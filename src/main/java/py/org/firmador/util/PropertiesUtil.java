@@ -13,10 +13,19 @@ public class PropertiesUtil {
     public static final String WIN="win";
     public static final String LINUX="ux";
     public static final String MAC="mac";
-    public static Map<String,String> init() throws UnsupportedPlatformException {
+
+    public static final String SLASH = File.separator;
+
+    public static Map<String,String> init() throws UnsupportedPlatformException{
+        return init(false);
+    }
+    public static Map<String,String> init(boolean reload) throws UnsupportedPlatformException {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
+        String home = System.getProperty("user.home");
+        File conf = new File(home + SLASH + ".bic/bic.conf");
+        if(conf.exists()){
 
-
+        }
 
         return null;
 
@@ -91,10 +100,18 @@ public class PropertiesUtil {
 
     private static void find(File raiz, String[] buscados, List<File> encontrados){
         if(raiz == null) return;
-        Collection<File> archivos = null;
+        List<File> archivos = new ArrayList<>();
         try{
-            Log.info("Buscando en: " + raiz.getAbsolutePath());
-            archivos = FileUtils.listFiles(raiz, buscados, false);
+            for(File f : raiz.listFiles()){
+                if(f.isFile()){
+                    for(String buscado: buscados){
+                        if(f.getName().contains(buscado)){
+                            archivos.add(f);
+                            break;
+                        }
+                    }
+                }
+            }
         }catch(Exception ex){
             return;
         }
