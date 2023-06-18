@@ -8,20 +8,20 @@ import py.org.firmador.birome.Firmador;
 
 public class App {
     public static void main( String[] args ){
-        if(args == null || args.length<=0){
+        if(args == null || args.length == 0){
             Log.error("Debe definir parametros!");
-            return;
+            System.exit(1);
         }
 
         Map<String,String> parametros = new HashMap<>();
         for(String par : args){
             Entry<String,String> entrada = checkParametro(par);
-            if(entrada == null) return;
+            if(entrada == null) System.exit(1);
             parametros.put(entrada.getKey(), entrada.getValue());
         }
 
         Log.info("Listo! " + parametros.toString());
-
+        System.exit(0);
     }
 
     private static Entry<String,String> checkParametro(String param){
@@ -40,7 +40,7 @@ public class App {
             }
         }
         if(!existe){
-            Log.error("Parametro " + param + " no es concido");
+            Log.error("Parametro " + claveValor[0] + " no es concido");
             return null;
         } 
         Map<String,String> retorno = new HashMap<>();
