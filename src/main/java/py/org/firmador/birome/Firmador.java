@@ -13,6 +13,7 @@ public interface Firmador {
         , "callback-headers"// 5 JSON que representa el header del callback
         , "callback-parameters" // 6 JSON que representa los parametros del callback
         , "posicion"        // 7 JSON quer tiene parametros x y de la posicion de la firma, ejemplo : {"x": 10, "y": 150}
+        , "init"            // 8 init=true ejecuta el proceso de autoconfiguracion
     };
 
     public String firmar(Map<String,String> parametros);

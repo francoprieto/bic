@@ -5,7 +5,7 @@ import org.apache.commons.io.FileUtils;
 import py.org.firmador.Log;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 
-import java.io.File;
+import java.io.*;
 import java.nio.file.AccessDeniedException;
 import java.util.*;
 
@@ -19,12 +19,30 @@ public class PropertiesUtil {
     public static Map<String,String> init() throws UnsupportedPlatformException{
         return init(false);
     }
+
+    private static Properties leerPropiedades(String file){
+        try (InputStream input = new FileInputStream(file)) {
+            Properties prop = new Properties();
+            prop.load(input);
+            return prop;
+        } catch (IOException ex) {
+            Log.error("No se pudo leer el archivo " +file, ex );
+            return null;
+        }
+    }
+
     public static Map<String,String> init(boolean reload) throws UnsupportedPlatformException {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String home = System.getProperty("user.home");
-        File conf = new File(home + SLASH + ".bic/bic.conf");
-        if(conf.exists()){
-
+        File conf = new File(home + SLASH + ".bic" + SLASH + "bic.conf");
+        Properties configuracion = null;
+        if(conf.exists() && !reload)
+            configuracion = leerPropiedades(conf.getAbsolutePath());
+        else{
+            File bicHome = new File(home + SLASH + ".bic");
+            bicHome.mkdir();
+            Map<String,List<String>> drivers = PropertiesUtil.getLibraries(bicConf);
+            
         }
 
         return null;

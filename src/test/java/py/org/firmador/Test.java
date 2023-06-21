@@ -11,7 +11,10 @@ public class Test {
 
     public static void main( String[] args ) throws Exception{
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
-        String home = File.separator;
-        Log.info("SLASH: " + home);
+        Map<String,List<String>> libs = PropertiesUtil.getLibraries(bicConf);
+        for(Map.Entry<String,List<String>> entry : libs.entrySet()){
+            for(String file : entry.getValue())
+                Log.info("Archivo tipo " + entry.getKey() + " : " + file);
+        }
     }
 }
