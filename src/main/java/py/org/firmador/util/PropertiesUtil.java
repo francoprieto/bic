@@ -1,13 +1,12 @@
 package py.org.firmador.util;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
 import py.org.firmador.Log;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 
 import java.io.*;
-import java.nio.file.AccessDeniedException;
 import java.util.*;
 
 public class PropertiesUtil {
@@ -38,15 +37,21 @@ public class PropertiesUtil {
 
         File conf = new File(home + SLASH + ".bic" + SLASH + "bic.conf");
         Properties configuracion = null;
+        Map<String,List<String>> drivers = null;
         if(conf.exists() && !reload)
             configuracion = leerPropiedades(conf.getAbsolutePath());
         else{
             File bicHome = new File(home + SLASH + ".bic");
             bicHome.mkdir();
-            Map<String,List<String>> drivers = PropertiesUtil.getLibraries(bicConf);
-            
+            drivers = PropertiesUtil.getLibraries(bicConf);
         }
-
+        String retorno = null;
+        try {
+            retorno = getJsonConf(drivers);
+        }catch(JsonProcessingException jpe){
+            Log.error("No se pudo conseguir las librerias", jpe);
+        }
+        Log.info("conf en json: " + retorno);
         return null;
 
     }
@@ -135,7 +140,6 @@ public class PropertiesUtil {
         }catch(Exception ex){
             return;
         }
-        if(archivos.isEmpty()) return;
 
         encontrados.addAll(archivos);
 
@@ -148,11 +152,10 @@ public class PropertiesUtil {
         }
     }
 
-    public static String getJsonConf(Map<String,List<String>> confMap){
+    public static String getJsonConf(Map<String,List<String>> confMap) throws JsonProcessingException {
         if(confMap.isEmpty()) return null;
         ObjectMapper mapper = new ObjectMapper();
-        //mapper.
-        return null;
+        return mapper.writeValueAsString(confMap);
     }
 
     public static String getOS() throws UnsupportedPlatformException {
