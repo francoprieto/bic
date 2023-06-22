@@ -1,6 +1,7 @@
 package py.org.firmador.util;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import py.org.firmador.Log;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
@@ -23,9 +24,9 @@ public class PropertiesUtil {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String home = System.getProperty("user.home");
         File conf = new File(home + SLASH + ".bic/bic.conf");
-        if(conf.exists()){
+       // if(conf.exists()){
 
-        }
+        //}
 
         return null;
 
@@ -105,7 +106,7 @@ public class PropertiesUtil {
             for(File f : raiz.listFiles()){
                 if(f.isFile()){
                     for(String buscado: buscados){
-                        if(f.getName().contains(buscado)){
+                        if(f.getName().contains(buscado) && !f.getName().endsWith(".conf")){
                             archivos.add(f);
                             break;
                         }
@@ -115,7 +116,7 @@ public class PropertiesUtil {
         }catch(Exception ex){
             return;
         }
-        if(archivos == null) return;
+        if(archivos.isEmpty()) return;
 
         encontrados.addAll(archivos);
 
@@ -126,6 +127,13 @@ public class PropertiesUtil {
                 }
             }
         }
+    }
+
+    public static String getJsonConf(Map<String,List<String>> confMap){
+        if(confMap.isEmpty()) return null;
+        ObjectMapper mapper = new ObjectMapper();
+        //mapper.
+        return null;
     }
 
     public static String getOS() throws UnsupportedPlatformException {
