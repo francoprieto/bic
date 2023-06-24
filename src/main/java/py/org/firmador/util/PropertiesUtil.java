@@ -35,7 +35,7 @@ public class PropertiesUtil {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String home = System.getProperty("user.home");
 
-        File conf = new File(home + SLASH + ".bic" + SLASH + "bic.conf");
+        File conf = new File(home + SLASH + ".bic" + SLASH + "bic.json");
         Properties configuracion = null;
         Map<String,List<String>> drivers = null;
         if(conf.exists() && !reload)
@@ -47,7 +47,9 @@ public class PropertiesUtil {
         }
         String retorno = null;
         try {
-            retorno = getJsonConf(drivers);
+            Map<String, Object> params = new HashMap<>();
+
+            retorno = getJsonConf(drivers, params);
         }catch(JsonProcessingException jpe){
             Log.error("No se pudo conseguir las librerias", jpe);
         }
@@ -152,10 +154,12 @@ public class PropertiesUtil {
         }
     }
 
-    public static String getJsonConf(Map<String,List<String>> confMap) throws JsonProcessingException {
+    public static String getJsonConf(Map<String,List<String>> confMap, Map<String, Object> params) throws JsonProcessingException {
         if(confMap.isEmpty()) return null;
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.writeValueAsString(confMap);
+        if(params == null) params = new HashMap<>();
+        params.put("conf", confMap);
+        return mapper.writeValueAsString(params);
     }
 
     public static String getOS() throws UnsupportedPlatformException {
