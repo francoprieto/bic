@@ -1,8 +1,8 @@
 package py.org.firmador.util;
 
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.FileUtils;
 import py.org.firmador.Log;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 
@@ -16,27 +16,28 @@ public class PropertiesUtil {
 
     public static final String SLASH = File.separator;
 
-    public static Map<String,String> init() throws UnsupportedPlatformException{
-        return init(false);
+    public static Map<String,Object> init() throws UnsupportedPlatformException{
+        Map<String,Object> out = init(false);
+        return out;
     }
 
-    private static Properties leerPropiedades(String file){
-        try (InputStream input = new FileInputStream(file)) {
-            Properties prop = new Properties();
-            prop.load(input);
-            return prop;
-        } catch (IOException ex) {
-            Log.error("No se pudo leer el archivo " +file, ex );
-            return null;
+    private static Map<String, Object> leerPropiedades(String file){
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String,Object> conf = new HashMap<>();
+        try {
+            mapper.writeValue(new File(file), conf);
+        }catch(IOException ioe){
+            Log.error("Error al leer la configuracion", ioe);
         }
+        return conf;
     }
 
-    public static Map<String,String> init(boolean reload) throws UnsupportedPlatformException {
+    public static Map<String,Object> init(boolean reload) throws UnsupportedPlatformException {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String home = System.getProperty("user.home");
 
         File conf = new File(home + SLASH + ".bic" + SLASH + "bic.json");
-        Properties configuracion = null;
+        Map<String,Object> configuracion = null;
         Map<String,List<String>> drivers = null;
         if(conf.exists() && !reload)
             configuracion = leerPropiedades(conf.getAbsolutePath());
@@ -48,14 +49,19 @@ public class PropertiesUtil {
         String retorno = null;
         try {
             Map<String, Object> params = new HashMap<>();
-
+            String downloadTimeout = bicConf.getString("download.timeout");
+            String uploadTimeout = bicConf.getString("read.timeout");
+            params.put("download.timeout", Long.valueOf(downloadTimeout));
+            params.put("read.timeout", Long.valueOf(uploadTimeout));
             retorno = getJsonConf(drivers, params);
-        }catch(JsonProcessingException jpe){
-            Log.error("No se pudo conseguir las librerias", jpe);
+            FileUtils.writeByteArrayToFile(conf, retorno.getBytes());
+            configuracion = leerPropiedades(conf.getAbsolutePath());
+        }catch(IOException e){
+            Log.error("No se pudo conseguir las librerias", e);
         }
         Log.info("conf en json: " + retorno);
-        return null;
 
+        return configuracion;
     }
 
     public static Map<String,List<String>> getLibraries(ResourceBundle bicConf) throws UnsupportedPlatformException {

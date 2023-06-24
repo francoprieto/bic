@@ -19,6 +19,6 @@ public class Test {
                 Log.info("Archivo tipo " + entry.getKey() + " : " + file);
         }
          */
-        PropertiesUtil.init(true);
+        PropertiesUtil.init();
     }
 }
