@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import py.org.firmador.Log;
+import py.org.firmador.dto.Conf;
+import py.org.firmador.dto.Libs;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 
 import java.io.*;
@@ -16,35 +18,35 @@ public class PropertiesUtil {
 
     public static final String SLASH = File.separator;
 
-    public static Map<String,Object> init() throws UnsupportedPlatformException{
-        Map<String,Object> out = init(false);
+    public static Conf init() throws UnsupportedPlatformException{
+        Conf out = init(false);
         return out;
     }
 
-    private static Map<String, Object> leerPropiedades(String file){
+    private static Conf leerPropiedades(String file){
         ObjectMapper mapper = new ObjectMapper();
-        Map<String,Object> conf = new HashMap<>();
+        Conf conf = null;
         try {
-            mapper.writeValue(new File(file), conf);
+            conf = mapper.readValue(new File(file), Conf.class);
         }catch(IOException ioe){
             Log.error("Error al leer la configuracion", ioe);
         }
         return conf;
     }
 
-    public static Map<String,Object> init(boolean reload) throws UnsupportedPlatformException {
+    public static Conf init(boolean reload) throws UnsupportedPlatformException {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String home = System.getProperty("user.home");
 
         File conf = new File(home + SLASH + ".bic" + SLASH + "bic.json");
-        Map<String,Object> configuracion = null;
+        Conf configuracion = null;
         Map<String,List<String>> drivers = null;
         if(conf.exists() && !reload)
             configuracion = leerPropiedades(conf.getAbsolutePath());
         else{
             File bicHome = new File(home + SLASH + ".bic");
             bicHome.mkdir();
-            drivers = PropertiesUtil.getLibraries(bicConf);
+            drivers = getLibraries(bicConf);
         }
         String retorno = null;
         try {
@@ -162,10 +164,19 @@ public class PropertiesUtil {
 
     public static String getJsonConf(Map<String,List<String>> confMap, Map<String, Object> params) throws JsonProcessingException {
         if(confMap.isEmpty()) return null;
+        Conf conf = new Conf();
+        conf.setDownloadTimeout((Long)params.get("download.timeout"));
+        conf.setReadTimeout((Long)params.get("read.timeout"));
+        List<Libs> libs = new ArrayList<>();
+        for(Map.Entry<String,List<String>> entrada : confMap.entrySet()){
+            Libs lib = new Libs();
+            lib.setName(entrada.getKey());
+            lib.setFiles(entrada.getValue());
+            libs.add(lib);
+        }
+        conf.setLibs(libs);
         ObjectMapper mapper = new ObjectMapper();
-        if(params == null) params = new HashMap<>();
-        params.put("conf", confMap);
-        return mapper.writeValueAsString(params);
+        return mapper.writeValueAsString(conf);
     }
 
     public static String getOS() throws UnsupportedPlatformException {
