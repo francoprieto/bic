@@ -11,7 +11,7 @@ import py.org.firmador.exceptions.UnsupportedPlatformException;
 import java.io.*;
 import java.util.*;
 
-public class PropertiesUtil {
+public class ConfiguracionUtil {
     public static final String WIN="win";
     public static final String LINUX="ux";
     public static final String MAC="mac";

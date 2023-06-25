@@ -1,11 +1,6 @@
 package py.org.firmador;
 
-import py.org.firmador.util.PropertiesUtil;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.ResourceBundle;
+import py.org.firmador.util.ConfiguracionUtil;
 
 public class Test {
 
@@ -19,6 +14,6 @@ public class Test {
                 Log.info("Archivo tipo " + entry.getKey() + " : " + file);
         }
          */
-        PropertiesUtil.init();
+        ConfiguracionUtil.init();
     }
 }
