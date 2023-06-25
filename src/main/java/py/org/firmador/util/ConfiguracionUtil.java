@@ -59,7 +59,7 @@ public class ConfiguracionUtil {
             FileUtils.writeByteArrayToFile(conf, retorno.getBytes());
             configuracion = leerPropiedades(conf.getAbsolutePath());
         }catch(IOException e){
-            Log.error("No se pudo conseguir las librerias", e);
+            Log.error("No se pudo detectar librerias", e);
         }
         Log.info("conf en json: " + retorno);
 
