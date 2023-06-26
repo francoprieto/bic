@@ -18,6 +18,8 @@ public class ConfiguracionUtil {
 
     public static final String SLASH = File.separator;
 
+    public static final String HOME = System.getProperty("user.home");
+
     public static Conf init() throws UnsupportedPlatformException{
         Conf out = init(false);
         return out;
@@ -34,17 +36,29 @@ public class ConfiguracionUtil {
         return conf;
     }
 
+    public static String getDirCache(){
+        String path = HOME + SLASH + ".bic" + SLASH + "cache";
+        File file = new File(path);
+        if(!file.exists()) file.mkdir();
+        return path;
+    }
+
+    public static String getDirFirmados(){
+        String path = HOME + SLASH + ".bic" + SLASH + "firmados";
+        File file = new File(path);
+        if(!file.exists()) file.mkdir();
+        return path;
+    }
+
     public static Conf init(boolean reload) throws UnsupportedPlatformException {
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
-        String home = System.getProperty("user.home");
-
-        File conf = new File(home + SLASH + ".bic" + SLASH + "bic.json");
+        File conf = new File(HOME + SLASH + ".bic" + SLASH + "bic.json");
         Conf configuracion = null;
         Map<String,List<String>> drivers = null;
         if(conf.exists() && !reload)
             configuracion = leerPropiedades(conf.getAbsolutePath());
         else{
-            File bicHome = new File(home + SLASH + ".bic");
+            File bicHome = new File(HOME + SLASH + ".bic");
             bicHome.mkdir();
             drivers = getLibraries(bicConf);
         }
