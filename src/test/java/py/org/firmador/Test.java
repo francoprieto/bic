@@ -7,7 +7,6 @@ public class Test {
     public static void main( String[] args ) throws Exception{
         /*
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
-
         Map<String,List<String>> libs = PropertiesUtil.getLibraries(bicConf);
         for(Map.Entry<String,List<String>> entry : libs.entrySet()){
             for(String file : entry.getValue())

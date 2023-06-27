@@ -1,5 +1,6 @@
 package py.org.firmador.birome;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import py.org.firmador.Log;
@@ -11,6 +12,7 @@ import py.org.firmador.util.WebUtil;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +69,6 @@ public class FirmadorImpl implements Firmador{
             return "error";
         }
 
-
         return null;
     }
 
@@ -92,7 +93,20 @@ public class FirmadorImpl implements Firmador{
 
         if(parametros.containsKey("archivo-uri")){
             String nombreArchivo = FilenameUtils.getName(parametros.get("archivo-uri"));
-            if(WebUtil.descargar(parametros.get("archivo-uri"), cache + ConfiguracionUtil.SLASH + nombreArchivo, downloadTimeout, readTimeout)){
+            Map<String,String> headers = null;
+            if(parametros.containsKey("archivo-headers")){
+                try {
+                    headers = WebUtil.getHeaders(parametros.get("archivo-headers"));
+                }catch(JsonProcessingException jpe){
+                    Log.error("Error al leer los headers para descargar el archivo", jpe);
+                    return new ArrayList<>();
+                }
+            }
+            if(headers == null && WebUtil.descargar(parametros.get("archivo-uri"), cache + ConfiguracionUtil.SLASH + nombreArchivo, downloadTimeout, readTimeout)){
+                retorno.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
+                return retorno;
+            }
+            if(headers != null && WebUtil.descargar(parametros.get("archivo-uri"), cache + ConfiguracionUtil.SLASH + nombreArchivo, headers, downloadTimeout, readTimeout)){
                 retorno.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
                 return retorno;
             }

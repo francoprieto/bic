@@ -70,6 +70,10 @@ public class ConfiguracionUtil {
             params.put("download.timeout", Long.valueOf(downloadTimeout));
             params.put("read.timeout", Long.valueOf(uploadTimeout));
             retorno = getJsonConf(drivers, params);
+            if(retorno == null){
+                Log.error("La configuración no es válida, debe inicializar la aplicación");
+                return null;
+            }
             FileUtils.writeByteArrayToFile(conf, retorno.getBytes());
             configuracion = leerPropiedades(conf.getAbsolutePath());
         }catch(IOException e){
@@ -177,7 +181,7 @@ public class ConfiguracionUtil {
     }
 
     public static String getJsonConf(Map<String,List<String>> confMap, Map<String, Object> params) throws JsonProcessingException {
-        if(confMap.isEmpty()) return null;
+        if(confMap == null || confMap.isEmpty()) return null;
         Conf conf = new Conf();
         conf.setDownloadTimeout((Long)params.get("download.timeout"));
         conf.setReadTimeout((Long)params.get("read.timeout"));
