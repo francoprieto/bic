@@ -13,6 +13,6 @@ public class Test {
                 Log.info("Archivo tipo " + entry.getKey() + " : " + file);
         }
          */
-        App.main(new String[]{"--archivos=/Users/francoprieto/Downloads/test.pdf"});
+        App.main(new String[]{"--pin=04209217","--archivos=/Users/francoprieto/Downloads/test.pdf,/Users/francoprieto/Downloads/CARLOS PRIETO 178121 ESTUDIO.PDF","--destino=/Users/francoprieto/Documents"});
     }
 }

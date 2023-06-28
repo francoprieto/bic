@@ -3,7 +3,7 @@ package py.org.firmador.birome;
 import java.util.Map;
 
 public interface Firmador {
-    
+    public static final String SUN_PKCS11_PROVIDER_NAME = "SunPKCS11";
     public static final String[] PARAMS={
         "pin"                   // 0 Pin del token
         , "archivo"             // 1 Archivo individual local a firmar

@@ -36,6 +36,38 @@ public class ConfiguracionUtil {
         return conf;
     }
 
+    public static String toConfFile(Map<String,String> confs){
+
+            // Obtenemos la ruta temporal del sistema para crear el archivo de configuracion
+            String tmp = HOME + SLASH + ".bic" + SLASH + "bic.cfg";
+            File cfg = new File(tmp);
+
+            // Elimina la configuracion previamente configurada, si pasamos parametros
+            if (confs != null)
+                FileUtils.deleteQuietly(cfg);
+
+            // Si existe el archivo, significa que es una configuracion previa
+            if (cfg.exists())
+                return tmp;
+
+            if (confs == null)
+                return null;
+
+            // Si no hay configuracion previa se crea una nueva y se retorna esta
+            // configuracion
+            try (OutputStream output = new FileOutputStream(tmp)) {
+                for (Map.Entry<String, String> entrada : confs.entrySet())
+                    FileUtils.writeByteArrayToFile(cfg, (entrada.toString() + "\n").getBytes(), true);
+
+            } catch (IOException io) {
+                Log.error("Error al escribir " + tmp, io);
+                return "";
+            }
+
+            return tmp;
+    }
+
+
     public static String getDirCache(){
         String path = HOME + SLASH + ".bic" + SLASH + "cache";
         File file = new File(path);
