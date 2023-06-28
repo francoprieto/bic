@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import py.org.firmador.birome.Firmador;
+import py.org.firmador.birome.FirmadorImpl;
 
 public class App {
     public static void main( String[] args ){
@@ -19,6 +20,9 @@ public class App {
             if(entrada == null) System.exit(1);
             parametros.put(entrada.getKey(), entrada.getValue());
         }
+
+        Firmador bic = new FirmadorImpl();
+        bic.firmar(parametros);
 
         Log.info("Listo! " + parametros.toString());
         System.exit(0);

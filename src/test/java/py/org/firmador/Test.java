@@ -13,6 +13,6 @@ public class Test {
                 Log.info("Archivo tipo " + entry.getKey() + " : " + file);
         }
          */
-        ConfiguracionUtil.init();
+        App.main(new String[]{"--archivos=/Users/francoprieto/Downloads/test.pdf"});
     }
 }

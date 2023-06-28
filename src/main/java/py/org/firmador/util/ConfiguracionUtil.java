@@ -55,9 +55,10 @@ public class ConfiguracionUtil {
         File conf = new File(HOME + SLASH + ".bic" + SLASH + "bic.json");
         Conf configuracion = null;
         Map<String,List<String>> drivers = null;
-        if(conf.exists() && !reload)
+        if(conf.exists() && !reload) {
             configuracion = leerPropiedades(conf.getAbsolutePath());
-        else{
+            return configuracion;
+        }else{
             File bicHome = new File(HOME + SLASH + ".bic");
             bicHome.mkdir();
             drivers = getLibraries(bicConf);

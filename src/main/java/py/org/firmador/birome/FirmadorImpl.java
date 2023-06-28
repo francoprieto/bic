@@ -44,6 +44,15 @@ public class FirmadorImpl implements Firmador{
                 && parametros.get("archivo-uri").trim().length() > 0)
             return true;
 
+        if(parametros.containsKey("destino")){
+            File destino = new File(parametros.get("destino"));
+            if(!destino.exists() || !destino.isDirectory()){
+                Log.error("El directorio " + parametros.get("destino") + " no es válido!");
+                return false;
+            }
+            return true;
+        }
+
         Log.error("No se ha definido un archivo!");
         return false;
     }
@@ -92,7 +101,8 @@ public class FirmadorImpl implements Firmador{
         }
 
         if(parametros.containsKey("archivo-uri")){
-            String nombreArchivo = FilenameUtils.getName(parametros.get("archivo-uri"));
+            String nombreArchivo = (parametros.containsKey("archivo-nombre") ? parametros.get("archivo-nombre").trim() : null);
+            if(nombreArchivo == null) nombreArchivo = FilenameUtils.getName(parametros.get("archivo-uri"));
             Map<String,String> headers = null;
             if(parametros.containsKey("archivo-headers")){
                 try {

@@ -1,4 +1,5 @@
 #!/bin/bash
+export BIC=$(pwd)
+export TARGET=$BIC/target/bic-1.0.0-jar-with-dependencies.jar
 
-export JAVA_HOME=/c/dev/java/jdk-17
-export TARGET=$(pwd)/target
+$JAVA_HOME/bin/java -jar $TARGET --init=true
