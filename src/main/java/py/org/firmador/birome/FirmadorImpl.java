@@ -2,6 +2,7 @@ package py.org.firmador.birome;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
@@ -126,7 +127,7 @@ public class FirmadorImpl implements Firmador{
                     });
                     builder = KeyStore.Builder.newInstance("PKCS11", providerPKCS11, chp);
                 }else{
-                    KeyStore.ProtectionParameter pp = new KeyStore.PasswordProtection(pin == null ? "".toCharArray() : pin.toCharArray());
+                    KeyStore.ProtectionParameter pp = new KeyStore.PasswordProtection(pin.toCharArray());
                     builder = KeyStore.Builder.newInstance("PKCS11", providerPKCS11, pp);
                 }
                 Certificate cert = null;
@@ -149,7 +150,7 @@ public class FirmadorImpl implements Firmador{
                     for(File archivo : archivos) {
                         if(archivo.exists() && archivo.isFile()) {
                             File firmado = this.procesarFirma(archivo, privateKey, providerPKCS11, cert, parametros);
-                            if(firmado.exists() && firmado.isFile())
+                            if(firmado != null && firmado.exists() && firmado.isFile())
                                 retorno.add(firmado);
                         }
                     }
@@ -169,6 +170,17 @@ public class FirmadorImpl implements Firmador{
         return retorno;
     }
 
+    private Map<String, Integer> getPosicion(Map<String,String> parametros){
+        //sap.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig");
+        Map<String,Integer> coordenadas = new HashMap<>();
+        coordenadas.put("abajo-izquierda-x",36);
+        coordenadas.put("abajo-izquierda-y",748);
+        coordenadas.put("arriba-derecha-x", 144);
+        coordenadas.put("arriba-derecha-y",780);
+        coordenadas.put("pagina",1);
+        return coordenadas;
+    }
+
     private File procesarFirma(File archivo, PrivateKey key, Provider provider, Certificate cert, Map<String,String> parametros){
         String destino = null;
 
@@ -183,8 +195,13 @@ public class FirmadorImpl implements Firmador{
 
             PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
-            PdfSignatureAppearance appearance = stp.getSignatureAppearance();
 
+            Map<String,Integer> coor = this.getPosicion(parametros);
+            Rectangle firma = new Rectangle(Float.valueOf(coor.get("abajo-izquierda-x"))
+                    ,Float.valueOf(coor.get("abajo-izquierda-y"))
+                    ,Float.valueOf(coor.get("arriba-derecha-x"))
+                    ,Float.valueOf(coor.get("arriba-derecha-y")));
+            sap.setVisibleSignature(firma, coor.get("pagina"), "firma");
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
