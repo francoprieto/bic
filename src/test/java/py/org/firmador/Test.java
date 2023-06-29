@@ -13,7 +13,7 @@ public class Test {
                 Log.info("Archivo tipo " + entry.getKey() + " : " + file);
         }
          */
-        //App.main(new String[]{"--archivos=/Users/francoprieto/Downloads/test.pdf,/Users/francoprieto/Downloads/CARLOS PRIETO 178121 ESTUDIO.PDF","--destino=/Users/francoprieto/Documents"});
-        App.main(new String[]{"--pin=04209217","--archivos=C:\\Users\\franco\\Downloads\\test.pdf,C:\\Users\\franco\\Downloads\\factura ccpa.pdf", "--destino=C:\\Users\\franco\\Documents"});
+        App.main(new String[]{"--pin=04209217","--archivos=/Users/francoprieto/Downloads/test.pdf,/Users/francoprieto/Downloads/Fact Contado 0010140021559.pdf","--destino=/Users/francoprieto/Documents"});
+        //App.main(new String[]{"--pin=04209217","--archivos=C:\\Users\\franco\\Downloads\\test.pdf,C:\\Users\\franco\\Downloads\\factura ccpa.pdf", "--destino=C:\\Users\\franco\\Documents"});
     }
 }

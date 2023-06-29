@@ -15,7 +15,7 @@ public interface Firmador {
         , "callback-headers"    // 7 JSON que representa el header del callback
         , "callback-parameters" // 8 JSON que representa los parametros del callback
         , "destino"             // 9 Directorio destino donde se guardan el o los archivos firmados
-        , "posicion"            // 10 JSON quer tiene parametros x y de la posicion de la firma, ejemplo : {"x": 10, "y": 150}
+        , "posicion"            // 10 JSON que tiene parametros esquina inferior izquierda x,y, y esquina superior derecha x,y, ademas el número de pagina
         , "init"                // 10 init=true ejecuta el proceso de autoconfiguracion
     };
 
