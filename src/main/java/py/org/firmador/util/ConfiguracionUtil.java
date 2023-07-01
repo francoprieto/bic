@@ -3,12 +3,17 @@ package py.org.firmador.util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.ntp.NTPUDPClient;
+import org.apache.commons.net.ntp.TimeInfo;
+import org.apache.commons.net.ntp.TimeStamp;
 import py.org.firmador.Log;
 import py.org.firmador.dto.Conf;
 import py.org.firmador.dto.Libs;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ConfiguracionUtil {
@@ -238,8 +243,27 @@ public class ConfiguracionUtil {
         throw new UnsupportedPlatformException("Sistema Operativo no soportado");
     }
 
-    public static String ahora(){
-        // https://stackoverflow.com/questions/4442192/how-to-use-an-internet-time-server-to-get-the-time
+    public static String ahora(String server){
+        NTPUDPClient client = new NTPUDPClient();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+        // We want to timeout if a response takes longer than 10 seconds
+        client.setDefaultTimeout(10_000);
+        Long offset = 0L;
+        try {
+            InetAddress inetAddress = InetAddress.getByName(server);
+            TimeInfo timeInfo = client.getTime(inetAddress);
+            timeInfo.computeDetails();
+            if (timeInfo.getOffset() != null) {
+                timeInfo = timeInfo;
+                offset = timeInfo.getOffset();
+            }
+            long currentTime = System.currentTimeMillis();
+            TimeStamp atomicNtpTime = TimeStamp.getNtpTime(currentTime + offset);
+            return sdf.format(atomicNtpTime.getTime());
+        }catch(IOException ex){
+            Log.error("Error al obtener la fecha de " + server);
+        }
         return null;
     }
 

@@ -110,12 +110,10 @@ public class FirmadorImpl implements Firmador{
             pin = parametros.get("pin").trim();
         for(Libs lib : libs){
             boolean romper = false;
-            //providerPKCS11.setProperty("name",lib.getName());
             for(String file : lib.getFiles()){
                 Map<String,String> confs = new HashMap<>();
                 confs.put("slot","0");
                 confs.put("name",lib.getName());
-                //providerPKCS11.setProperty("library",file);
                 confs.put("library",file);
                 String conf = ConfiguracionUtil.toConfFile(confs);
                 providerPKCS11 = providerPKCS11.configure(conf);
@@ -233,7 +231,7 @@ public class FirmadorImpl implements Firmador{
                 if(dn.contains("GIVENNAME=")) datos.put("NOMBRES",dn.replace("GIVENNAME=",""));
                 if(dn.contains("SERIALNUMBER=")) datos.put("SERIAL",dn.replace("SERIALNUMBER=",""));
             }
-
+            String fecha = ConfiguracionUtil.ahora()
             if(datos.containsKey("SERIAL"))
                 datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
 
