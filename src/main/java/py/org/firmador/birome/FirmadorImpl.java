@@ -21,6 +21,7 @@ import py.org.firmador.util.WebUtil;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -216,13 +217,29 @@ public class FirmadorImpl implements Firmador{
                     ,Float.valueOf(coor.get("esy")));
             sap.setVisibleSignature(firma, coor.get("pagina"), null);
             sap.setCertificate(cert);
-            sap.setLayer2Text("Layer2");
-            sap.setContact("contact");
-            sap.setLayer4Text("Layer4");
-            sap.setLocation("Location");
-            sap.setLocationCaption("Location Caption");
-            sap.setReason("Reason");
-            sap.setReasonCaption("Reason Caption");
+
+            X509Certificate x509Certificate = (X509Certificate) cert;
+
+           // X500Principal principal = (X500Principal) x509Certificate.getSubjectX500Principal();
+            Principal principal = x509Certificate.getSubjectDN();
+            String fullDns = principal.getName();
+            String[] dns = fullDns.split(",");
+            Map<String,String> datos = new HashMap<>();
+            datos.put("APELLIDOS","");
+            datos.put("NOMBRES","");
+            datos.put("SERIAL","");
+            for(String dn : dns){
+                if(dn.contains("SURNAME=")) datos.put("APELLIDOS",dn.replace("SURNAME=",""));
+                if(dn.contains("GIVENNAME=")) datos.put("NOMBRES",dn.replace("GIVENNAME=",""));
+                if(dn.contains("SERIALNUMBER=")) datos.put("SERIAL",dn.replace("SERIALNUMBER=",""));
+            }
+
+            if(datos.containsKey("SERIAL"))
+                datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
+
+            sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() + ""
+                                + (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "")
+                                + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : ""));
 
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
@@ -261,8 +278,6 @@ public class FirmadorImpl implements Firmador{
                 // Eliminamos si existe un archivo con el mismo nombre anterior
                 if(des.exists())
                     FileUtils.deleteQuietly(des);
-                if(src.exists())
-                    FileUtils.deleteQuietly(src);
 
                 FileUtils.copyFile(src, des);
                 retorno.add(des);

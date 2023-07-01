@@ -238,4 +238,9 @@ public class ConfiguracionUtil {
         throw new UnsupportedPlatformException("Sistema Operativo no soportado");
     }
 
+    public static String ahora(){
+        // https://stackoverflow.com/questions/4442192/how-to-use-an-internet-time-server-to-get-the-time
+        return null;
+    }
+
 }
