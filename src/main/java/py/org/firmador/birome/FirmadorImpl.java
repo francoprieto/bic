@@ -1,6 +1,8 @@
 package py.org.firmador.birome;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
@@ -171,13 +173,24 @@ public class FirmadorImpl implements Firmador{
     }
 
     private Map<String, Integer> getPosicion(Map<String,String> parametros){
-        //sap.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig");
         Map<String,Integer> coordenadas = new HashMap<>();
-        coordenadas.put("abajo-izquierda-x",36);
-        coordenadas.put("abajo-izquierda-y",748);
-        coordenadas.put("arriba-derecha-x", 144);
-        coordenadas.put("arriba-derecha-y",780);
+        coordenadas.put("eix",36);
+        coordenadas.put("eiy",748);
+        coordenadas.put("esx", 144);
+        coordenadas.put("esy",780);
         coordenadas.put("pagina",1);
+        if(parametros.containsKey("posicion") && parametros.get("posicion") != null){
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                Map<String, String> cp = mapper.readValue(parametros.get("posicion"), Map.class);
+
+                for(Map.Entry<String,String> e : cp.entrySet())
+                    coordenadas.put(e.getKey(),Integer.valueOf(e.getValue()));
+
+            }catch(JsonProcessingException jpe){
+                Log.warn("Posicion de la firma invalida, se asume valores por defecto!");
+            }
+        }
         return coordenadas;
     }
 
@@ -197,11 +210,20 @@ public class FirmadorImpl implements Firmador{
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
 
             Map<String,Integer> coor = this.getPosicion(parametros);
-            Rectangle firma = new Rectangle(Float.valueOf(coor.get("abajo-izquierda-x"))
-                    ,Float.valueOf(coor.get("abajo-izquierda-y"))
-                    ,Float.valueOf(coor.get("arriba-derecha-x"))
-                    ,Float.valueOf(coor.get("arriba-derecha-y")));
-            sap.setVisibleSignature(firma, coor.get("pagina"), "firma");
+            Rectangle firma = new Rectangle(Float.valueOf(coor.get("eix"))
+                    ,Float.valueOf(coor.get("eiy"))
+                    ,Float.valueOf(coor.get("esx"))
+                    ,Float.valueOf(coor.get("esy")));
+            sap.setVisibleSignature(firma, coor.get("pagina"), null);
+            sap.setCertificate(cert);
+            sap.setLayer2Text("Layer2");
+            sap.setContact("contact");
+            sap.setLayer4Text("Layer4");
+            sap.setLocation("Location");
+            sap.setLocationCaption("Location Caption");
+            sap.setReason("Reason");
+            sap.setReasonCaption("Reason Caption");
+
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
