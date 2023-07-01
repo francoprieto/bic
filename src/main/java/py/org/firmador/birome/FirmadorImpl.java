@@ -235,6 +235,13 @@ public class FirmadorImpl implements Firmador{
             for(String file: files) {
                 File src = new File(file);
                 File des = new File(cache + ConfiguracionUtil.SLASH + src.getName());
+
+                // Eliminamos si existe un archivo con el mismo nombre anterior
+                if(des.exists())
+                    FileUtils.deleteQuietly(des);
+                if(src.exists())
+                    FileUtils.deleteQuietly(src);
+
                 FileUtils.copyFile(src, des);
                 retorno.add(des);
             }
