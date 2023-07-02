@@ -243,7 +243,9 @@ public class ConfiguracionUtil {
         throw new UnsupportedPlatformException("Sistema Operativo no soportado");
     }
 
-    public static String ahora(String server){
+    public static String ahora(){
+        ResourceBundle bicConf = ResourceBundle.getBundle("bic");
+        String server = bicConf.getString("ntp.server");
         NTPUDPClient client = new NTPUDPClient();
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 

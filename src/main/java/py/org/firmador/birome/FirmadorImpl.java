@@ -102,7 +102,6 @@ public class FirmadorImpl implements Firmador{
 
     private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos){
         Provider providerPKCS11 = Security.getProvider(Firmador.SUN_PKCS11_PROVIDER_NAME);
-        //providerPKCS11.setProperty("slot","0");
         List<Libs> libs = configuracion.getLibs();
         List<File> retorno = new ArrayList<>();
         String pin = null;
@@ -181,11 +180,8 @@ public class FirmadorImpl implements Firmador{
         if(parametros.containsKey("posicion") && parametros.get("posicion") != null){
             ObjectMapper mapper = new ObjectMapper();
             try {
-                Map<String, String> cp = mapper.readValue(parametros.get("posicion"), Map.class);
-
-                for(Map.Entry<String,String> e : cp.entrySet())
-                    coordenadas.put(e.getKey(),Integer.valueOf(e.getValue()));
-
+                Map<String, Integer> cp = mapper.readValue(parametros.get("posicion"), Map.class);
+                coordenadas.putAll(cp);
             }catch(JsonProcessingException jpe){
                 Log.warn("Posicion de la firma invalida, se asume valores por defecto!");
             }
@@ -231,13 +227,16 @@ public class FirmadorImpl implements Firmador{
                 if(dn.contains("GIVENNAME=")) datos.put("NOMBRES",dn.replace("GIVENNAME=",""));
                 if(dn.contains("SERIALNUMBER=")) datos.put("SERIAL",dn.replace("SERIALNUMBER=",""));
             }
-            String fecha = ConfiguracionUtil.ahora()
+            String fecha = ConfiguracionUtil.ahora();
+            if(fecha != null && fecha.trim().length() > 0)
+                datos.put("FECHA", fecha);
             if(datos.containsKey("SERIAL"))
                 datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
 
             sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() + ""
                                 + (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "")
-                                + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : ""));
+                                + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "")
+                                + (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
 
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
