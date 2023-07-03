@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Image;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.itextpdf.text.pdf.security.*;
+import net.glxn.qrgen.javase.QRCode;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import py.org.firmador.Log;
@@ -28,10 +30,7 @@ import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FirmadorImpl implements Firmador{
 
@@ -170,23 +169,69 @@ public class FirmadorImpl implements Firmador{
         return retorno;
     }
 
-    private Map<String, Integer> getPosicion(Map<String,String> parametros){
-        Map<String,Integer> coordenadas = new HashMap<>();
-        coordenadas.put("eix",36);
-        coordenadas.put("eiy",748);
-        coordenadas.put("esx", 144);
-        coordenadas.put("esy",780);
-        coordenadas.put("pagina",1);
+    private Map<String, Float> getPosicion(Map<String,String> parametros, PdfReader pdf){
+
+        if(pdf == null) return new HashMap<>();
+        ResourceBundle conf = ResourceBundle.getBundle("bic");
+        Integer height = Integer.valueOf(conf.getString("firma.alto"));
+        Integer width = Integer.valueOf(conf.getString("firma.ancho"));
+
+        Map<String, Float> retorno = new HashMap<>();
+
+        Rectangle cropBox = null;
+
+        String pos = "";
+
         if(parametros.containsKey("posicion") && parametros.get("posicion") != null){
             ObjectMapper mapper = new ObjectMapper();
             try {
-                Map<String, Integer> cp = mapper.readValue(parametros.get("posicion"), Map.class);
-                coordenadas.putAll(cp);
+                Map<String, String> cp = mapper.readValue(parametros.get("posicion"), Map.class);
+                if(cp.containsKey("pagina")){
+                    if(cp.get("pagina").equals("primera")){
+                        retorno.put("pagina",Float.valueOf(1));
+                        cropBox = pdf.getCropBox(1);
+                    }else if(cp.get("pagina").equals("ultima")) {
+                        retorno.put("pagina", Float.valueOf(pdf.getNumberOfPages()));
+                        cropBox = pdf.getCropBox(pdf.getNumberOfPages());
+                    }else{
+                        retorno.put("pagina",Float.valueOf(cp.get("pagina")));
+                        cropBox = pdf.getCropBox(Integer.valueOf(cp.get("pagina")));
+                    }
+                }
+
+                if(cp.containsKey("lugar") && cp.get("lugar").trim().length() > 0)
+                    pos = cp.get("lugar").trim();
+
             }catch(JsonProcessingException jpe){
                 Log.warn("Posicion de la firma invalida, se asume valores por defecto!");
             }
         }
-        return coordenadas;
+
+        retorno.put("eix", cropBox.getRight(width));
+        retorno.put("eiy", cropBox.getBottom());
+        retorno.put("esx", cropBox.getRight());
+        retorno.put("esy", cropBox.getBottom(height));
+
+        if(cropBox != null){
+            if(pos.equals("esquina-superior-izquierda")) {
+                retorno.put("eix", cropBox.getLeft());
+                retorno.put("eiy", cropBox.getTop(height));
+                retorno.put("esx", cropBox.getLeft(width));
+                retorno.put("esy", cropBox.getTop());
+            }else if(pos.equals("esquina-superior-derecha")){
+                retorno.put("eix", cropBox.getRight(width));
+                retorno.put("eiy", cropBox.getTop(height));
+                retorno.put("esx", cropBox.getRight());
+                retorno.put("esy", cropBox.getTop());
+            }else if(pos.equals("esquina-inferior-izquierda")){
+                retorno.put("eix", cropBox.getLeft());
+                retorno.put("eiy", cropBox.getBottom());
+                retorno.put("esx", cropBox.getLeft(width));
+                retorno.put("esy", cropBox.getBottom(height));
+            }
+        }
+
+        return retorno;
     }
 
     private File procesarFirma(File archivo, PrivateKey key, Provider provider, Certificate cert, Map<String,String> parametros){
@@ -204,19 +249,24 @@ public class FirmadorImpl implements Firmador{
             PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
 
-            Map<String,Integer> coor = this.getPosicion(parametros);
+            Rectangle cropBox = pdf.getCropBox(1);
+
+            Map<String,Float> coor = this.getPosicion(parametros, pdf);
             Rectangle firma = new Rectangle(Float.valueOf(coor.get("eix"))
                     ,Float.valueOf(coor.get("eiy"))
                     ,Float.valueOf(coor.get("esx"))
                     ,Float.valueOf(coor.get("esy")));
-            sap.setVisibleSignature(firma, coor.get("pagina"), null);
+            sap.setVisibleSignature(firma, coor.get("pagina").intValue(), null);
             sap.setCertificate(cert);
 
             X509Certificate x509Certificate = (X509Certificate) cert;
 
-           // X500Principal principal = (X500Principal) x509Certificate.getSubjectX500Principal();
             Principal principal = x509Certificate.getSubjectDN();
             String fullDns = principal.getName();
+
+            ByteArrayOutputStream qr = QRCode.from(fullDns)
+                    .withSize(50, 50).stream();
+
             String[] dns = fullDns.split(",");
             Map<String,String> datos = new HashMap<>();
             datos.put("APELLIDOS","");
@@ -237,6 +287,8 @@ public class FirmadorImpl implements Firmador{
                                 + (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "")
                                 + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "")
                                 + (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
+            sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
+            sap.setImage(Image.getInstance(qr.toByteArray()));
 
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
