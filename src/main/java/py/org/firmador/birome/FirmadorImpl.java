@@ -175,6 +175,9 @@ public class FirmadorImpl implements Firmador{
         ResourceBundle conf = ResourceBundle.getBundle("bic");
         Integer height = Integer.valueOf(conf.getString("firma.alto"));
         Integer width = Integer.valueOf(conf.getString("firma.ancho"));
+        Integer margin = Integer.valueOf(conf.getString("firma.margen"));
+        height = height + margin;
+        width = width + margin;
 
         Map<String, Float> retorno = new HashMap<>();
 
@@ -208,24 +211,24 @@ public class FirmadorImpl implements Firmador{
         }
 
         retorno.put("eix", cropBox.getRight(width));
-        retorno.put("eiy", cropBox.getBottom());
-        retorno.put("esx", cropBox.getRight());
+        retorno.put("eiy", cropBox.getBottom(margin));
+        retorno.put("esx", cropBox.getRight(margin));
         retorno.put("esy", cropBox.getBottom(height));
 
         if(cropBox != null){
             if(pos.equals("esquina-superior-izquierda")) {
-                retorno.put("eix", cropBox.getLeft());
+                retorno.put("eix", cropBox.getLeft(margin));
                 retorno.put("eiy", cropBox.getTop(height));
                 retorno.put("esx", cropBox.getLeft(width));
-                retorno.put("esy", cropBox.getTop());
+                retorno.put("esy", cropBox.getTop(margin));
             }else if(pos.equals("esquina-superior-derecha")){
                 retorno.put("eix", cropBox.getRight(width));
                 retorno.put("eiy", cropBox.getTop(height));
-                retorno.put("esx", cropBox.getRight());
-                retorno.put("esy", cropBox.getTop());
+                retorno.put("esx", cropBox.getRight(margin));
+                retorno.put("esy", cropBox.getTop(margin));
             }else if(pos.equals("esquina-inferior-izquierda")){
-                retorno.put("eix", cropBox.getLeft());
-                retorno.put("eiy", cropBox.getBottom());
+                retorno.put("eix", cropBox.getLeft(margin));
+                retorno.put("eiy", cropBox.getBottom(margin));
                 retorno.put("esx", cropBox.getLeft(width));
                 retorno.put("esy", cropBox.getBottom(height));
             }
@@ -265,7 +268,8 @@ public class FirmadorImpl implements Firmador{
             String fullDns = principal.getName();
 
             ByteArrayOutputStream qr = QRCode.from(fullDns)
-                    .withSize(50, 50).stream();
+                                        .withSize(50, 50)
+                                        .stream();
 
             String[] dns = fullDns.split(",");
             Map<String,String> datos = new HashMap<>();
@@ -287,14 +291,18 @@ public class FirmadorImpl implements Firmador{
                                 + (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "")
                                 + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "")
                                 + (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
-            sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
-            sap.setImage(Image.getInstance(qr.toByteArray()));
 
             // digital signature
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;
+
+            //sap.setImage(Image.getInstance(qr.toByteArray()));
+            sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
+
+            sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
+            sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
 
             // Signs the document using the detached mode, CMS or CAdES equivalent
             MakeSignature.signDetached(sap, digest, es, certs, null, null, null, 0, MakeSignature.CryptoStandard.CMS);
