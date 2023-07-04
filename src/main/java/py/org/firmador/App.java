@@ -4,8 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import py.org.firmador.birome.Firmador;
 import py.org.firmador.birome.FirmadorImpl;
+import py.org.firmador.dto.Resultado;
 
 public class App {
     public static void main( String[] args ){
@@ -22,9 +25,19 @@ public class App {
         }
 
         Firmador bic = new FirmadorImpl();
-        bic.firmar(parametros);
+        Resultado res = bic.firmar(parametros);
 
-        Log.info("Listo! " + parametros.toString());
+        ObjectMapper mapper = new ObjectMapper();
+
+        String json = "";
+        try{
+            json = mapper.writeValueAsString(res);
+        }catch(JsonProcessingException jpe){
+            Log.error("Error al procesar respuesta", jpe);
+            System.exit(1);
+        }
+
+        Log.info("Listo! " + json);
         System.exit(0);
     }
 

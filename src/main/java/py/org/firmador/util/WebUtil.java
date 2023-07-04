@@ -11,6 +11,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpStatus;
 import py.org.firmador.Log;
 
 import java.io.File;
@@ -25,7 +26,7 @@ import java.util.Map;
 
 public class WebUtil {
 
-    public static void upload(File file, String uri, Map<String,String> headers, Map<String,String> parameters){
+    public static String upload(File file, String uri, Map<String,String> headers, Map<String,String> parameters){
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setMode(HttpMultipartMode.LEGACY);
         for(Map.Entry<String,String> entry : parameters.entrySet()){
@@ -45,13 +46,17 @@ public class WebUtil {
         try(CloseableHttpClient client = HttpClientBuilder.create().build()){
 
             CloseableHttpResponse response = (CloseableHttpResponse) client.execute(post);
-            if(response.getCode() == )
-            HttpEntity respuesta = response.getEntity();
-
+            if((response.getCode() + "").startsWith("2")){
+                HttpEntity respuesta = response.getEntity();
+                return respuesta.toString();
+            }
+            Log.error("Error HTTP " + response.getCode() + " al intentar realizar el upload a " + uri);
+            System.exit(1);
         }catch(IOException ex){
-
+            Log.error("Error al intentar realizar el upload a " + uri, ex);
+            System.exit(1);
         }
-
+        return "";
     }
 
     public static boolean descargar(String origen, String destino, Long dto, Long rto) throws IOException {

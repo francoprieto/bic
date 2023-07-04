@@ -1,7 +1,7 @@
 package py.org.firmador.birome;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Image;
@@ -16,6 +16,7 @@ import org.apache.commons.io.FilenameUtils;
 import py.org.firmador.Log;
 import py.org.firmador.dto.Conf;
 import py.org.firmador.dto.Libs;
+import py.org.firmador.dto.Resultado;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 import py.org.firmador.util.ConfiguracionUtil;
 import py.org.firmador.util.WebUtil;
@@ -23,7 +24,6 @@ import py.org.firmador.util.WebUtil;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -72,7 +72,7 @@ public class FirmadorImpl implements Firmador{
         Log.error("No se ha definido un archivo!");
         return false;
     }
-    public String firmar(Map<String,String> parametros){
+    public Resultado firmar(Map<String,String> parametros){
         Conf configuracion = null;
         try {
             if (parametros.containsKey("init") && parametros.get("init").equals("true"))
@@ -81,22 +81,51 @@ public class FirmadorImpl implements Firmador{
                 configuracion = ConfiguracionUtil.init();
         }catch(UnsupportedPlatformException exception){
             Log.error("Plataforma no soportada");
-            return "error";
+            return new Resultado("error", "Plataforma no soportada");
         }
 
-        if(!this.validarParametrosArchivos(parametros)) return "error";
+        if(!this.validarParametrosArchivos(parametros)) return new Resultado("error", "Parametros inválidos");
 
         List<File> archivos = null;
         try{
             archivos = this.cachearArchivos(parametros, configuracion.getDownloadTimeout(), configuracion.getReadTimeout());
         }catch(IOException ex){
             Log.error("Error al cacherar los archivos", ex);
-            return "error";
+            return new Resultado("error", "Error al cacherar los archivos");
         }
 
         List<File> firmados = firmarArchivos(configuracion, parametros, archivos);
+        String resultados = "";
+        if(parametros.containsKey("callback-api")){
+            Map<String,String> headers = new HashMap<>();
+            try {
+                if (parametros.containsKey("callback-headers"))
+                    headers = WebUtil.getHeaders(parametros.get("callback-headers"));
+            }catch(JsonProcessingException jpe){
+                Log.error("El JSON de callback-headers " + parametros.get("callback-headers") + " no es valido!", jpe);
+                return new Resultado("error", "El JSON de callback-headers " + parametros.get("callback-headers") + " no es valido!");
+            }
+            Map<String,String> params = new HashMap<>();
+            try {
+                if (parametros.containsKey("callback-parameters"))
+                    params = WebUtil.getHeaders(parametros.get("callback-parameters"));
+            }catch(JsonProcessingException jpe){
+                Log.error("El JSON de callback-parameters " + parametros.get("callback-parameters") + " no es valido!", jpe);
+                return new Resultado("error", "El JSON de callback-parameters " + parametros.get("callback-parameters") + " no es valido!");
+            }
+            for(File file : firmados){
+                String res = WebUtil.upload(file, parametros.get("callback-api"), headers, params);
+                if(res != null && res.trim().length() > 0){
+                    if(resultados.trim().length() > 0) resultados += ",";
+                    resultados += "[{\"archivo\":\"" + file.getName() + "\", \"resultado\":\"" + res + "\"}]";
+                }
+                if(file.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache"))
+                    FileUtils.deleteQuietly(file);
+            }
+        }
+        if(resultados.trim().length() == 0) return new Resultado("ok","Archivos firmados");
 
-        return null;
+        return new Resultado("ok",resultados);
     }
 
     private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos){

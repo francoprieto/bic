@@ -1,5 +1,7 @@
 package py.org.firmador.birome;
 
+import py.org.firmador.dto.Resultado;
+
 import java.util.Map;
 
 public interface Firmador {
@@ -19,5 +21,5 @@ public interface Firmador {
         , "init"                // 10 init=true ejecuta el proceso de autoconfiguracion
     };
 
-    public String firmar(Map<String,String> parametros);
+    public Resultado firmar(Map<String,String> parametros);
 }
