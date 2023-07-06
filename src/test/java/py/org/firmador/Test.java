@@ -24,7 +24,7 @@ public class Test {
             destino = "--destino=/Users/francoprieto/Documents";
         }
 
-        String posicion = "--posicion={\"lugar\":\"esquina-inferior-derecha\",\"pagina\":\"primera\"}";
+        String posicion = "--posicion={\"lugar\":\"centro-superior\",\"pagina\":\"primera\"}";
         App.main(new String[]{"--pin=04209217", archivos, destino, posicion});
 
     }

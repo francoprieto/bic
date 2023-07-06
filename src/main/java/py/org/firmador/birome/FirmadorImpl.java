@@ -239,9 +239,15 @@ public class FirmadorImpl implements Firmador{
             }
         }
 
-        retorno.put("eix", cropBox.getRight(width));
+        Float mitadFirmaFloat = Float.valueOf(width / 2);
+        Float mitadPaginaFloat = Float.valueOf(cropBox.getWidth() / 2);
+        Integer mitadFirma = mitadFirmaFloat.intValue();
+        Integer mitadPagina = mitadPaginaFloat.intValue();
+        Integer mitad = mitadPagina - mitadFirma;
+        // centro-inferior (default)
+        retorno.put("eix", cropBox.getLeft(margin));
         retorno.put("eiy", cropBox.getBottom(margin));
-        retorno.put("esx", cropBox.getRight(margin));
+        retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
         retorno.put("esy", cropBox.getBottom(height));
 
         if(cropBox != null){
@@ -255,11 +261,21 @@ public class FirmadorImpl implements Firmador{
                 retorno.put("eiy", cropBox.getTop(height));
                 retorno.put("esx", cropBox.getRight(margin));
                 retorno.put("esy", cropBox.getTop(margin));
-            }else if(pos.equals("esquina-inferior-izquierda")){
+            }else if(pos.equals("esquina-inferior-izquierda")) {
                 retorno.put("eix", cropBox.getLeft(margin));
                 retorno.put("eiy", cropBox.getBottom(margin));
                 retorno.put("esx", cropBox.getLeft(width));
                 retorno.put("esy", cropBox.getBottom(height));
+            }else if(pos.equals("esquina-inferior-derecha")){
+                retorno.put("eix", cropBox.getRight(width));
+                retorno.put("eiy", cropBox.getBottom(margin));
+                retorno.put("esx", cropBox.getRight(margin));
+                retorno.put("esy", cropBox.getBottom(height));
+            }else if(pos.equals("centro-superior")){
+                retorno.put("eix", cropBox.getLeft(margin));
+                retorno.put("eiy", cropBox.getTop(height));
+                retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
+                retorno.put("esy", cropBox.getTop(margin));
             }
         }
 
