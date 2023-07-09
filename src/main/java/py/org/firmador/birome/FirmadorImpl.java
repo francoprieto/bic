@@ -298,6 +298,7 @@ public class FirmadorImpl implements Firmador{
         try {
             // reader and stamper
             PdfReader pdf = new PdfReader(archivo.getCanonicalPath());
+
             fos = new ByteArrayOutputStream();
 
             PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
@@ -365,6 +366,7 @@ public class FirmadorImpl implements Firmador{
             return firmado;
         } catch (IOException | DocumentException | GeneralSecurityException e) {
             Log.error("Error al firmar el archivo " + archivo.getName(), e);
+            System.exit(1);
         }
         return null;
     }

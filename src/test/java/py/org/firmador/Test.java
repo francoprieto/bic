@@ -8,15 +8,8 @@ import java.util.ResourceBundle;
 public class Test {
 
     public static void main( String[] args ) throws Exception{
-        /*
-        ResourceBundle bicConf = ResourceBundle.getBundle("bic");
-        Map<String,List<String>> libs = PropertiesUtil.getLibraries(bicConf);
-        for(Map.Entry<String,List<String>> entry : libs.entrySet()){
-            for(String file : entry.getValue())
-                Log.info("Archivo tipo " + entry.getKey() + " : " + file);
-        }
-         */
-        String archivos = "--archivos=C:\\Users\\franco\\Downloads\\test.pdf,C:\\Users\\franco\\Downloads\\factura ccpa.pdf";
+
+        String archivos = "--archivos=C:\\Users\\franco\\Downloads\\test.pdf";
         String destino = "--destino=C:\\Users\\franco\\Documents";
 
         if(!ConfiguracionUtil.getOS().equals(ConfiguracionUtil.WIN)){
