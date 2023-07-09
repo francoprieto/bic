@@ -239,18 +239,24 @@ public class FirmadorImpl implements Firmador{
             }
         }
 
-        Float mitadFirmaFloat = Float.valueOf(width / 2);
-        Float mitadPaginaFloat = Float.valueOf(cropBox.getWidth() / 2);
-        Integer mitadFirma = mitadFirmaFloat.intValue();
-        Integer mitadPagina = mitadPaginaFloat.intValue();
-        Integer mitad = mitadPagina - mitadFirma;
-        // centro-inferior (default)
-        retorno.put("eix", cropBox.getLeft(margin));
-        retorno.put("eiy", cropBox.getBottom(margin));
-        retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
-        retorno.put("esy", cropBox.getBottom(height));
+        if(cropBox == null){
+            cropBox = pdf.getCropBox(1);
+            retorno.put("pagina",Float.valueOf(1));
+        }
 
         if(cropBox != null){
+
+            Float mitadFirmaFloat = Float.valueOf(width / 2);
+            Float mitadPaginaFloat = Float.valueOf(cropBox.getWidth() / 2);
+            Integer mitadFirma = mitadFirmaFloat.intValue();
+            Integer mitadPagina = mitadPaginaFloat.intValue();
+
+            // centro-inferior (default)
+            retorno.put("eix", cropBox.getLeft(margin));
+            retorno.put("eiy", cropBox.getBottom(margin));
+            retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
+            retorno.put("esy", cropBox.getBottom(height));
+
             if(pos.equals("esquina-superior-izquierda")) {
                 retorno.put("eix", cropBox.getLeft(margin));
                 retorno.put("eiy", cropBox.getTop(height));
