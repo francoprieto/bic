@@ -22,7 +22,7 @@ const bicurl = 'http://localhost:4200/bic';
 let mainWindow
 
 // Deep linked url
-let deeplinkingUrl
+let deeplinkingUrl = '';
 
 // Force Single Instance Application
 const gotTheLock = app.requestSingleInstanceLock()
@@ -48,8 +48,6 @@ if (gotTheLock) {
 	return
 }
 
-
-
 function firmar(archivo, pin){
 
 }
@@ -65,18 +63,21 @@ function createWindow() {
 	})
 
 	// and load the index.html of the app.
-	mainWindow.loadURL(bicurl);
+	//mainWindow.loadURL(bicurl);
 
+    mainWindow.webContents.openDevTools()
 	// Protocol handler for win32
 	if (process.platform == 'win32') {
 		// Keep only command line / deep linked arguments
 		deeplinkingUrl = process.argv.slice(1)
 	}
 
-	if (deeplinkingUrl) {
-		let params = (deeplinkingUrl + '').replaceAll('bic://', '');
-		mainWindow.loadURL(bicurl + '?d=' + params);
+	if (deeplinkingUrl && deeplinkingUrl.length > 1) {
+		let params = deeplinkingUrl.replaceAll('bic://', '');
+        logEverywhere('createWindow# ' + params);
 	}
+
+    mainWindow.loadURL(__dirname + '/index.html');
 
 	// Emitted when the window is closed.
 	mainWindow.on('closed', function () {

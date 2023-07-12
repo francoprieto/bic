@@ -4,11 +4,27 @@
   "description": "Aplicacion para firma digital de PDFs",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "pack": "build --dir",
+    "dist": "build"
   },
   "author": "Franco",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^25.2.0"
+    "electron": "^5.0.1",
+    "electron-builder": "^20.40.2"
+  },
+  "build": {
+    "appId": "bic-macos-win32",
+    "protocols": {
+      "name": "bic",
+      "schemes": [
+        "bic"
+      ]
+    },
+    "mac": {
+      "category": "public.app-category.Reference"
+    },
+    "win": {}
   }
 }
