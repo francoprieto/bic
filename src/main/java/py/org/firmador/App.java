@@ -6,8 +6,8 @@ import java.util.Map.Entry;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import py.org.firmador.birome.Firmador;
-import py.org.firmador.birome.FirmadorImpl;
+import py.org.firmador.bic.Firmador;
+import py.org.firmador.bic.FirmadorImpl;
 import py.org.firmador.dto.Resultado;
 
 public class App {

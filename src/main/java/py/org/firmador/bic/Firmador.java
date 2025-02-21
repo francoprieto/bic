@@ -1,4 +1,4 @@
-package py.org.firmador.birome;
+package py.org.firmador.bic;
 
 import py.org.firmador.dto.Resultado;
 

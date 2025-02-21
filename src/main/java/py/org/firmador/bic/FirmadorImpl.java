@@ -1,6 +1,5 @@
-package py.org.firmador.birome;
+package py.org.firmador.bic;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.DocumentException;
