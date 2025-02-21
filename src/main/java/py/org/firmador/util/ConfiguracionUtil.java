@@ -264,9 +264,10 @@ public class ConfiguracionUtil {
             TimeStamp atomicNtpTime = TimeStamp.getNtpTime(currentTime + offset);
             return sdf.format(atomicNtpTime.getTime());
         }catch(IOException ex){
-            Log.error("Error al obtener la fecha de " + server);
+            String out = sdf.format(new Date());
+            Log.info("No se pudo obtener la fecha de " + server + " - retornamos " + out);
+            return out;
         }
-        return null;
     }
 
 }

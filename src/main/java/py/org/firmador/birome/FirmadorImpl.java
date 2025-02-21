@@ -23,7 +23,10 @@ import py.org.firmador.util.WebUtil;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.swing.*;
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +34,8 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class FirmadorImpl implements Firmador{
 
@@ -70,14 +75,16 @@ public class FirmadorImpl implements Firmador{
         }
 
         Log.error("No se ha definido un archivo!");
+
         return false;
     }
     public Resultado firmar(Map<String,String> parametros){
         Conf configuracion = null;
         try {
-            if (parametros.containsKey("init") && parametros.get("init").equals("true"))
+            if (parametros.containsKey("init") && parametros.get("init").equals("true")) {
                 configuracion = ConfiguracionUtil.init(true);
-            else
+                return new Resultado("ok","Configuración inicial exitosa");
+            }else
                 configuracion = ConfiguracionUtil.init();
         }catch(UnsupportedPlatformException exception){
             Log.error("Plataforma no soportada");
@@ -138,19 +145,57 @@ public class FirmadorImpl implements Firmador{
         for(Libs lib : libs){
             boolean romper = false;
             for(String file : lib.getFiles()){
-                Map<String,String> confs = new HashMap<>();
-                confs.put("slot","0");
-                confs.put("name",lib.getName());
-                confs.put("library",file);
-                String conf = ConfiguracionUtil.toConfFile(confs);
-                providerPKCS11 = providerPKCS11.configure(conf);
+                boolean configurado = false;
+                for(int s=0; s<10; s++) {
+                    try {
+                        Map<String, String> confs = new HashMap<>();
+                        confs.put("slot", s + "");
+                        confs.put("name", lib.getName());
+                        confs.put("library", file);
+                        String conf = ConfiguracionUtil.toConfFile(confs);
+                        providerPKCS11 = providerPKCS11.configure(conf);
+                        configurado = true;
+                        break;
+                    }catch(Exception pe){
+                        Log.info("No es el slot " + s );
+                    }
+                }
+
+                if(!configurado){
+                    Log.error("La configuración es inválida");
+                    return null;
+                }
+
                 java.security.Security.addProvider(providerPKCS11);
                 KeyStore.Builder builder = null;
                 if(pin == null){
                     // Solicita el PIN al usuario
                     KeyStore.CallbackHandlerProtection chp = new KeyStore.CallbackHandlerProtection(new CallbackHandler() {
-                        public void handle(Callback[] arg0) throws IOException, UnsupportedCallbackException {
-                            // Se abre dialogo por defecto para la firma
+                        public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+                            for (Callback callback : callbacks) {
+                                if (callback instanceof PasswordCallback) {
+                                    PasswordCallback passwordCallback = (PasswordCallback) callback;
+                                    char[] password = promptForPassword();
+                                    if (password != null) {
+                                        passwordCallback.setPassword(password);
+                                    }
+                                } else {
+                                    throw new UnsupportedCallbackException(callback);
+                                }
+                            }
+                        }
+                        private char[] promptForPassword() {
+                            AtomicReference<char[]> passwordRef = new AtomicReference<>();
+                            JPasswordField passwordField = new JPasswordField(20);
+                            JPanel panel = new JPanel(new BorderLayout());
+                            panel.add(new JLabel("Ingrese su PIN:"), BorderLayout.NORTH);
+                            panel.add(passwordField, BorderLayout.CENTER);
+
+                            int option = JOptionPane.showConfirmDialog(null, panel, "Autenticación", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+                            if (option == JOptionPane.OK_OPTION) {
+                                passwordRef.set(passwordField.getPassword());
+                            }
+                            return passwordRef.get();
                         }
                     });
                     builder = KeyStore.Builder.newInstance("PKCS11", providerPKCS11, chp);

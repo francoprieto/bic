@@ -57,7 +57,7 @@ public class App {
             }
         }
         if(!existe){
-            Log.error("Parametro " + claveValor[0] + " no es concido");
+            Log.error("Parametro " + claveValor[0] + " no es conocido");
             return null;
         } 
         Map<String,String> retorno = new HashMap<>();
