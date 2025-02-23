@@ -162,6 +162,7 @@ public class FirmadorImpl implements Firmador{
 
                 if(!configurado){
                     Log.error("La configuración es inválida");
+                    System.exit(1);
                     return null;
                 }
 

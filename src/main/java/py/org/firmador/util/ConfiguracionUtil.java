@@ -37,6 +37,7 @@ public class ConfiguracionUtil {
             conf = mapper.readValue(new File(file), Conf.class);
         }catch(IOException ioe){
             Log.error("Error al leer la configuracion", ioe);
+            System.exit(1);
         }
         return conf;
     }
@@ -110,12 +111,14 @@ public class ConfiguracionUtil {
             retorno = getJsonConf(drivers, params);
             if(retorno == null){
                 Log.error("La configuración no es válida, debe inicializar la aplicación");
+                System.exit(1);
                 return null;
             }
             FileUtils.writeByteArrayToFile(conf, retorno.getBytes());
             configuracion = leerPropiedades(conf.getAbsolutePath());
         }catch(IOException e){
             Log.error("No se pudo detectar librerias", e);
+            System.exit(1);
         }
         Log.info("conf en json: " + retorno);
 
@@ -125,16 +128,20 @@ public class ConfiguracionUtil {
     public static Map<String,List<String>> getLibraries(ResourceBundle bicConf) throws UnsupportedPlatformException {
         String os = getOS();
         String base = null;
+        String excludeStrings = null;
         switch (os){
             case WIN:
                 base = bicConf.getString(WIN);
+                excludeStrings = bicConf.getString("win.exclude");
                 os = WIN;
                 break;
             case LINUX:
                 base = bicConf.getString(LINUX);
+                excludeStrings = bicConf.getString("ux.exclude");
                 os = LINUX;
                 break;
             case MAC:
+                excludeStrings = bicConf.getString("mac.exclude");
                 base = bicConf.getString(MAC);
                 os = MAC;
                 break;
@@ -143,6 +150,14 @@ public class ConfiguracionUtil {
         }
 
         if(base == null) return new HashMap<>();
+
+        String[] excludes = new String[0];
+        if(excludeStrings != null) excludes = excludeStrings.split(";");
+
+        List<String> excluidos = new ArrayList<>();
+        for(String exc : excludes)
+            excluidos.add(exc.toLowerCase().trim());
+
 
         Map<String,String> libsCandidatas = new HashMap<>();
         int i = 0;
@@ -175,7 +190,7 @@ public class ConfiguracionUtil {
                 String[] archivos = entrada.getValue().toArray(new String[0]);
                 if (raiz.exists()) {
                     List<File> librerias = new ArrayList<>();
-                    find(raiz, archivos, librerias);
+                    find(raiz, archivos, librerias, excluidos);
                     if (!librerias.isEmpty()) {
                         for (File file : librerias) {
                             if(!libs.containsKey(entrada.getKey())) libs.put(entrada.getKey(),new ArrayList<String>());
@@ -189,14 +204,14 @@ public class ConfiguracionUtil {
         return libs;
     }
 
-    private static void find(File raiz, String[] buscados, List<File> encontrados){
+    private static void find(File raiz, String[] buscados, List<File> encontrados, List<String> excluidos){
         if(raiz == null) return;
         List<File> archivos = new ArrayList<>();
         try{
             for(File f : raiz.listFiles()){
                 if(f.isFile()){
                     for(String buscado: buscados){
-                        if(f.getName().contains(buscado) && !f.getName().endsWith(".conf")){
+                        if(f.getName().equals(buscado) && !f.getName().endsWith(".conf")){
                             archivos.add(f);
                             break;
                         }
@@ -211,8 +226,8 @@ public class ConfiguracionUtil {
 
         if(raiz.listFiles() != null) {
             for (File dir : raiz.listFiles()) {
-                if (!dir.isFile()) {
-                    find(dir, buscados, encontrados);
+                if (!dir.isFile() && !excluidos.contains(dir.getName().toLowerCase().trim())) {
+                    find(dir, buscados, encontrados, excluidos);
                 }
             }
         }
