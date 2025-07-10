@@ -261,11 +261,14 @@ public class ConfiguracionUtil {
     public static String ahora(){
         ResourceBundle bicConf = ResourceBundle.getBundle("bic");
         String server = bicConf.getString("ntp.server");
-        NTPUDPClient client = new NTPUDPClient();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
-        // We want to timeout if a response takes longer than 10 seconds
-        client.setDefaultTimeout(10_000);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        if(server.isEmpty()) return sdf.format(new Date());
+
+        NTPUDPClient client = new NTPUDPClient();
+
+        // We want to timeout if a response takes longer than 2 seconds
+        client.setDefaultTimeout(2000);
         Long offset = 0L;
         try {
             InetAddress inetAddress = InetAddress.getByName(server);
