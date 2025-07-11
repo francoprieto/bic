@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import py.org.firmador.bic.Firmador;
 import py.org.firmador.bic.FirmadorImpl;
 import py.org.firmador.dto.Resultado;
+import py.org.firmador.util.MensajeUtil;
 
 public class App {
     public static void main( String[] args ){
@@ -36,6 +37,8 @@ public class App {
             Log.error("Error al procesar respuesta", jpe);
             System.exit(1);
         }
+
+        MensajeUtil.showMessage(res);
 
         Log.info("Listo! " + json);
         System.exit(0);

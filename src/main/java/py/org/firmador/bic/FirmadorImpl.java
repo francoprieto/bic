@@ -78,6 +78,9 @@ public class FirmadorImpl implements Firmador{
         return false;
     }
     public Resultado firmar(Map<String,String> parametros){
+
+        this.cleanCache();
+
         Conf configuracion = null;
         try {
             if (parametros.containsKey("init") && parametros.get("init").equals("true")) {
@@ -101,6 +104,10 @@ public class FirmadorImpl implements Firmador{
         }
 
         List<File> firmados = firmarArchivos(configuracion, parametros, archivos);
+
+        if(firmados == null || firmados.isEmpty())
+            return new Resultado("error", "Archivos no firmados\nVerifique que el token este conectado.");
+
         String resultados = "";
         if(parametros.containsKey("callback-api")){
             Map<String,String> headers = new HashMap<>();
@@ -129,7 +136,7 @@ public class FirmadorImpl implements Firmador{
                     FileUtils.deleteQuietly(file);
             }
         }
-        if(resultados.trim().length() == 0) return new Resultado("ok","Archivos firmados");
+        if(resultados.trim().length() == 0) return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
 
         return new Resultado("ok",resultados);
     }
@@ -139,8 +146,10 @@ public class FirmadorImpl implements Firmador{
         List<Libs> libs = configuracion.getLibs();
         List<File> retorno = new ArrayList<>();
         String pin = null;
+
         if(parametros.containsKey("pin") && parametros.get("pin") != null)
             pin = parametros.get("pin").trim();
+
         for(Libs lib : libs){
             boolean romper = false;
             for(String file : lib.getFiles()){
@@ -414,6 +423,15 @@ public class FirmadorImpl implements Firmador{
             System.exit(1);
         }
         return null;
+    }
+
+    private void cleanCache(){
+        String cache = ConfiguracionUtil.getDirCache();
+        File dir = new File(cache);
+        if(dir != null && dir.exists() && dir.isDirectory()){
+            for(File f : dir.listFiles())
+                FileUtils.deleteQuietly(f);
+        }
     }
 
     private List<File> cachearArchivos(Map<String,String> parametros, Long downloadTimeout, Long readTimeout) throws IOException {
