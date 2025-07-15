@@ -38,96 +38,110 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class FirmadorImpl implements Firmador{
 
-    private boolean validarParametrosArchivos(Map<String,String> parametros){
+    // Constantes para los nombres de parámetros
+    private static final String PARAM_ARCHIVO = "archivo";
+    private static final String PARAM_ARCHIVOS = "archivos";
+    private static final String PARAM_DESTINO = "destino";
+    private static final String PARAM_ARCHIVO_URI = "archivo-uri";
+    private static final String PARAM_INIT = "init";
+    private static final String PARAM_PIN = "pin";
+    private static final String PARAM_CALLBACK_API = "callback-api";
+    private static final String PARAM_CALLBACK_HEADERS = "callback-headers";
+    private static final String PARAM_CALLBACK_PARAMETERS = "callback-parameters";
+    private static final String PARAM_ARCHIVO_NOMBRE = "archivo-nombre";
+    private static final String PARAM_ARCHIVO_HEADERS = "archivo-headers";
+    private static final String PARAM_POSICION = "posicion";
 
-        if(parametros.containsKey("archivo")){
-            if(!(new File(parametros.get("archivo"))).exists()
-                || !(new File(parametros.get("archivo"))).isFile()){
-                Log.error("El archivo " + parametros.get("archivo") + " no es válido!");
+    /**
+     * Valida los parámetros relacionados a archivos.
+     * @param parametros Mapa de parámetros
+     * @return true si los parámetros son válidos, false en caso contrario
+     */
+    private boolean validarParametrosArchivos(Map<String,String> parametros){
+        if(parametros.containsKey(PARAM_ARCHIVO)){
+            File archivo = new File(parametros.get(PARAM_ARCHIVO));
+            if(!archivo.exists() || !archivo.isFile()){
+                Log.error("El archivo " + archivo + " no es válido!");
                 return false;
             }
             return true;
         }
-
-        if(parametros.containsKey("archivos")){
-            String[] archivos = parametros.get("archivos").split(",");
-            for(String archivo : archivos){
-                if(!(new File(archivo)).exists() || !(new File(archivo)).isFile()) {
+        if(parametros.containsKey(PARAM_ARCHIVOS)){
+            String[] archivos = parametros.get(PARAM_ARCHIVOS).split(",");
+            for(String archivoPath : archivos){
+                File archivo = new File(archivoPath);
+                if(!archivo.exists() || !archivo.isFile()) {
                     Log.error("El archivo " + archivo + " no es válido!");
                     return false;
                 }
             }
             return true;
         }
-
-        if(parametros.containsKey("archivo-uri")
-                && parametros.get("archivo-uri").trim().length() > 0)
+        if(parametros.containsKey(PARAM_ARCHIVO_URI)
+                && parametros.get(PARAM_ARCHIVO_URI).trim().length() > 0)
             return true;
-
-        if(parametros.containsKey("destino")){
-            File destino = new File(parametros.get("destino"));
+        if(parametros.containsKey(PARAM_DESTINO)){
+            File destino = new File(parametros.get(PARAM_DESTINO));
             if(!destino.exists() || !destino.isDirectory()){
-                Log.error("El directorio " + parametros.get("destino") + " no es válido!");
+                Log.error("El directorio " + parametros.get(PARAM_DESTINO) + " no es válido!");
                 return false;
             }
             return true;
         }
-
         Log.error("No se ha definido un archivo!");
-
         return false;
     }
+
+    /**
+     * Firma los archivos según los parámetros y configuración.
+     * @param parametros Mapa de parámetros
+     * @return Resultado de la operación
+     */
     public Resultado firmar(Map<String,String> parametros){
-
         this.cleanCache();
-
-        Conf configuracion = null;
+        Conf configuracion;
         try {
-            if (parametros.containsKey("init") && parametros.get("init").equals("true")) {
+            if (parametros.containsKey(PARAM_INIT) && "true".equals(parametros.get(PARAM_INIT))) {
                 configuracion = ConfiguracionUtil.init(true);
                 return new Resultado("ok","Configuración inicial exitosa");
-            }else
+            } else {
                 configuracion = ConfiguracionUtil.init();
-        }catch(UnsupportedPlatformException exception){
+            }
+        } catch(UnsupportedPlatformException exception){
             Log.error("Plataforma no soportada");
             return new Resultado("error", "Plataforma no soportada");
         }
-
         if(!this.validarParametrosArchivos(parametros)) return new Resultado("error", "Parametros inválidos");
-
-        List<File> archivos = null;
+        List<File> archivos;
         try{
             archivos = this.cachearArchivos(parametros, configuracion.getDownloadTimeout(), configuracion.getReadTimeout());
         }catch(IOException ex){
             Log.error("Error al cacherar los archivos", ex);
             return new Resultado("error", "Error al cacherar los archivos");
         }
-
         List<File> firmados = firmarArchivos(configuracion, parametros, archivos);
-
         if(firmados == null || firmados.isEmpty())
             return new Resultado("error", "Archivos no firmados\nVerifique que el token este conectado.");
-
         String resultados = "";
-        if(parametros.containsKey("callback-api")){
+        if(parametros.containsKey(PARAM_CALLBACK_API)){
             Map<String,String> headers = new HashMap<>();
             try {
-                if (parametros.containsKey("callback-headers"))
-                    headers = WebUtil.getHeaders(parametros.get("callback-headers"));
+                if (parametros.containsKey(PARAM_CALLBACK_HEADERS))
+                    headers = WebUtil.getHeaders(parametros.get(PARAM_CALLBACK_HEADERS));
             }catch(JsonProcessingException jpe){
-                Log.error("El JSON de callback-headers " + parametros.get("callback-headers") + " no es valido!", jpe);
-                return new Resultado("error", "El JSON de callback-headers " + parametros.get("callback-headers") + " no es valido!");
+                Log.error("El JSON de callback-headers " + parametros.get(PARAM_CALLBACK_HEADERS) + " no es valido!", jpe);
+                return new Resultado("error", "El JSON de callback-headers " + parametros.get(PARAM_CALLBACK_HEADERS) + " no es valido!");
             }
             Map<String,String> params = new HashMap<>();
             try {
-                if (parametros.containsKey("callback-parameters"))
-                    params = WebUtil.getHeaders(parametros.get("callback-parameters"));
+                if (parametros.containsKey(PARAM_CALLBACK_PARAMETERS))
+                    params = WebUtil.getHeaders(parametros.get(PARAM_CALLBACK_PARAMETERS));
             }catch(JsonProcessingException jpe){
-                Log.error("El JSON de callback-parameters " + parametros.get("callback-parameters") + " no es valido!", jpe);
-                return new Resultado("error", "El JSON de callback-parameters " + parametros.get("callback-parameters") + " no es valido!");
+                Log.error("El JSON de callback-parameters " + parametros.get(PARAM_CALLBACK_PARAMETERS) + " no es valido!", jpe);
+                return new Resultado("error", "El JSON de callback-parameters " + parametros.get(PARAM_CALLBACK_PARAMETERS) + " no es valido!");
             }
             for(File file : firmados){
-                String res = WebUtil.upload(file, parametros.get("callback-api"), headers, params);
+                String res = WebUtil.upload(file, parametros.get(PARAM_CALLBACK_API), headers, params);
                 if(res != null && res.trim().length() > 0){
                     if(resultados.trim().length() > 0) resultados += ",";
                     resultados += "[{\"archivo\":\"" + file.getName() + "\", \"resultado\":\"" + res + "\"}]";
@@ -137,27 +151,33 @@ public class FirmadorImpl implements Firmador{
             }
         }
         if(resultados.trim().length() == 0) return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
-
         return new Resultado("ok",resultados);
     }
 
+    /**
+     * Firma una lista de archivos utilizando la configuración y parámetros dados.
+     * @param configuracion Configuración de la aplicación
+     * @param parametros Parámetros de la firma
+     * @param archivos Archivos a firmar
+     * @return Lista de archivos firmados
+     */
     private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos){
         Provider providerPKCS11 = Security.getProvider(Firmador.SUN_PKCS11_PROVIDER_NAME);
         List<Libs> libs = configuracion.getLibs();
-        List<File> retorno = new ArrayList<>();
+        List<File> archivosFirmados = new ArrayList<>();
         String pin = null;
 
-        if(parametros.containsKey("pin") && parametros.get("pin") != null)
-            pin = parametros.get("pin").trim();
+        if(parametros.containsKey(PARAM_PIN) && parametros.get(PARAM_PIN) != null)
+            pin = parametros.get(PARAM_PIN).trim();
 
         for(Libs lib : libs){
-            boolean romper = false;
+            boolean encontrado = false;
             for(String file : lib.getFiles()){
                 boolean configurado = false;
                 for(int s=0; s<10; s++) {
                     try {
                         Map<String, String> confs = new HashMap<>();
-                        confs.put("slot", s + "");
+                        confs.put("slot", String.valueOf(s));
                         confs.put("name", lib.getName());
                         confs.put("library", file);
                         String conf = ConfiguracionUtil.toConfFile(confs);
@@ -171,12 +191,11 @@ public class FirmadorImpl implements Firmador{
 
                 if(!configurado){
                     Log.error("La configuración es inválida");
-                    System.exit(1);
-                    return null;
+                    return new ArrayList<>();
                 }
 
                 java.security.Security.addProvider(providerPKCS11);
-                KeyStore.Builder builder = null;
+                KeyStore.Builder builder;
                 if(pin == null){
                     // Solicita el PIN al usuario
                     KeyStore.CallbackHandlerProtection chp = new KeyStore.CallbackHandlerProtection(new CallbackHandler() {
@@ -233,27 +252,32 @@ public class FirmadorImpl implements Firmador{
                         if(archivo.exists() && archivo.isFile()) {
                             File firmado = this.procesarFirma(archivo, privateKey, providerPKCS11, cert, parametros);
                             if(firmado != null && firmado.exists() && firmado.isFile())
-                                retorno.add(firmado);
+                                archivosFirmados.add(firmado);
                         }
                     }
-                    romper = true;
+                    encontrado = true;
                 } catch (NoSuchAlgorithmException | UnrecoverableKeyException e) {
                     Log.error("No se pudo obtener el certificado y la clave privada: " + lib.getName() + " - " + file);
                     return new ArrayList<>();
                 } catch (KeyStoreException e) {
-                    romper = false;
+                    encontrado = false;
                     Log.warn("Configuracion no soportada: " + lib.getName() + " - " + file);
                 }
-                if(romper) break;
+                if(encontrado) break;
             }
-            if(romper) break;
+            if(encontrado) break;
         }
 
-        return retorno;
+        return archivosFirmados;
     }
 
+    /**
+     * Obtiene la posición de la firma en el PDF según los parámetros.
+     * @param parametros Parámetros de la firma
+     * @param pdf Lector PDF
+     * @return Mapa con las coordenadas y página
+     */
     private Map<String, Float> getPosicion(Map<String,String> parametros, PdfReader pdf){
-
         if(pdf == null) return new HashMap<>();
         ResourceBundle conf = ResourceBundle.getBundle("bic");
         Integer height = Integer.valueOf(conf.getString("firma.alto"));
@@ -263,31 +287,27 @@ public class FirmadorImpl implements Firmador{
         width = width + margin;
 
         Map<String, Float> retorno = new HashMap<>();
-
         Rectangle cropBox = null;
-
         String pos = "";
 
-        if(parametros.containsKey("posicion") && parametros.get("posicion") != null){
+        if(parametros.containsKey(PARAM_POSICION) && parametros.get(PARAM_POSICION) != null){
             ObjectMapper mapper = new ObjectMapper();
             try {
-                Map<String, String> cp = mapper.readValue(parametros.get("posicion"), Map.class);
+                Map<String, String> cp = mapper.readValue(parametros.get(PARAM_POSICION), Map.class);
                 if(cp.containsKey("pagina")){
                     if(cp.get("pagina").equals("primera")){
-                        retorno.put("pagina",Float.valueOf(1));
+                        retorno.put("pagina",1f);
                         cropBox = pdf.getCropBox(1);
                     }else if(cp.get("pagina").equals("ultima")) {
-                        retorno.put("pagina", Float.valueOf(pdf.getNumberOfPages()));
+                        retorno.put("pagina", (float) pdf.getNumberOfPages());
                         cropBox = pdf.getCropBox(pdf.getNumberOfPages());
                     }else{
                         retorno.put("pagina",Float.valueOf(cp.get("pagina")));
                         cropBox = pdf.getCropBox(Integer.valueOf(cp.get("pagina")));
                     }
                 }
-
                 if(cp.containsKey("lugar") && cp.get("lugar").trim().length() > 0)
                     pos = cp.get("lugar").trim();
-
             }catch(JsonProcessingException jpe){
                 Log.warn("Posicion de la firma invalida, se asume valores por defecto!");
             }
@@ -295,15 +315,14 @@ public class FirmadorImpl implements Firmador{
 
         if(cropBox == null){
             cropBox = pdf.getCropBox(1);
-            retorno.put("pagina",Float.valueOf(1));
+            retorno.put("pagina",1f);
         }
 
         if(cropBox != null){
-
-            Float mitadFirmaFloat = Float.valueOf(width / 2);
-            Float mitadPaginaFloat = Float.valueOf(cropBox.getWidth() / 2);
-            Integer mitadFirma = mitadFirmaFloat.intValue();
-            Integer mitadPagina = mitadPaginaFloat.intValue();
+            Float mitadFirmaFloat = width / 2f;
+            Float mitadPaginaFloat = cropBox.getWidth() / 2f;
+            int mitadFirma = mitadFirmaFloat.intValue();
+            int mitadPagina = mitadPaginaFloat.intValue();
 
             // centro-inferior (default)
             retorno.put("eix", cropBox.getLeft(margin));
@@ -311,72 +330,70 @@ public class FirmadorImpl implements Firmador{
             retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
             retorno.put("esy", cropBox.getBottom(height));
 
-            if(pos.equals("esquina-superior-izquierda")) {
-                retorno.put("eix", cropBox.getLeft(margin));
-                retorno.put("eiy", cropBox.getTop(height));
-                retorno.put("esx", cropBox.getLeft(width));
-                retorno.put("esy", cropBox.getTop(margin));
-            }else if(pos.equals("esquina-superior-derecha")){
-                retorno.put("eix", cropBox.getRight(width));
-                retorno.put("eiy", cropBox.getTop(height));
-                retorno.put("esx", cropBox.getRight(margin));
-                retorno.put("esy", cropBox.getTop(margin));
-            }else if(pos.equals("esquina-inferior-izquierda")) {
-                retorno.put("eix", cropBox.getLeft(margin));
-                retorno.put("eiy", cropBox.getBottom(margin));
-                retorno.put("esx", cropBox.getLeft(width));
-                retorno.put("esy", cropBox.getBottom(height));
-            }else if(pos.equals("esquina-inferior-derecha")){
-                retorno.put("eix", cropBox.getRight(width));
-                retorno.put("eiy", cropBox.getBottom(margin));
-                retorno.put("esx", cropBox.getRight(margin));
-                retorno.put("esy", cropBox.getBottom(height));
-            }else if(pos.equals("centro-superior")){
-                retorno.put("eix", cropBox.getLeft(margin));
-                retorno.put("eiy", cropBox.getTop(height));
-                retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
-                retorno.put("esy", cropBox.getTop(margin));
+            switch (pos) {
+                case "esquina-superior-izquierda":
+                    retorno.put("eix", cropBox.getLeft(margin));
+                    retorno.put("eiy", cropBox.getTop(height));
+                    retorno.put("esx", cropBox.getLeft(width));
+                    retorno.put("esy", cropBox.getTop(margin));
+                    break;
+                case "esquina-superior-derecha":
+                    retorno.put("eix", cropBox.getRight(width));
+                    retorno.put("eiy", cropBox.getTop(height));
+                    retorno.put("esx", cropBox.getRight(margin));
+                    retorno.put("esy", cropBox.getTop(margin));
+                    break;
+                case "esquina-inferior-izquierda":
+                    retorno.put("eix", cropBox.getLeft(margin));
+                    retorno.put("eiy", cropBox.getBottom(margin));
+                    retorno.put("esx", cropBox.getLeft(width));
+                    retorno.put("esy", cropBox.getBottom(height));
+                    break;
+                case "esquina-inferior-derecha":
+                    retorno.put("eix", cropBox.getRight(width));
+                    retorno.put("eiy", cropBox.getBottom(margin));
+                    retorno.put("esx", cropBox.getRight(margin));
+                    retorno.put("esy", cropBox.getBottom(height));
+                    break;
+                case "centro-superior":
+                    retorno.put("eix", cropBox.getLeft(margin));
+                    retorno.put("eiy", cropBox.getTop(height));
+                    retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
+                    retorno.put("esy", cropBox.getTop(margin));
+                    break;
+                default:
+                    // Ya está el default
+                    break;
             }
         }
-
         return retorno;
     }
 
+    /**
+     * Procesa la firma de un archivo PDF.
+     * @param archivo Archivo a firmar
+     * @param key Clave privada
+     * @param provider Proveedor PKCS11
+     * @param cert Certificado
+     * @param parametros Parámetros de la firma
+     * @return Archivo firmado o null si ocurre un error
+     */
     private File procesarFirma(File archivo, PrivateKey key, Provider provider, Certificate cert, Map<String,String> parametros){
-        String destino = null;
-
-        if(parametros.containsKey("destino")) destino = parametros.get("destino");
-        else destino = ConfiguracionUtil.getDirFirmados();
-
+        String destino = parametros.containsKey(PARAM_DESTINO) ? parametros.get(PARAM_DESTINO) : ConfiguracionUtil.getDirFirmados();
         ByteArrayOutputStream fos = null;
         try {
-            // reader and stamper
             PdfReader pdf = new PdfReader(archivo.getCanonicalPath());
-
             fos = new ByteArrayOutputStream();
-
             PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
-
-            Rectangle cropBox = pdf.getCropBox(1);
-
             Map<String,Float> coor = this.getPosicion(parametros, pdf);
-            Rectangle firma = new Rectangle(Float.valueOf(coor.get("eix"))
-                    ,Float.valueOf(coor.get("eiy"))
-                    ,Float.valueOf(coor.get("esx"))
-                    ,Float.valueOf(coor.get("esy")));
+            Rectangle firma = new Rectangle(coor.get("eix"), coor.get("eiy"), coor.get("esx"), coor.get("esy"));
             sap.setVisibleSignature(firma, coor.get("pagina").intValue(), null);
             sap.setCertificate(cert);
-
             X509Certificate x509Certificate = (X509Certificate) cert;
-
             Principal principal = x509Certificate.getSubjectDN();
             String fullDns = principal.getName();
-
-            ByteArrayOutputStream qr = QRCode.from(fullDns)
-                                        .withSize(50, 50)
-                                        .stream();
-
+            ByteArrayOutputStream qr = QRCode.from(fullDns).withSize(50, 50).stream();
             String[] dns = fullDns.split(",");
             Map<String,String> datos = new HashMap<>();
             datos.put("APELLIDOS","");
@@ -392,27 +409,18 @@ public class FirmadorImpl implements Firmador{
                 datos.put("FECHA", fecha);
             if(datos.containsKey("SERIAL"))
                 datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
-
-            sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() + ""
-                                + (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "")
-                                + (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "")
-                                + (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
-
-            // digital signature
+            sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() +
+                                (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "") +
+                                (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
+                                (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;
-
-            //sap.setImage(Image.getInstance(qr.toByteArray()));
             sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
-
             sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
             sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
-
-            // Signs the document using the detached mode, CMS or CAdES equivalent
             MakeSignature.signDetached(sap, digest, es, certs, null, null, null, 0, MakeSignature.CryptoStandard.CMS);
-
             byte[] data = fos.toByteArray();
             File firmado = new File(destino +  ConfiguracionUtil.SLASH + archivo.getName());
             FileUtils.writeByteArrayToFile(firmado , data);
@@ -420,11 +428,14 @@ public class FirmadorImpl implements Firmador{
             return firmado;
         } catch (IOException | DocumentException | GeneralSecurityException e) {
             Log.error("Error al firmar el archivo " + archivo.getName(), e);
-            System.exit(1);
+            // No se usa System.exit, solo se retorna null
         }
         return null;
     }
 
+    /**
+     * Limpia el directorio de caché de archivos temporales.
+     */
     private void cleanCache(){
         String cache = ConfiguracionUtil.getDirCache();
         File dir = new File(cache);
@@ -434,53 +445,54 @@ public class FirmadorImpl implements Firmador{
         }
     }
 
+    /**
+     * Copia los archivos a firmar al directorio de caché, o descarga si es necesario.
+     * @param parametros Parámetros de la firma
+     * @param downloadTimeout Timeout de descarga
+     * @param readTimeout Timeout de lectura
+     * @return Lista de archivos en caché
+     * @throws IOException Si ocurre un error de E/S
+     */
     private List<File> cachearArchivos(Map<String,String> parametros, Long downloadTimeout, Long readTimeout) throws IOException {
         String cache = ConfiguracionUtil.getDirCache();
-        List<File> retorno = new ArrayList<>();
-
-        // Los archivos locales copiamos al directorio cache
-        if(parametros.containsKey("archivo") || parametros.containsKey("archivos")){
+        List<File> archivosCacheados = new ArrayList<>();
+        // Archivos locales
+        if(parametros.containsKey(PARAM_ARCHIVO) || parametros.containsKey(PARAM_ARCHIVOS)){
             String[] files = null;
-            if(parametros.containsKey("archivo")) files = new String[]{ parametros.get("archivo") };
-            else if(parametros.containsKey("archivos")) files = parametros.get("archivos").split(",");
-
+            if(parametros.containsKey(PARAM_ARCHIVO)) files = new String[]{ parametros.get(PARAM_ARCHIVO) };
+            else if(parametros.containsKey(PARAM_ARCHIVOS)) files = parametros.get(PARAM_ARCHIVOS).split(",");
             for(String file: files) {
                 File src = new File(file);
                 File des = new File(cache + ConfiguracionUtil.SLASH + src.getName());
-
-                // Eliminamos si existe un archivo con el mismo nombre anterior
                 if(des.exists())
                     FileUtils.deleteQuietly(des);
-
                 FileUtils.copyFile(src, des);
-                retorno.add(des);
+                archivosCacheados.add(des);
             }
-            return retorno;
+            return archivosCacheados;
         }
-
-        if(parametros.containsKey("archivo-uri")){
-            String nombreArchivo = (parametros.containsKey("archivo-nombre") ? parametros.get("archivo-nombre").trim() : null);
-            if(nombreArchivo == null) nombreArchivo = FilenameUtils.getName(parametros.get("archivo-uri"));
+        // Descarga de archivo remoto
+        if(parametros.containsKey(PARAM_ARCHIVO_URI)){
+            String nombreArchivo = (parametros.containsKey(PARAM_ARCHIVO_NOMBRE) ? parametros.get(PARAM_ARCHIVO_NOMBRE).trim() : null);
+            if(nombreArchivo == null) nombreArchivo = FilenameUtils.getName(parametros.get(PARAM_ARCHIVO_URI));
             Map<String,String> headers = null;
-            if(parametros.containsKey("archivo-headers")){
+            if(parametros.containsKey(PARAM_ARCHIVO_HEADERS)){
                 try {
-                    headers = WebUtil.getHeaders(parametros.get("archivo-headers"));
+                    headers = WebUtil.getHeaders(parametros.get(PARAM_ARCHIVO_HEADERS));
                 }catch(JsonProcessingException jpe){
                     Log.error("Error al leer los headers para descargar el archivo", jpe);
                     return new ArrayList<>();
                 }
             }
-            if(headers == null && WebUtil.descargar(parametros.get("archivo-uri"), cache + ConfiguracionUtil.SLASH + nombreArchivo, downloadTimeout, readTimeout)){
-                retorno.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
-                return retorno;
+            if(headers == null && WebUtil.descargar(parametros.get(PARAM_ARCHIVO_URI), cache + ConfiguracionUtil.SLASH + nombreArchivo, downloadTimeout, readTimeout)){
+                archivosCacheados.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
+                return archivosCacheados;
             }
-            if(headers != null && WebUtil.descargar(parametros.get("archivo-uri"), cache + ConfiguracionUtil.SLASH + nombreArchivo, headers, downloadTimeout, readTimeout)){
-                retorno.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
-                return retorno;
+            if(headers != null && WebUtil.descargar(parametros.get(PARAM_ARCHIVO_URI), cache + ConfiguracionUtil.SLASH + nombreArchivo, headers, downloadTimeout, readTimeout)){
+                archivosCacheados.add(new File(cache + ConfiguracionUtil.SLASH + nombreArchivo));
+                return archivosCacheados;
             }
         }
-
         return new ArrayList<>();
-
     }
 }
