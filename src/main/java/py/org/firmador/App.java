@@ -11,7 +11,15 @@ import py.org.firmador.bic.FirmadorImpl;
 import py.org.firmador.dto.Resultado;
 import py.org.firmador.util.MensajeUtil;
 
+/**
+ * Aplicación principal para la firma digital de documentos.
+ * Procesa los argumentos de línea de comandos, valida los parámetros y ejecuta la firma.
+ */
 public class App {
+    /**
+     * Método principal de la aplicación.
+     * @param args Argumentos de línea de comandos en formato --parametro=valor
+     */
     public static void main( String[] args ){
         if(args == null || args.length == 0){
             Log.error("Debe definir parametros!");
@@ -21,40 +29,49 @@ public class App {
         Map<String,String> parametros = new HashMap<>();
         for(String par : args){
             Entry<String,String> entrada = checkParametro(par);
-            if(entrada == null) System.exit(1);
+            if(entrada == null) {
+                System.exit(2);
+            }
             parametros.put(entrada.getKey(), entrada.getValue());
         }
 
-        Firmador bic = new FirmadorImpl();
-        Resultado res = bic.firmar(parametros);
+        Firmador firmador = new FirmadorImpl();
+        Resultado resultado = firmador.firmar(parametros);
 
         ObjectMapper mapper = new ObjectMapper();
-
         String json = "";
         try{
-            json = mapper.writeValueAsString(res);
+            json = mapper.writeValueAsString(resultado);
         }catch(JsonProcessingException jpe){
             Log.error("Error al procesar respuesta", jpe);
-            System.exit(1);
+            System.exit(3);
         }
 
-        MensajeUtil.showMessage(res);
-
+        MensajeUtil.showMessage(resultado);
         Log.info("Listo! " + json);
         System.exit(0);
     }
 
+    /**
+     * Valida y extrae el parámetro en formato --clave=valor.
+     * @param param Parámetro recibido por línea de comandos
+     * @return Entrada clave-valor válida, o null si el formato es incorrecto o el parámetro no es permitido
+     */
     private static Entry<String,String> checkParametro(String param){
-        if(!param.startsWith("--") || !param.contains("=")){
+        if(param == null || !param.startsWith("--") || !param.contains("=")){
             Log.error("Parametro " + param + " no es válido, debe contar con el siguiente formato: --parametro=valor");
             return null;
         }
-        param = param.replace("--", "");
-        String[] claveValor = param.split("=");
+        param = param.replaceFirst("--", "");
+        String[] claveValor = param.split("=", 2);
+        if(claveValor.length != 2) {
+            Log.error("Parametro " + param + " no es válido, debe contar con el siguiente formato: --parametro=valor");
+            return null;
+        }
         String[] permitidos = Firmador.PARAMS;
         boolean existe = false;
-        for(String par : permitidos){
-            if(claveValor[0].equals(par)){
+        for(String permitido : permitidos){
+            if(claveValor[0].equals(permitido)){
                 existe = true;
                 break;
             }
@@ -62,7 +79,7 @@ public class App {
         if(!existe){
             Log.error("Parametro " + claveValor[0] + " no es conocido");
             return null;
-        } 
+        }
         Map<String,String> retorno = new HashMap<>();
         retorno.put(claveValor[0], claveValor[1]);
         return retorno.entrySet().iterator().next();
