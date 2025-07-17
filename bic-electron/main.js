@@ -1,132 +1,115 @@
-/**
- * APLICACION NODEJS-ELECTRON LLAMADA DESDE UN BROWSER.
- * Basada en el codigo:
- * https://github.com/oikonomopo/electron-deep-linking-mac-win
- * https://www.example-code.com/nodejs/pkcs11_sign_pdf.asp
- * Uso:
- * Se puede abrir de un sitio web a través de un enlace con el protocolo 'bic' y pasar parametros.
- * bic://
- */
-
-const { app, BrowserWindow } = require('electron');
-// Module with utilities for working with file and directory paths.
+const { app, protocol, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-// Module with utilities for URL resolution and parsing.
-const url = require('url');
+let mainWindow;
+let pdfUrls = [];
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
+const { execFile } = require('child_process');
+const os = require('os');
 
-
-const bicurl = 'http://localhost:4200/bic';
-
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
-
-// Deep linked url
-let deeplinkingUrl = '';
-
-// Force Single Instance Application
-const gotTheLock = app.requestSingleInstanceLock();
-
-if (gotTheLock) {
-	app.on('second-instance', (e, argv) => {
-		// Someone tried to run a second instance, we should focus our window.
-
-		// Protocol handler for win32
-		// argv: An array of the second instance’s (command line / deep linked) arguments
-		if (process.platform == 'win32') {
-			// Keep only command line / deep linked arguments
-			deeplinkingUrl = argv.slice(1);
-		}
-		logEverywhere('app.makeSingleInstance2# ' + deeplinkingUrl);
-
-		if (mainWindow) {
-			if (mainWindow.isMinimized()) mainWindow.restore()
-			mainWindow.focus();
-		}
-	});
-} else {
-	app.quit();
-	return;
-}
-
-//function firmar(archivo, pin){
-//}
+// Registrar protocolo personalizado
+app.setAsDefaultProtocolClient('bic');
 
 function createWindow() {
-	// Create the browser window.
-	mainWindow = new BrowserWindow({
-		width: 1200,
-		height: 900,
-		webPreferences: {
-			nodeIntegration: true
-		}
-	});
-
-	// and load the index.html of the app.
-	//mainWindow.loadURL(''bicurl'');
-
-    mainWindow.webContents.openDevTools();
-	// Protocol handler for win32
-	if (process.platform == 'win32') {
-		// Keep only command line / deep linked arguments
-		deeplinkingUrl = process.argv.slice(1);
-	}
-    logEverywhere('createWindow1# ' + deeplinkingUrl);
-	if (deeplinkingUrl && deeplinkingUrl.length > 1) {
-        logEverywhere('createWindow# ' + deeplinkingUrl);
-	}
-
-    mainWindow.loadURL('https://blank.page/');
-
-	// Emitted when the window is closed.
-	mainWindow.on('closed', function () {
-		// Dereference the window object, usually you would store windows
-		// in an array if your app supports multi windows, this is the time
-		// when you should delete the corresponding element.
-		mainWindow = null;
-	});
+  mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  mainWindow.loadFile('index.html');
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
-
-// Quit when all windows are closed.
-app.on('window-all-closed', function () {
-	// On OS X it is common for applications and their menu bar
-	// to stay active until the user quits explicitly with Cmd + Q
-	if (process.platform !== 'darwin') {
-		app.quit();
-	}
+// Manejar apertura con protocolo personalizado
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  // Extraer parámetros de la URL
+  const urlObj = new URL(url);
+  if (urlObj.protocol === 'bic:') {
+    const filesParam = urlObj.searchParams.get('files');
+    if (filesParam) {
+      pdfUrls = filesParam.split(',');
+    }
+  }
+  if (mainWindow) {
+    mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+  }
 });
 
-app.on('activate', function () {
-	// On OS X it's common to re-create a window in the app when the
-	// dock icon is clicked and there are no other windows open.
-	if (mainWindow === null) {
-		createWindow();
-	}
+app.whenReady().then(() => {
+  createWindow();
+  // Si la app se abre con argumentos (por ejemplo, desde protocolo personalizado)
+  if (process.argv.length > 1) {
+    const arg = process.argv.find(a => a.startsWith('bic://'));
+    if (arg) {
+      const urlObj = new URL(arg);
+      const filesParam = urlObj.searchParams.get('files');
+      if (filesParam) {
+        pdfUrls = filesParam.split(',');
+      }
+    }
+  }
+  if (pdfUrls.length > 0 && mainWindow) {
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+    });
+  }
 });
 
-if (!app.isDefaultProtocolClient('bic')) {
-	// Define custom protocol handler. Deep linking works on packaged versions of the application!
-	app.setAsDefaultProtocolClient('bic');
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// Función para descargar un archivo
+function descargarArchivo(url, destino) {
+  return new Promise((resolve, reject) => {
+    const protocolo = url.startsWith('https') ? https : http;
+    const file = fs.createWriteStream(destino);
+    protocolo.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        reject(new Error('Error al descargar: ' + url));
+        return;
+      }
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(() => resolve(destino));
+      });
+    }).on('error', (err) => {
+      fs.unlink(destino, () => reject(err));
+    });
+  });
 }
 
-app.on('will-finish-launching', function () {
-	// Protocol handler for osx
-	app.on('open-url', function (event, url) {
-		event.preventDefault();
-		logEverywhere('OSX loading..' + url);
-		deeplinkingUrl = url;
-	});
-});
-
-// Log both at dev console and at running node console instance
-function logEverywhere(s) {
-	console.log(s);
-	if (mainWindow && mainWindow.webContents) {
-		mainWindow.webContents.executeJavaScript(`console.log("${s}")`);
-	}
-}
+ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
+  try {
+    // Descargar los PDFs seleccionados a una carpeta temporal
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bic-'));
+    const rutasLocales = [];
+    for (const url of pdfs) {
+      const nombre = path.basename(url.split('?')[0]);
+      const destino = path.join(tempDir, nombre);
+      await descargarArchivo(url, destino);
+      rutasLocales.push(destino);
+    }
+    // Ejecutar la aplicación Java
+    // Ajusta la ruta y los argumentos según tu app Java
+    const javaPath = 'java';
+    const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar'); // Ajusta el nombre del JAR
+    const args = ['-jar', jarPath, '--password', password, ...rutasLocales];
+    execFile(javaPath, args, (error, stdout, stderr) => {
+      if (error) {
+        event.sender.send('firma-resultado', { success: false, error: stderr || error.message });
+      } else {
+        event.sender.send('firma-resultado', { success: true, output: stdout });
+      }
+    });
+  } catch (err) {
+    event.sender.send('firma-resultado', { success: false, error: err.message });
+  }
+}); 

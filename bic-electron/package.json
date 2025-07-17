@@ -1,30 +1,12 @@
 {
   "name": "bic-electron",
   "version": "1.0.0",
-  "description": "Aplicacion para firma digital de PDFs",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
-    "start": "electron .",
-    "pack": "build --dir",
-    "dist": "build"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Franco",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "electron": "^5.0.1",
-    "electron-builder": "^20.40.2"
-  },
-  "build": {
-    "appId": "bic-macos-win32",
-    "protocols": {
-      "name": "bic",
-      "schemes": [
-        "bic"
-      ]
-    },
-    "mac": {
-      "category": "public.app-category.Reference"
-    },
-    "win": {}
-  }
+  "description": ""
 }
