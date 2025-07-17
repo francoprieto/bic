@@ -101,7 +101,8 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     // Ajusta la ruta y los argumentos según tu app Java
     const javaPath = 'java';
     const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar'); // Ajusta el nombre del JAR
-    const args = ['-jar', jarPath, '--password', password, ...rutasLocales];
+    const archivosParam = rutasLocales.join(',');
+    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=C:\\temp`];
     execFile(javaPath, args, (error, stdout, stderr) => {
       if (error) {
         event.sender.send('firma-resultado', { success: false, error: stderr || error.message });
