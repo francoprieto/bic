@@ -8,5 +8,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "npx": "^10.2.2"
+  },
+  "devDependencies": {
+    "electron": "^37.2.3"
+  }
 }
