@@ -1,12 +1,17 @@
 const { app, protocol, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-let mainWindow;
-let pdfUrls = [];
+
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const { execFile } = require('child_process');
 const os = require('os');
+
+
+let mainWindow;
+let pdfUrls = [];
+let bicHome;
+let firmaSimple = true;
 
 // Registrar protocolo personalizado
 app.setAsDefaultProtocolClient('bic');
@@ -21,6 +26,8 @@ function createWindow() {
       contextIsolation: true
     }
   });
+  bicHome = os.homedir + path.sep + '.bic' + path.sep;
+  
   mainWindow.loadFile('index.html');
 }
 
@@ -29,12 +36,17 @@ app.on('open-url', (event, url) => {
   event.preventDefault();
   // Extraer parámetros de la URL
   const urlObj = new URL(url);
+  
   if (urlObj.protocol === 'bic:') {
     const filesParam = urlObj.searchParams.get('files');
     if (filesParam) {
       pdfUrls = filesParam.split(',');
+    }else{
+      const paramsurl = urlObj.searchParams.get('paramsurl');
+      if(paramsurl) firmaSimple = true;
     }
   }
+
   if (mainWindow) {
     mainWindow.webContents.send('set-pdf-urls', pdfUrls);
   }
@@ -50,9 +62,17 @@ app.whenReady().then(() => {
       const filesParam = urlObj.searchParams.get('files');
       if (filesParam) {
         pdfUrls = filesParam.split(',');
+      }else{
+        const paramsurl = urlObj.searchParams.get('paramsurl');
+        if(paramsurl) firmaSimple = true;
       }
     }
   }
+
+  if(!firmaSimple && paramsurl){
+    descargarArchivo(paramsurl, bicHome);
+  }
+
   if (pdfUrls.length > 0 && mainWindow) {
     mainWindow.webContents.on('did-finish-load', () => {
       mainWindow.webContents.send('set-pdf-urls', pdfUrls);

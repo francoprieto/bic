@@ -1,10 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Test Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pruebas BIC - Firmador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .test-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .test-link:hover {
+            background-color: #0056b3;
+        }
+        .test-link.danger {
+            background-color: #dc3545;
+        }
+        .test-link.danger:hover {
+            background-color: #c82333;
+        }
+        .test-link.success {
+            background-color: #28a745;
+        }
+        .test-link.success:hover {
+            background-color: #218838;
+        }
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .custom-test {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .custom-test input {
+            width: 70%;
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .custom-test button {
+            padding: 8px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-test button:hover {
+            background-color: #5a6268;
+        }
+    </style>
 </head>
 <body>
-Click aqui: <a href="bic://parametro1,parametro2">Bic</a>
+    <div class="container">
+        <h1>🧪 Pruebas BIC - Firmador</h1>
+        
+        <div class="test-section">
+            <h3>📋 Pruebas Básicas</h3>
+            <div class="description">Enlaces básicos para probar la funcionalidad del firmador BIC</div>
+            <a href="bic://parametro1,parametro2" class="test-link">Prueba Básica</a>
+            <a href="bic://test,archivo.pdf" class="test-link">Prueba con PDF</a>
+            <a href="bic://demo,archivo.txt" class="test-link">Prueba con TXT</a>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Pruebas de Firma</h3>
+            <div class="description">Enlaces específicos para probar diferentes tipos de firma</div>
+            <a href="bic://firmar,doc1.pdf" class="test-link success">Firmar Documento</a>
+            <a href="bic://verificar,doc2.pdf" class="test-link">Verificar Firma</a>
+            <a href="bic://certificado,info" class="test-link">Obtener Certificado</a>
+        </div>
+
+        <div class="test-section">
+            <h3>⚠️ Pruebas de Error</h3>
+            <div class="description">Enlaces para probar el manejo de errores y casos límite</div>
+            <a href="bic://error,archivo_inexistente.pdf" class="test-link danger">Archivo Inexistente</a>
+            <a href="bic://invalid,parametros_invalidos" class="test-link danger">Parámetros Inválidos</a>
+            <a href="bic://timeout,archivo_grande.pdf" class="test-link danger">Timeout</a>
+        </div>
+
+        <div class="test-section">
+            <h3>🔄 Pruebas de Configuración</h3>
+            <div class="description">Enlaces para probar diferentes configuraciones</div>
+            <a href="bic://config,mostrar" class="test-link">Mostrar Configuración</a>
+            <a href="bic://config,reset" class="test-link">Reset Configuración</a>
+            <a href="bic://config,test" class="test-link">Test Configuración</a>
+        </div>
+
+        <div class="custom-test">
+            <h3>🎯 Prueba Personalizada</h3>
+            <div class="description">Ingresa tus propios parámetros para probar</div>
+            <input type="text" id="customParams" placeholder="Ej: firmar,mi_archivo.pdf" value="bic://">
+            <button onclick="testCustom()">Probar</button>
+        </div>
+    </div>
+
+    <script>
+        function testCustom() {
+            const input = document.getElementById('customParams');
+            const params = input.value;
+            
+            if (params && params.trim() !== '') {
+                // Si no empieza con bic://, lo agregamos
+                const url = params.startsWith('bic://') ? params : `bic://${params}`;
+                window.location.href = url;
+            } else {
+                alert('Por favor ingresa parámetros válidos');
+            }
+        }
+
+        // Permitir usar Enter para ejecutar la prueba personalizada
+        document.getElementById('customParams').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testCustom();
+            }
+        });
+
+        // Log de clicks para debugging
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.href.startsWith('bic://')) {
+                console.log('Probando BIC con:', e.target.href);
+            }
+        });
+    </script>
 </body>
 </html>
