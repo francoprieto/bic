@@ -26,8 +26,11 @@ function createWindow() {
       contextIsolation: true
     }
   });
+
   bicHome = os.homedir + path.sep + '.bic' + path.sep;
   
+  console.log("Home", bicHome);
+
   mainWindow.loadFile('index.html');
 }
 
@@ -41,14 +44,26 @@ app.on('open-url', (event, url) => {
     const filesParam = urlObj.searchParams.get('files');
     if (filesParam) {
       pdfUrls = filesParam.split(',');
-    }else{
+      if (mainWindow) {
+        mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+      }
+    } else {
       const paramsurl = urlObj.searchParams.get('paramsurl');
-      if(paramsurl) firmaSimple = true;
+      if (paramsurl) {
+        const nombreArchivo = path.basename(paramsurl.split('?')[0]);
+        const destino = path.join(bicHome, nombreArchivo);
+        descargarArchivo(paramsurl, destino)
+          .then(() => {
+            pdfUrls = [destino];
+            if (mainWindow) {
+              mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+            }
+          })
+          .catch(err => {
+            console.error('Error al descargar archivo:', err);
+          });
+      }
     }
-  }
-
-  if (mainWindow) {
-    mainWindow.webContents.send('set-pdf-urls', pdfUrls);
   }
 });
 
@@ -62,15 +77,27 @@ app.whenReady().then(() => {
       const filesParam = urlObj.searchParams.get('files');
       if (filesParam) {
         pdfUrls = filesParam.split(',');
-      }else{
+        if (mainWindow) {
+          mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+        }
+      } else {
         const paramsurl = urlObj.searchParams.get('paramsurl');
-        if(paramsurl) firmaSimple = true;
+        if (paramsurl) {
+          const nombreArchivo = path.basename(paramsurl.split('?')[0]);
+          const destino = path.join(bicHome, nombreArchivo);
+          descargarArchivo(paramsurl, destino)
+            .then(() => {
+              pdfUrls = [destino];
+              if (mainWindow) {
+                mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+              }
+            })
+            .catch(err => {
+              console.error('Error al descargar archivo:', err);
+            });
+        }
       }
     }
-  }
-
-  if(!firmaSimple && paramsurl){
-    descargarArchivo(paramsurl, bicHome);
   }
 
   if (pdfUrls.length > 0 && mainWindow) {
@@ -88,6 +115,7 @@ app.on('window-all-closed', () => {
 
 // Función para descargar un archivo
 function descargarArchivo(url, destino) {
+  console.log("Descargando", url, "a", destino);
   return new Promise((resolve, reject) => {
     const protocolo = url.startsWith('https') ? https : http;
     const file = fs.createWriteStream(destino);
