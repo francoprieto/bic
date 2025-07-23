@@ -32,20 +32,44 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 }
 
-// Función para descargar y notificar PDF
-function descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog) {
-  const nombreArchivo = path.basename(paramsurl.split('?')[0]);
-  const destino = path.join(bicHome, nombreArchivo);
-  descargarArchivo(paramsurl, destino)
-    .then(() => {
-      pdfUrls = [destino];
-      if (mainWindow) {
-        mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+// Variable global para almacenar el contenido del PDF en memoria
+let pdfBuffer = null;
+
+// Nueva función para leer archivo remoto en variable
+function leerArchivoRemotoEnVariable(url, mainWindow, dialog) {
+  return new Promise((resolve, reject) => {
+    const protocolo = url.startsWith('https') ? https : http;
+    let data = [];
+    protocolo.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        dialog.showErrorBox('Error', 'Error al leer los parámetros: ' + url);
+        return;
       }
-    })
-    .catch(err => {
-      dialog.showErrorBox('Error', 'Error al descargar parámetros: ' + err.message);
+      response.on('data', (chunk) => {
+        data.push(chunk);
+      });
+      response.on('end', () => {
+        resolve(Buffer.concat(data));
+        const parms = JSON.parse(data);
+        parms.forEach(element => {
+          pdfUrls.push(element);
+        });
+      });
+    }).on('error', (err) => {
+      dialog.showErrorBox('Error', 'Error al leer los parametros: ' + err.message);
     });
+  });
+}
+
+function leerArchivoSimple(filesParam, mainWindow, dialog){
+  const lista = filesParam.split(','); 
+  lista.forEach(element=>{
+    const cleanUrl = element.split(/[?#]/)[0];
+    pdfUrls.push({"nombre": cleanUrl.substring(cleanUrl.lastIndexOf('/') + 1), "url": element});
+  });
+  if (mainWindow) {
+    mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+  }
 }
 
 // Manejar apertura con protocolo personalizado
@@ -57,15 +81,11 @@ app.on('open-url', (event, url) => {
   if (urlObj.protocol === 'bic:') {
     const filesParam = urlObj.searchParams.get('files');
     if (filesParam) {
-      console.log("Entra a lista simple", filesParam);
-      pdfUrls = filesParam.split(',');
-      if (mainWindow) {
-        mainWindow.webContents.send('set-pdf-urls', pdfUrls);
-      }
+      leerArchivoSimple(filesParam, mainWindow, dialog);
     } else {
       const paramsurl = urlObj.searchParams.get('paramsurl');
       if (paramsurl) {
-        descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog);
+        leerArchivoRemotoEnVariable(paramsurl, mainWindow, dialog);
       }
     }
   }
@@ -80,27 +100,27 @@ app.whenReady().then(() => {
       const urlObj = new URL(arg);
       const filesParam = urlObj.searchParams.get('files');
       if (filesParam) {
-        console.log("Entra a lista simple", filesParam);
-        pdfUrls = filesParam.split(',');
-        if (mainWindow) {
-          mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+        leerArchivoSimple(filesParam, mainWindow, dialog);
+        if (pdfUrls.length > 0 && mainWindow) {
+          mainWindow.webContents.on('did-finish-load', () => {
+            mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+          });
         }
       } else {
         const paramsurl = urlObj.searchParams.get('paramsurl');
         if (paramsurl) {
-          descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog);
+          leerArchivoRemotoEnVariable(paramsurl, mainWindow, dialog).then(()=>{
+            if (pdfUrls.length > 0 && mainWindow) {
+              mainWindow.webContents.on('did-finish-load', () => {
+                mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+              });
+            }
+          });
         }
       }
     }
   }
 
-  console.log("lista de pdfs",pdfUrls.length);
-  
-  if (pdfUrls.length > 0 && mainWindow) {
-    mainWindow.webContents.on('did-finish-load', () => {
-      mainWindow.webContents.send('set-pdf-urls', pdfUrls);
-    });
-  }
 });
 
 app.on('window-all-closed', () => {
