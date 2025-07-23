@@ -4,6 +4,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const signForm = document.getElementById('signForm');
   const resultDiv = document.getElementById('result');
   const signBtn = document.getElementById('signBtn');
+  const selectAllCheckbox = document.getElementById('selectAll');
 
   // Variables para paginación
   let allPdfs = [];
@@ -25,6 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!allPdfs || allPdfs.length === 0) {
       pdfList.innerHTML = '<div class="text-gray-500">No hay archivos para firmar.</div>';
       renderPagination();
+      if (selectAllCheckbox) selectAllCheckbox.checked = false;
       return;
     }
     const startIdx = (currentPage - 1) * pageSize;
@@ -41,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
     renderPagination();
-    // Restaurar selección
+    // Restaurar selección y listeners
     pagePdfs.forEach((pdf, idx) => {
       const globalIdx = startIdx + idx;
       const checkbox = document.getElementById(`pdf-${globalIdx}`);
@@ -52,11 +54,24 @@ window.addEventListener('DOMContentLoaded', () => {
           } else {
             selectedPdfs.delete(pdf);
           }
-          updateSignBtnState(); // Actualizar el estado del botón al cambiar selección
+          updateSignBtnState();
+          updateSelectAllCheckbox();
         });
       }
     });
-    updateSignBtnState(); // Actualizar el estado del botón al renderizar la lista
+    updateSignBtnState();
+    updateSelectAllCheckbox();
+    // Listener para el checkbox de seleccionar todos
+    if (selectAllCheckbox) {
+      selectAllCheckbox.onchange = function() {
+        if (this.checked) {
+          pagePdfs.forEach(pdf => selectedPdfs.add(pdf));
+        } else {
+          pagePdfs.forEach(pdf => selectedPdfs.delete(pdf));
+        }
+        renderPdfList(); // Volver a renderizar para reflejar los cambios
+      };
+    }
   }
 
   // Renderiza los controles de paginación
@@ -119,6 +134,17 @@ window.addEventListener('DOMContentLoaded', () => {
       signBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
       signBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
     }
+  }
+
+  // Actualiza el estado del checkbox de seleccionar todos
+  function updateSelectAllCheckbox() {
+    if (!selectAllCheckbox) return;
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, allPdfs.length);
+    const pagePdfs = allPdfs.slice(startIdx, endIdx);
+    const allSelected = pagePdfs.every(pdf => selectedPdfs.has(pdf));
+    selectAllCheckbox.checked = allSelected && pagePdfs.length > 0;
+    selectAllCheckbox.indeterminate = !allSelected && pagePdfs.some(pdf => selectedPdfs.has(pdf));
   }
 
   // Maneja el envío del formulario
