@@ -5,25 +5,57 @@
   <title>Firmador de PDFs</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Configuración de Tailwind para dark mode
+    tailwind.config = {
+      darkMode: 'class',
+    };
+  </script>
   <style>
     /* Puedes agregar estilos personalizados aquí si lo necesitas */
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center">
-  <h1 class="text-2xl font-bold text-gray-800 mb-6">Firmador de PDFs</h1>
-  <form id="signForm" class="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
-    <div class="pdf-list mb-6" id="pdfList">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center transition-colors duration-300 dark:bg-gray-950">
+  <button id="toggleDark" type="button" class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow">
+    <span id="darkIcon">🌙</span>
+  </button>
+  <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">BIC</h1>
+  <form id="signForm" class="bg-white dark:bg-gray-900 shadow-md rounded-lg p-3 w-full max-w-3xl">
+    <div class="flex items-center gap-2 p-2 mb-0 w-full">
+      <label for="password" class="block text-gray-700 dark:text-gray-200 font-semibold text-sm mb-0 whitespace-nowrap">Password del token:</label>
+      <input type="password" id="password" required class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-40" />
+      <button type="submit" class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors">Firmar</button>
+    </div>
+    <div class="pdf-list mb-6 w-full h-full" id="pdfList">
       <!-- Aquí se cargará la lista de PDFs -->
-    </div>
-    <div class="mb-4">
-      <label for="password" class="block text-gray-700 font-semibold mb-2">Password del token:</label>
-      <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
-    </div>
-    <div class="actions flex justify-end">
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition-colors">Firmar</button>
     </div>
   </form>
   <div id="result" class="mt-6"></div>
+  <script>
+    // Alternancia de modo oscuro
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('toggleDark');
+    const darkIcon = document.getElementById('darkIcon');
+    // Cargar preferencia
+    if (localStorage.getItem('theme') === 'dark' ||
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
+      darkIcon.textContent = '☀️';
+    } else {
+      root.classList.remove('dark');
+      darkIcon.textContent = '🌙';
+    }
+    toggleBtn.addEventListener('click', () => {
+      root.classList.toggle('dark');
+      if (root.classList.contains('dark')) {
+        localStorage.setItem('theme', 'dark');
+        darkIcon.textContent = '☀️';
+      } else {
+        localStorage.setItem('theme', 'light');
+        darkIcon.textContent = '🌙';
+      }
+    });
+  </script>
   <script src="renderer.js"></script>
 </body>
 </html> 
