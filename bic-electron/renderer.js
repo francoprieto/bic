@@ -33,9 +33,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const globalIdx = startIdx + idx;
       const checked = selectedPdfs.has(pdf) ? 'checked' : '';
       return `
-        <div class="flex items-center bg-gray-100 rounded-lg shadow p-4 mb-3 pdf-item w-full">
+        <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
           <input type="checkbox" id="pdf-${globalIdx}" name="pdfs" value="${pdf}" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" ${checked}>
-          <label for="pdf-${globalIdx}" class="text-gray-800 break-all cursor-pointer">${pdf}</label>
+          <label for="pdf-${globalIdx}" class="text-gray-800 dark:text-gray-300 break-all cursor-pointer">${pdf}</label>
         </div>
       `;
     }).join('');
