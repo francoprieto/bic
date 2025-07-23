@@ -3,6 +3,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const pdfList = document.getElementById('pdfList');
   const signForm = document.getElementById('signForm');
   const resultDiv = document.getElementById('result');
+  const signBtn = document.getElementById('signBtn');
 
   // Variables para paginación
   let allPdfs = [];
@@ -35,7 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
       return `
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
           <input type="checkbox" id="pdf-${globalIdx}" name="pdfs" value="${pdf["url"]}" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" ${checked}>
-          <label for="pdf-${globalIdx}" class="text-gray-800 dark:text-gray-300 break-all cursor-pointer">${pdf["nombre"]}</label>
+          <label for="pdf-${globalIdx}" class="text-gray-800 dark:text-gray-300 break-all cursor-pointer" title="${pdf["url"]}">${pdf["nombre"]}</label>
         </div>
       `;
     }).join('');
@@ -51,9 +52,11 @@ window.addEventListener('DOMContentLoaded', () => {
           } else {
             selectedPdfs.delete(pdf);
           }
+          updateSignBtnState(); // Actualizar el estado del botón al cambiar selección
         });
       }
     });
+    updateSignBtnState(); // Actualizar el estado del botón al renderizar la lista
   }
 
   // Renderiza los controles de paginación
@@ -101,6 +104,21 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     };
     paginationDiv.appendChild(nextBtn);
+  }
+
+  // Función para actualizar el estado del botón de Firmar
+  function updateSignBtnState() {
+    const cantidad = selectedPdfs.size;
+    signBtn.textContent = cantidad > 0 ? `Firmar (${cantidad})` : 'Firmar';
+    if (cantidad > 0) {
+      signBtn.disabled = false;
+      signBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+      signBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+    } else {
+      signBtn.disabled = true;
+      signBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+      signBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+    }
   }
 
   // Maneja el envío del formulario

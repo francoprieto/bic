@@ -17,14 +17,14 @@
 </head>
 <body class="bg-gray-300 min-h-screen flex flex-col items-center justify-center transition-colors duration-300 dark:bg-gray-700">
   <button id="toggleDark" type="button" class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow-xl">
-    <span id="darkIcon">🌙</span>
+    <span id="darkIcon" title="Cambiar de modo a claro u oscuro">🌙</span>
   </button>
   <h1 class="text-2xl font-bold text-gray-950 dark:text-gray-100 mb-2">BIC</h1>
   <form id="signForm" class="bg-white dark:bg-gray-900 shadow-xl dark:shadow-xl rounded-lg p-3 w-full h-fit max-w-3xl">
     <div class="flex items-center gap-2 p-2 mb-3 w-full border border-gray-300 dark:border-gray-700 rounded-lg shadow-md">
       <label for="password" class="block text-gray-700 dark:text-gray-200 font-semibold text-sm mb-0 whitespace-nowrap">Password:</label>
       <input type="password" id="password" required class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-40" />
-      <button type="submit" class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors">
+      <button id="signBtn" type="submit" class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors" disabled>
         Firmar
       </button>
     </div>
