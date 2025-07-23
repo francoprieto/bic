@@ -1,4 +1,4 @@
-const { app, protocol, BrowserWindow, ipcMain } = require('electron');
+const { app, protocol, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 
 const fs = require('fs');
@@ -28,10 +28,24 @@ function createWindow() {
   });
 
   bicHome = os.homedir + path.sep + '.bic' + path.sep;
-  
-  console.log("Home", bicHome);
 
   mainWindow.loadFile('index.html');
+}
+
+// Función para descargar y notificar PDF
+function descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog) {
+  const nombreArchivo = path.basename(paramsurl.split('?')[0]);
+  const destino = path.join(bicHome, nombreArchivo);
+  descargarArchivo(paramsurl, destino)
+    .then(() => {
+      pdfUrls = [destino];
+      if (mainWindow) {
+        mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+      }
+    })
+    .catch(err => {
+      dialog.showErrorBox('Error', 'Error al descargar parámetros: ' + err.message);
+    });
 }
 
 // Manejar apertura con protocolo personalizado
@@ -43,6 +57,7 @@ app.on('open-url', (event, url) => {
   if (urlObj.protocol === 'bic:') {
     const filesParam = urlObj.searchParams.get('files');
     if (filesParam) {
+      console.log("Entra a lista simple", filesParam);
       pdfUrls = filesParam.split(',');
       if (mainWindow) {
         mainWindow.webContents.send('set-pdf-urls', pdfUrls);
@@ -50,18 +65,7 @@ app.on('open-url', (event, url) => {
     } else {
       const paramsurl = urlObj.searchParams.get('paramsurl');
       if (paramsurl) {
-        const nombreArchivo = path.basename(paramsurl.split('?')[0]);
-        const destino = path.join(bicHome, nombreArchivo);
-        descargarArchivo(paramsurl, destino)
-          .then(() => {
-            pdfUrls = [destino];
-            if (mainWindow) {
-              mainWindow.webContents.send('set-pdf-urls', pdfUrls);
-            }
-          })
-          .catch(err => {
-            console.error('Error al descargar archivo:', err);
-          });
+        descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog);
       }
     }
   }
@@ -76,6 +80,7 @@ app.whenReady().then(() => {
       const urlObj = new URL(arg);
       const filesParam = urlObj.searchParams.get('files');
       if (filesParam) {
+        console.log("Entra a lista simple", filesParam);
         pdfUrls = filesParam.split(',');
         if (mainWindow) {
           mainWindow.webContents.send('set-pdf-urls', pdfUrls);
@@ -83,23 +88,14 @@ app.whenReady().then(() => {
       } else {
         const paramsurl = urlObj.searchParams.get('paramsurl');
         if (paramsurl) {
-          const nombreArchivo = path.basename(paramsurl.split('?')[0]);
-          const destino = path.join(bicHome, nombreArchivo);
-          descargarArchivo(paramsurl, destino)
-            .then(() => {
-              pdfUrls = [destino];
-              if (mainWindow) {
-                mainWindow.webContents.send('set-pdf-urls', pdfUrls);
-              }
-            })
-            .catch(err => {
-              console.error('Error al descargar archivo:', err);
-            });
+          descargarYNotificarPDF(paramsurl, bicHome, mainWindow, dialog);
         }
       }
     }
   }
 
+  console.log("lista de pdfs",pdfUrls.length);
+  
   if (pdfUrls.length > 0 && mainWindow) {
     mainWindow.webContents.on('did-finish-load', () => {
       mainWindow.webContents.send('set-pdf-urls', pdfUrls);

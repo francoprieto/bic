@@ -3,31 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <title>Firmador de PDFs</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; }
-    h1 { font-size: 1.5em; }
-    .pdf-list { margin-bottom: 20px; }
-    .pdf-item { margin-bottom: 5px; }
-    .actions { margin-top: 20px; }
-    .result { margin-top: 20px; color: green; }
-    .error { color: red; }
+    /* Puedes agregar estilos personalizados aquí si lo necesitas */
   </style>
 </head>
-<body>
-  <h1>Firmador de PDFs</h1>
-  <form id="signForm">
-    <div class="pdf-list" id="pdfList">
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">Firmador de PDFs</h1>
+  <form id="signForm" class="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
+    <div class="pdf-list mb-6" id="pdfList">
       <!-- Aquí se cargará la lista de PDFs -->
     </div>
-    <div>
-      <label for="password">Password del token:</label>
-      <input type="password" id="password" required />
+    <div class="mb-4">
+      <label for="password" class="block text-gray-700 font-semibold mb-2">Password del token:</label>
+      <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
-    <div class="actions">
-      <button type="submit">Firmar</button>
+    <div class="actions flex justify-end">
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition-colors">Firmar</button>
     </div>
   </form>
-  <div id="result"></div>
+  <div id="result" class="mt-6"></div>
   <script src="renderer.js"></script>
 </body>
 </html> 

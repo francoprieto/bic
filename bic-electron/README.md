@@ -12,6 +12,7 @@ Permite recibir una lista de URLs de archivos PDF desde una web (usando un proto
 
 ```bash
 npm install
+npm install --save-dev electron
 ```
 
 2. Ajusta la ruta del JAR en `main.js`:

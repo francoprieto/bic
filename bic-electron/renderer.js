@@ -1,84 +1,48 @@
 window.addEventListener('DOMContentLoaded', () => {
-  const pdfListDiv = document.getElementById('pdfList');
+  const { ipcRenderer } = window;
+  const pdfList = document.getElementById('pdfList');
   const signForm = document.getElementById('signForm');
   const resultDiv = document.getElementById('result');
-  let pdfUrls = [];
 
   // Recibe la lista de PDFs desde el proceso principal
-  window.electronAPI.onSetPdfUrls((urls) => {
-    pdfUrls = urls;
-    renderPdfList();
+  window.electronAPI?.onSetPdfUrls?.((_, pdfs) => {
+    renderPdfList(pdfs);
   });
 
-  function renderPdfList() {
-    pdfListDiv.innerHTML = '';
-    if (pdfUrls.length === 0) {
-      pdfListDiv.innerHTML = '<em>No se recibieron archivos PDF.</em>';
+  // Función para renderizar la lista de PDFs como tarjetas con checkbox
+  function renderPdfList(pdfs) {
+    if (!pdfs || pdfs.length === 0) {
+      pdfList.innerHTML = '<div class="text-gray-500">No hay archivos para firmar.</div>';
       return;
     }
-    // Checkbox para seleccionar todos
-    const selectAllId = 'selectAll';
-    const selectAll = document.createElement('input');
-    selectAll.type = 'checkbox';
-    selectAll.id = selectAllId;
-    selectAll.addEventListener('change', (e) => {
-      document.querySelectorAll('.pdf-checkbox').forEach(cb => {
-        cb.checked = e.target.checked;
-      });
-    });
-    const labelAll = document.createElement('label');
-    labelAll.htmlFor = selectAllId;
-    labelAll.textContent = 'Seleccionar todos';
-    pdfListDiv.appendChild(selectAll);
-    pdfListDiv.appendChild(labelAll);
-    pdfListDiv.appendChild(document.createElement('br'));
-    // Lista de PDFs
-    pdfUrls.forEach((url, idx) => {
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'pdf-checkbox';
-      checkbox.id = 'pdf_' + idx;
-      checkbox.value = url;
-      const label = document.createElement('label');
-      label.htmlFor = checkbox.id;
-      label.textContent = url;
-      const div = document.createElement('div');
-      div.className = 'pdf-item';
-      div.appendChild(checkbox);
-      div.appendChild(label);
-      pdfListDiv.appendChild(div);
-    });
+    pdfList.innerHTML = pdfs.map((pdf, idx) => `
+      <div class="flex items-center bg-gray-100 rounded-lg shadow p-4 mb-3 pdf-item">
+        <input type="checkbox" id="pdf-${idx}" name="pdfs" value="${pdf}" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+        <label for="pdf-${idx}" class="text-gray-800 break-all cursor-pointer">${pdf}</label>
+      </div>
+    `).join('');
   }
 
+  // Maneja el envío del formulario
   signForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    resultDiv.textContent = '';
-    const selected = Array.from(document.querySelectorAll('.pdf-checkbox:checked')).map(cb => cb.value);
     const password = document.getElementById('password').value;
-    if (selected.length === 0) {
-      resultDiv.textContent = 'Selecciona al menos un archivo.';
-      resultDiv.className = 'error';
+    const checkboxes = pdfList.querySelectorAll('input[type="checkbox"]:checked');
+    const pdfs = Array.from(checkboxes).map(cb => cb.value);
+    if (pdfs.length === 0) {
+      resultDiv.innerHTML = '<div class="error text-red-600">Selecciona al menos un archivo para firmar.</div>';
       return;
     }
-    if (!password) {
-      resultDiv.textContent = 'Ingresa el password del token.';
-      resultDiv.className = 'error';
-      return;
-    }
-    // Enviar datos al proceso principal
-    window.electronAPI.sendToMain('firmar-pdfs', { pdfs: selected, password });
-    resultDiv.textContent = 'Firmando...';
-    resultDiv.className = '';
+    resultDiv.innerHTML = '';
+    ipcRenderer.send('firmar-pdfs', { pdfs, password });
   });
 
-  // Recibir resultado de la firma
-  window.electronAPI.onFromMain('firma-resultado', (data) => {
-    if (data.success) {
-      resultDiv.textContent = '¡Firma completada!';
-      resultDiv.className = 'result';
+  // Recibe el resultado de la firma
+  ipcRenderer.on('firma-resultado', (event, { success, output, error }) => {
+    if (success) {
+      resultDiv.innerHTML = `<div class="result text-green-600">${output || 'Firma realizada correctamente.'}</div>`;
     } else {
-      resultDiv.textContent = 'Error: ' + data.error;
-      resultDiv.className = 'error';
+      resultDiv.innerHTML = `<div class="error text-red-600">${error || 'Error al firmar.'}</div>`;
     }
   });
 }); 
