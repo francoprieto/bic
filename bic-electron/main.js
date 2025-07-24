@@ -28,7 +28,6 @@ function createWindow() {
   });
 
   bicHome = os.homedir + path.sep + '.bic' + path.sep;
-
   mainWindow.loadFile('index.html');
 }
 

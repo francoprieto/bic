@@ -19,7 +19,7 @@
   <button id="toggleDark" type="button" class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow-xl">
     <span id="darkIcon" title="Cambiar de modo a claro u oscuro">🌙</span>
   </button>
-  <h1 class="text-2xl font-bold text-gray-950 dark:text-gray-100 mb-2">BIC</h1>
+  <h1 class="text-2xl text-blue-700 dark:text-blue-400 font-semibold mb-2">BIC</h1>
   <div class="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-xl p-0">
     <div class="border-b border-gray-200 dark:border-gray-700 flex" role="tablist">
       <button id="tab-firmar" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white dark:bg-gray-900 rounded-tl-lg  dark:text-blue-400" role="tab" aria-selected="true" aria-controls="tabpanel-firmar">Firma</button>
@@ -27,8 +27,8 @@
     </div>
     <div id="tabpanel-firmar" class="tab-panel" role="tabpanel" aria-labelledby="tab-firmar">
       <form id="signForm" class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full h-fit max-w-3xl">
-        <div class="flex items-center gap-2 p-2 mb-3 w-full border border-gray-300 dark:border-gray-700 rounded-lg shadow-md">
-          <label for="password" class="block text-gray-700 dark:text-gray-200 font-semibold text-sm mb-0 whitespace-nowrap">Password:</label>
+        <div class="flex items-center gap-2 p-2 mb-3 w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-md">
+          <label for="password" class="block text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap">Password:</label>
           <input type="password" id="password" required class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-40" />
           <button id="signBtn" type="submit" class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors" disabled>
             Firmar
@@ -42,68 +42,79 @@
         </div>
       </form>
     </div>
+
     <div id="tabpanel-config" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-config">
       <form id="signForm" class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full h-fit max-w-3xl">
-        <label class="block text-gray-700 dark:text-gray-200 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Posición de la firma</label>
-        <div class="flex flex-col">
-          <div class="flex flex-row w-full">
-            <div class="flex flex-row w-1/3 border-t-2 border-l-2 border-dotted border-gray-500 mr-5">
-              <div class="flex flex-col w-full text-center pt-1">
-                <input id="esi" type="radio" name="posicion" value="esi"/>
-                <label for="esi" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina superior izquierda</label>
+
+        <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 rounded-lg shadow-md">
+          <label class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Posición de la firma</label>
+          <div class="flex flex-col">
+            <div class="flex flex-row w-full">
+              <div class="flex flex-row w-1/3 border-t-2 border-l-2 border-dotted border-gray-500 mr-5">
+                <div class="flex flex-col w-full text-center pt-1">
+                  <input id="esi" type="radio" name="posicion" value="esi"/>
+                  <label for="esi" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina superior izquierda</label>
+                </div>
+              </div>
+              <div class="flex flex-row w-1/3 border-t-2 border-dotted border-gray-500 ml-5 mr-5 items-center justify-center">
+                <div class="flex flex-col w-full text-center pt-1">
+                  <input id="cs" type="radio" name="posicion" value="cs"/>
+                  <label for="cs" class="text-xs text-gray-700 dark:text-gray-200 p-1">Centro superior</label>
+                </div>
+              </div>
+              <div class="flex flex-row w-1/3 border-t-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5">
+                <div class="flex flex-col w-full text-center pt-1">
+                  <input id="esd" type="radio" name="posicion" value="esd"/>
+                  <label for="esd" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina superior derecha</label>
+                </div>
               </div>
             </div>
-            <div class="flex flex-row w-1/3 border-t-2 border-dotted border-gray-500 ml-5 mr-5 items-center justify-center">
-              <div class="flex flex-col w-full text-center pt-1">
-                <input id="cs" type="radio" name="posicion" value="cs"/>
-                <label for="cs" class="text-xs text-gray-700 dark:text-gray-200 p-1">Centro superior</label>
+            <div class="flex flex-row w-full">
+              <div class="flex flex-row w-1/3 border-b-2 border-l-2 border-dotted border-gray-500 mr-5 mt-5">
+                <div class="flex flex-col w-full text-center pb-1">
+                  <label for="eii" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior izquierda</label>
+                  <input id="eii" type="radio" name="posicion" value="eii"/>
+                </div>
               </div>
-            </div>
-            <div class="flex flex-row w-1/3 border-t-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5">
-              <div class="flex flex-col w-full text-center pt-1">
-                <input id="esd" type="radio" name="posicion" value="esd"/>
-                <label for="esd" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina superior derecha</label>
+              <div class="flex flex-row w-1/3 border-b-2 border-dotted border-gray-500 ml-5 mr-5 mt-5 items-center justify-center">
+                <div class="flex flex-col w-full text-center pb-1">
+                  <label for="ci" class="text-xs text-gray-700 dark:text-gray-200 p-1">Centro inferior</label>
+                  <input id="ci" type="radio" name="posicion" value="ci"/>
+                </div>
               </div>
-            </div>
+              <div class="flex flex-row w-1/3 border-b-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5 mt-5">
+                <div class="flex flex-col w-full text-center pb-1">
+                  <label for="eid" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior derecha</label>
+                  <input id="eid" type="radio" name="posicion" value="eid"/>
+                </div>
+              </div>
+            </div>         
           </div>
-          <div class="flex flex-row w-full">
-            <div class="flex flex-row w-1/3 border-b-2 border-l-2 border-dotted border-gray-500 mr-5 mt-5">
-              <div class="flex flex-col w-full text-center pb-1">
-                <label for="eii" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior izquierda</label>
-                <input id="eii" type="radio" name="posicion" value="eii"/>
-              </div>
-            </div>
-            <div class="flex flex-row w-1/3 border-b-2 border-dotted border-gray-500 ml-5 mr-5 mt-5 items-center justify-center">
-              <div class="flex flex-col w-full text-center pb-1">
-                <label for="ci" class="text-xs text-gray-700 dark:text-gray-200 p-1">Centro inferior</label>
-                <input id="ci" type="radio" name="posicion" value="ci"/>
-              </div>
-            </div>
-            <div class="flex flex-row w-1/3 border-b-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5 mt-5">
-              <div class="flex flex-col w-full text-center pb-1">
-                <label for="eid" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior derecha</label>
-                <input id="eid" type="radio" name="posicion" value="eid"/>
-              </div>
-            </div>
-          </div>         
         </div>
-        <label class="block text-gray-700 dark:text-gray-200 font-semibold text-sm mb-0 whitespace-nowrap pb-5 pt-5">Página de la firma</label>
-        <div class="flex flex-col">
-          <div class="flex flex-row">
-            <input id="pp" type="radio" name="pagina" value="pp"/>
-            <label for="pp" class="text-xs text-gray-700 dark:text-gray-200 p-1">Primera página</label>
+
+        <div class="flex flex-row">
+          <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mt-4 mr-2 rounded-lg shadow-md w-1/2">
+            <label class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Página de la firma</label>
+            <div class="flex flex-row">
+              <input id="pp" type="radio" name="pagina" value="pp"/>
+              <label for="pp" class="text-xs text-gray-700 dark:text-gray-200 p-1">Primera página</label>
+            </div>
+            <div class="flex flex-row">
+              <input id="up" type="radio" name="pagina" value="up"/>
+              <label for="up" class="text-xs text-gray-700 dark:text-gray-200 p-1">Última página</label>
+            </div>
+            <div class="flex flex-row">
+              <input id="np" type="radio" name="pagina" value="up"/>
+              <label for="np" class="text-xs text-gray-700 dark:text-gray-200 p-1">
+                <input type="number" placeholder="Nro. Página" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-xs"/>
+              </label>
+            </div>          
           </div>
-          <div class="flex flex-row">
-            <input id="up" type="radio" name="pagina" value="up"/>
-            <label for="up" class="text-xs text-gray-700 dark:text-gray-200 p-1">Última página</label>
-          </div>
-          <div class="flex flex-row">
-            <input id="np" type="radio" name="pagina" value="up"/>
-            <label for="np" class="text-xs text-gray-700 dark:text-gray-200 p-1">
-              <input type="number" placeholder="Nro. Página" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-xs"/>
-            </label>
-          </div>          
+          <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mt-4 ml-2 rounded-lg shadow-md  w-1/2">
+            <label class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Directorio de archivos firmados</label>
+          </div>  
         </div>
+
       </form>
     </div>
   </div>
@@ -113,6 +124,8 @@
     const root = document.documentElement;
     const toggleBtn = document.getElementById('toggleDark');
     const darkIcon = document.getElementById('darkIcon');
+    
+
     // Cargar preferencia
     if (localStorage.getItem('theme') === 'dark' ||
         (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
