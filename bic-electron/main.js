@@ -149,6 +149,11 @@ function descargarArchivo(url, destino) {
   });
 }
 
+// Obtener el directorio home del usuario
+ipcMain.handle('get-home-dir', () => {
+  return os.homedir();
+});
+
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal

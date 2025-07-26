@@ -104,7 +104,7 @@
               <label for="up" class="text-xs text-gray-700 dark:text-gray-200 p-1">Última página</label>
             </div>
             <div class="flex flex-row">
-              <input id="np" type="radio" name="pagina" value="up"/>
+              <input id="np" type="radio" name="pagina" value="np"/>
               <label for="np" class="text-xs text-gray-700 dark:text-gray-200 p-1">
                 <input type="number" placeholder="Nro. Página" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-xs"/>
               </label>
@@ -112,6 +112,7 @@
           </div>
           <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mt-4 ml-2 rounded-lg shadow-md  w-1/2">
             <label class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Directorio de archivos firmados</label>
+            <input type="text" placeholder="Directorio" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm" />
           </div>  
         </div>
 
@@ -166,6 +167,87 @@
       panelConfig.classList.remove('hidden');
       panelFirmar.classList.add('hidden');
     });
+
+    // Gestión de configuración en localStorage
+    const configForm = document.getElementById('signForm');
+    
+    // Función para guardar configuración
+    function guardarConfiguracion() {
+      const config = {
+        posicion: document.querySelector('input[name="posicion"]:checked')?.value || '',
+        pagina: document.querySelector('input[name="pagina"]:checked')?.value || '',
+        numeroPagina: document.querySelector('input[type="number"]')?.value || '',
+        directorio: document.querySelector('input[placeholder="Directorio"]')?.value || ''
+      };
+      
+      localStorage.setItem('conf', JSON.stringify(config));
+      console.log('Configuración guardada:', config);
+    }
+
+    // Función para cargar configuración
+    async function cargarConfiguracion() {
+      let config = null;
+      const configGuardada = localStorage.getItem('conf');
+      if (configGuardada) {
+        try {
+          config = JSON.parse(configGuardada);
+        } catch (error) {
+          console.error('Error al cargar la configuración:', error);
+        }
+      }
+      // Si no hay configuración guardada, usar valores por defecto
+      if (!config) {
+        // Obtener el directorio home real del usuario
+        let homeDir = '~';
+        try {
+          if (window.electronAPI && window.electronAPI.getHomeDir) {
+            homeDir = await window.electronAPI.getHomeDir();
+          }
+        } catch (error) {
+          console.error('Error al obtener el directorio home:', error);
+        }
+        
+        config = {
+          posicion: 'ci', // Centro inferior
+          pagina: 'pp',   // Primera página
+          numeroPagina: '',
+          directorio: homeDir // Home del usuario real
+        };
+        localStorage.setItem('conf', JSON.stringify(config));
+      }
+      // Restaurar posición
+      if (config.posicion) {
+        const radioPosicion = document.querySelector(`input[name="posicion"][value="${config.posicion}"]`);
+        if (radioPosicion) radioPosicion.checked = true;
+      }
+      // Restaurar página
+      if (config.pagina) {
+        const radioPagina = document.querySelector(`input[name="pagina"][value="${config.pagina}"]`);
+        if (radioPagina) radioPagina.checked = true;
+      }
+      // Restaurar número de página
+      if (config.numeroPagina) {
+        const inputNumero = document.querySelector('input[type="number"]');
+        if (inputNumero) inputNumero.value = config.numeroPagina;
+      }
+      // Restaurar directorio
+      if (config.directorio) {
+        const inputDirectorio = document.querySelector('input[placeholder="Directorio"]');
+        if (inputDirectorio) inputDirectorio.value = config.directorio;
+      }
+      console.log('Configuración cargada:', config);
+    }
+
+    // Agregar listeners para guardar configuración automáticamente
+    document.addEventListener('change', (e) => {
+      if (e.target.name === 'posicion' || e.target.name === 'pagina' || 
+          e.target.type === 'number' || e.target.placeholder === 'Directorio') {
+        guardarConfiguracion();
+      }
+    });
+
+    // Cargar configuración al iniciar
+    cargarConfiguracion();
   </script>
   <script src="renderer.js"></script>
 </body>
