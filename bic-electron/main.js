@@ -155,6 +155,8 @@ ipcMain.handle('get-home-dir', () => {
 });
 
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
+
+  console.log(" ---@@--- ", pdfs, password);
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bic-'));

@@ -26,7 +26,9 @@
       <button id="tab-config" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-config">Configuración</button>
     </div>
     <div id="tabpanel-firmar" class="tab-panel" role="tabpanel" aria-labelledby="tab-firmar">
+
       <form id="signForm" class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full h-fit max-w-3xl">
+
         <div class="flex items-center gap-2 p-2 mb-3 w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-md">
           <label for="password" class="block text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap">Password:</label>
           <input type="password" id="password" required class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-40" />
@@ -34,13 +36,17 @@
             Firmar
           </button>
         </div>
+
         <div class="flex items-center ml-2 mb-3">
           <input type="checkbox" id="selectAll" class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
         </div>
+
         <div class="pdf-list mb-6 w-full h-full" id="pdfList">
           <!-- Aquí se cargará la lista de PDFs -->
         </div>
+
       </form>
+      
     </div>
 
     <div id="tabpanel-config" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-config">
