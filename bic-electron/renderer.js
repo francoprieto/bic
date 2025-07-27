@@ -22,6 +22,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Función para renderizar la lista de PDFs con paginación
   function renderPdfList() {
+    
     pdfList.innerHTML = '';
     if (!allPdfs || allPdfs.length === 0) {
       pdfList.innerHTML = '<div class="text-gray-500">No hay archivos para firmar.</div>';
@@ -150,6 +151,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Maneja el envío del formulario
   signForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log("submitted!");
     const password = document.getElementById('password').value;
     const pdfs = Array.from(selectedPdfs);
     if (pdfs.length === 0) {
@@ -157,11 +159,11 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
     resultDiv.innerHTML = '';
-    ipcRenderer.send('firmar-pdfs', { pdfs, password });
+    window.electronAPI?.sendToMain('firmar-pdfs', { pdfs, password });
   });
 
   // Recibe el resultado de la firma
-  ipcRenderer.on('firma-resultado', (event, { success, output, error }) => {
+  window.electronAPI?.onFromMain('firma-resultado', (event, { success, output, error }) => {
     if (success) {
       resultDiv.innerHTML = `<div class="result text-green-600">${output || 'Firma realizada correctamente.'}</div>`;
     } else {
