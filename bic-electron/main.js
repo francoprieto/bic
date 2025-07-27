@@ -156,21 +156,23 @@ ipcMain.handle('get-home-dir', () => {
 
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
 
-  console.log(" ---@@--- ", pdfs, password);
+  console.log(" ---@@--- ", bicHome);
+  
+  // Ejecutar la aplicación Java
+  // Ajusta la ruta y los argumentos según tu app Java
+  const javaPath = 'java';
+  const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar');
+
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bic-'));
     const rutasLocales = [];
-    for (const url of pdfs) {
-      const nombre = path.basename(url.split('?')[0]);
-      const destino = path.join(tempDir, nombre);
-      await descargarArchivo(url, destino);
+    for (const pdf of pdfs) {
+      const nombre = pdf.nombre; //path.basename(url.split('?')[0]);
+      const destino = path.join(bicHome, "downloads", nombre);
+      await descargarArchivo(pdf.url, destino);
       rutasLocales.push(destino);
     }
-    // Ejecutar la aplicación Java
-    // Ajusta la ruta y los argumentos según tu app Java
-    const javaPath = 'java';
-    const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar'); // Ajusta el nombre del JAR
+    // Ajusta el nombre del JAR
     const archivosParam = rutasLocales.join(',');
     const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=C:\\temp`];
     execFile(javaPath, args, (error, stdout, stderr) => {
