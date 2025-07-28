@@ -7,7 +7,6 @@ const http = require('http');
 const { execFile } = require('child_process');
 const os = require('os');
 
-
 let mainWindow;
 let pdfUrls = [];
 let bicHome;
@@ -129,12 +128,30 @@ app.on('window-all-closed', () => {
 });
 
 // Función para descargar un archivo
-function descargarArchivo(url, destino) {
-  console.log("Descargando", url, "a", destino);
+function descargarArchivo(pdf, destino) {
+  
+  const url = pdf.url;
+  let opt = {medhod: 'GET'};
+
+  if(pdf.headers) opt['headers'] = pdf.headers;
+
   return new Promise((resolve, reject) => {
-    const protocolo = url.startsWith('https') ? https : http;
+
+    let protocolo;
+
+    const uri = new URL(url);
+    opt['hostname'] = uri.hostname;
+    opt['port'] = uri.port;
+    opt['path'] = uri.pathname;
+
+    if(url.startsWith('https')){
+      protocolo = https;
+    }else{
+      protocolo = http;
+    }
+
     const file = fs.createWriteStream(destino);
-    protocolo.get(url, (response) => {
+    protocolo.get(opt, (response) => {
       if (response.statusCode !== 200) {
         reject(new Error('Error al descargar: ' + url));
         return;
@@ -154,27 +171,91 @@ ipcMain.handle('get-home-dir', () => {
   return os.homedir();
 });
 
+// Obtener las configuraciones del localStorage
+ipcMain.handle('get-confs', async () => {
+  try {
+    // Enviar mensaje al renderer para que obtenga las configuraciones del localStorage
+    const confs = await mainWindow.webContents.executeJavaScript(`
+      (() => {
+        const confs = localStorage.getItem('conf');
+        return confs ? JSON.parse(confs) : null;
+      })()
+    `);
+    return confs;
+  } catch (error) {
+    console.error('Error al obtener configuraciones:', error);
+    return null;
+  }
+});
+
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
 
   console.log(" ---@@--- ", bicHome);
+
+  // Obtener las configuraciones del localStorage
+  let confs = null;
+  try {
+    // Esperar a que la ventana esté completamente cargada
+    if (!mainWindow.webContents.isLoading()) {
+      confs = await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const confs = localStorage.getItem('conf');
+          return confs ? JSON.parse(confs) : null;
+        })()
+      `);
+      console.log('Configuraciones obtenidas:', confs);
+    } else {
+      console.log('Ventana aún cargando, esperando...');
+      // Esperar a que termine de cargar
+      await new Promise(resolve => {
+        mainWindow.webContents.once('did-finish-load', resolve);
+      });
+      confs = await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const confs = localStorage.getItem('conf');
+          return confs ? JSON.parse(confs) : null;
+        })()
+      `);
+      console.log('Configuraciones obtenidas después de cargar:', confs);
+    }
+  } catch (error) {
+    console.error('Error al obtener configuraciones:', error);
+  }
   
+  console.log("confs",confs);
+  let posicion={};
+  if(confs.pagina === 'pp') posicion['pargina'] = 'primera';
+  else if(confs.pagina === 'up') posicion['pargina'] = 'ultima';
+  else posicion['pargina'] = confs.numeroPagina;
+
+  if(confs.posicion === 'ci') posicion['lugar'] = 'centro-inferior';
+  else if(confs.posicion === 'cs') posicion['lugar'] = 'centro-superior';
+  else if(confs.posicion === 'esi') posicion['lugar'] = 'esquina-superior-izquierda';
+  else if(confs.posicion === 'esd') posicion['lugar'] = 'esquina-superior-derecha';
+  else if(confs.posicion === 'eii') posicion['lugar'] = 'esquina-inferior-izquierda';
+  else if(confs.posicion === 'eid') posicion['lugar'] = 'esquina-inferior-derecha';
+
+  console.log("pos",posicion);
+
+  const dir = confs.directorio;
+
   // Ejecutar la aplicación Java
   // Ajusta la ruta y los argumentos según tu app Java
   const javaPath = 'java';
   const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar');
-
+  
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal
     const rutasLocales = [];
     for (const pdf of pdfs) {
-      const nombre = pdf.nombre; //path.basename(url.split('?')[0]);
+      const nombre = pdf.nombre;
       const destino = path.join(bicHome, "downloads", nombre);
-      await descargarArchivo(pdf.url, destino);
+      await descargarArchivo(pdf, destino);
       rutasLocales.push(destino);
     }
     // Ajusta el nombre del JAR
     const archivosParam = rutasLocales.join(',');
-    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=C:\\temp`];
+    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${posicion}`];
     execFile(javaPath, args, (error, stdout, stderr) => {
       if (error) {
         event.sender.send('firma-resultado', { success: false, error: stderr || error.message });

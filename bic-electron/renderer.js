@@ -93,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     paginationDiv.style.display = 'flex';
     // Botón anterior
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = 'Anterior';
+    prevBtn.textContent = ' < ';
     prevBtn.className = 'px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50';
     prevBtn.disabled = currentPage === 1;
     prevBtn.onclick = () => {
@@ -105,12 +105,12 @@ window.addEventListener('DOMContentLoaded', () => {
     paginationDiv.appendChild(prevBtn);
     // Info de página
     const pageInfo = document.createElement('span');
-    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+    pageInfo.textContent = ` ${currentPage} / ${totalPages} `;
     pageInfo.className = 'mx-2 text-gray-700';
     paginationDiv.appendChild(pageInfo);
     // Botón siguiente
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Siguiente';
+    nextBtn.textContent = ' > ';
     nextBtn.className = 'px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.onclick = () => {
