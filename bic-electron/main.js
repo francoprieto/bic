@@ -219,11 +219,10 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     console.error('Error al obtener configuraciones:', error);
   }
   
-  console.log("confs",confs);
   let posicion={};
   if(confs.pagina === 'pp') posicion['pargina'] = 'primera';
   else if(confs.pagina === 'up') posicion['pargina'] = 'ultima';
-  else posicion['pargina'] = confs.numeroPagina;
+  else posicion['pargina'] = Number(confs.numeroPagina);
 
   if(confs.posicion === 'ci') posicion['lugar'] = 'centro-inferior';
   else if(confs.posicion === 'cs') posicion['lugar'] = 'centro-superior';
@@ -232,8 +231,8 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   else if(confs.posicion === 'eii') posicion['lugar'] = 'esquina-inferior-izquierda';
   else if(confs.posicion === 'eid') posicion['lugar'] = 'esquina-inferior-derecha';
 
-  console.log("pos",posicion);
-
+  console.log("pos",JSON.stringify(posicion));
+  
   const dir = confs.directorio;
 
   // Ejecutar la aplicación Java
@@ -250,9 +249,11 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
       await descargarArchivo(pdf, destino);
       rutasLocales.push(destino);
     }
+
+    const position = JSON.stringify(posicion);
     // Ajusta el nombre del JAR
     const archivosParam = rutasLocales.join(',');
-    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${posicion}`];
+    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${position}`];
     execFile(javaPath, args, (error, stdout, stderr) => {
       if (error) {
         event.sender.send('firma-resultado', { success: false, error: stderr || error.message });
