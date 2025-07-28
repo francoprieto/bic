@@ -189,9 +189,6 @@ ipcMain.handle('get-confs', async () => {
 });
 
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
-
-  console.log(" ---@@--- ", bicHome);
-
   // Obtener las configuraciones del localStorage
   let confs = null;
   try {
