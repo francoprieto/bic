@@ -220,9 +220,9 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   }
   
   let posicion={};
-  if(confs.pagina === 'pp') posicion['pargina'] = 'primera';
-  else if(confs.pagina === 'up') posicion['pargina'] = 'ultima';
-  else posicion['pargina'] = Number(confs.numeroPagina);
+  if(confs.pagina === 'pp') posicion['pagina'] = 'primera';
+  else if(confs.pagina === 'up') posicion['pagina'] = 'ultima';
+  else posicion['pagina'] = Number(confs.numeroPagina);
 
   if(confs.posicion === 'ci') posicion['lugar'] = 'centro-inferior';
   else if(confs.posicion === 'cs') posicion['lugar'] = 'centro-superior';
