@@ -98,7 +98,7 @@ public class FirmadorImpl implements Firmador{
      * @return Resultado de la operación
      */
     public Resultado firmar(Map<String,String> parametros){
-        this.cleanCache();
+        //this.cleanCache();
         Conf configuracion;
         try {
             if (parametros.containsKey(PARAM_INIT) && "true".equals(parametros.get(PARAM_INIT))) {
@@ -302,8 +302,11 @@ public class FirmadorImpl implements Firmador{
                         retorno.put("pagina", (float) pdf.getNumberOfPages());
                         cropBox = pdf.getCropBox(pdf.getNumberOfPages());
                     }else{
-                        retorno.put("pagina",Float.valueOf(cp.get("pagina")));
-                        cropBox = pdf.getCropBox(Integer.valueOf(cp.get("pagina")));
+                        String pag = cp.get("pagina");
+                        Integer ip = Integer.valueOf(pag);
+                        if(ip.intValue() > pdf.getNumberOfPages()) ip = pdf.getNumberOfPages();
+                        retorno.put("pagina",Float.valueOf(ip));
+                        cropBox = pdf.getCropBox(ip);
                     }
                 }
                 if(cp.containsKey("lugar") && cp.get("lugar").trim().length() > 0)
@@ -464,10 +467,11 @@ public class FirmadorImpl implements Firmador{
             for(String file: files) {
                 File src = new File(file);
                 File des = new File(cache + ConfiguracionUtil.SLASH + src.getName());
-                if(des.exists())
-                    FileUtils.deleteQuietly(des);
-                FileUtils.copyFile(src, des);
-                archivosCacheados.add(des);
+                if (!src.equals(des)){
+                    if (des.exists()) FileUtils.deleteQuietly(des);
+                    FileUtils.copyFile(src, des);
+                    archivosCacheados.add(des);
+                }else archivosCacheados.add(src);
             }
             return archivosCacheados;
         }
