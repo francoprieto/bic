@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const os = require('os');
 
 let mainWindow;
@@ -256,12 +256,63 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     
     const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${position}`];
 
-    execFile(javaPath, args, (error, stdout, stderr) => {
-      if (error) {
-        event.sender.send('firma-resultado', { success: false, error: stderr || error.message });
+    console.log("Argumentos", args);
+
+    // Usar spawn para mejor control del output en tiempo real
+    const javaProcess = spawn(javaPath, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf8'
+    });
+
+    let stdoutData = '';
+    let stderrData = '';
+
+    // Capturar stdout en tiempo real
+    javaProcess.stdout.on('data', (data) => {
+      const output = data.toString();
+      stdoutData += output;
+      console.log('Java stdout:', output);
+      // Enviar output en tiempo real al renderer
+      event.sender.send('java-output', { type: 'stdout', data: output });
+    });
+
+    // Capturar stderr en tiempo real
+    javaProcess.stderr.on('data', (data) => {
+      const output = data.toString();
+      stderrData += output;
+      console.log('Java stderr:', output);
+      // Enviar output en tiempo real al renderer
+      event.sender.send('java-output', { type: 'stderr', data: output });
+    });
+
+    // Manejar cuando el proceso termina
+    javaProcess.on('close', (code) => {
+      console.log(`Proceso Java terminado con código: ${code}`);
+      
+      if (code === 0) {
+        event.sender.send('firma-resultado', { 
+          success: true, 
+          output: stdoutData,
+          stderr: stderrData,
+          exitCode: code
+        });
       } else {
-        event.sender.send('firma-resultado', { success: true, output: stdout });
+        event.sender.send('firma-resultado', { 
+          success: false, 
+          error: stderrData || `Proceso terminado con código ${code}`,
+          stdout: stdoutData,
+          exitCode: code
+        });
       }
+    });
+
+    // Manejar errores del proceso
+    javaProcess.on('error', (error) => {
+      console.error('Error ejecutando Java:', error);
+      event.sender.send('firma-resultado', { 
+        success: false, 
+        error: error.message 
+      });
     });
   } catch (err) {
     event.sender.send('firma-resultado', { success: false, error: err.message });

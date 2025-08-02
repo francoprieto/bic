@@ -162,12 +162,48 @@ window.addEventListener('DOMContentLoaded', () => {
     window.electronAPI?.sendToMain('firmar-pdfs', { pdfs, password });
   });
 
-  // Recibe el resultado de la firma
-  window.electronAPI?.onFromMain('firma-resultado', (event, { success, output, error }) => {
-    if (success) {
-      resultDiv.innerHTML = `<div class="result text-green-600">${output || 'Firma realizada correctamente.'}</div>`;
-    } else {
-      resultDiv.innerHTML = `<div class="error text-red-600">${error || 'Error al firmar.'}</div>`;
+  // Variable para acumular el output en tiempo real
+  let javaOutputBuffer = '';
+
+  // Recibe el output en tiempo real del programa Java
+  window.electronAPI?.onFromMain('java-output', (event, { type, data }) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const outputLine = `[${timestamp}] [${type.toUpperCase()}] ${data}`;
+    javaOutputBuffer += outputLine;
+    
+    // Mostrar el output en tiempo real
+    if (resultDiv.innerHTML === '') {
+      resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
     }
+    
+    const outputDiv = resultDiv.querySelector('.java-output');
+    if (outputDiv) {
+      outputDiv.innerHTML += outputLine.replace(/\n/g, '<br>');
+      outputDiv.scrollTop = outputDiv.scrollHeight; // Auto-scroll al final
+    }
+  });
+
+  // Recibe el resultado final de la firma
+  window.electronAPI?.onFromMain('firma-resultado', (event, { success, output, stderr, error, exitCode }) => {
+    const timestamp = new Date().toLocaleTimeString();
+    
+    if (success) {
+      const successMessage = `[${timestamp}] ✅ Proceso completado exitosamente (código: ${exitCode})`;
+      resultDiv.innerHTML += `<div class="result text-green-600 font-bold mt-2">${successMessage}</div>`;
+      
+      if (output && output.trim()) {
+        resultDiv.innerHTML += `<div class="final-output bg-green-50 dark:bg-green-900 p-2 rounded mt-2 font-mono text-sm">${output}</div>`;
+      }
+    } else {
+      const errorMessage = `[${timestamp}] ❌ Error en el proceso (código: ${exitCode || 'N/A'})`;
+      resultDiv.innerHTML += `<div class="error text-red-600 font-bold mt-2">${errorMessage}</div>`;
+      
+      if (error) {
+        resultDiv.innerHTML += `<div class="error-details bg-red-50 dark:bg-red-900 p-2 rounded mt-2 font-mono text-sm">${error}</div>`;
+      }
+    }
+    
+    // Limpiar el buffer para la próxima ejecución
+    javaOutputBuffer = '';
   });
 }); 
