@@ -146,8 +146,10 @@ public class FirmadorImpl implements Firmador{
                     if(resultados.trim().length() > 0) resultados += ",";
                     resultados += "[{\"archivo\":\"" + file.getName() + "\", \"resultado\":\"" + res + "\"}]";
                 }
-                if(file.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache"))
+                if(file.getAbsolutePath().contains(".bic") && file.getAbsolutePath().contains("cache")) {
+                    Log.info("Eliminando archivo cacheado: " + file.getAbsolutePath());
                     FileUtils.deleteQuietly(file);
+                }
             }
         }
         if(resultados.trim().length() == 0) return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
@@ -251,6 +253,16 @@ public class FirmadorImpl implements Firmador{
                     for(File archivo : archivos) {
                         if(archivo.exists() && archivo.isFile()) {
                             File firmado = this.procesarFirma(archivo, privateKey, providerPKCS11, cert, parametros);
+
+                            if(!firmado.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache")
+                             && archivo.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache")){
+                                try {
+                                    FileUtils.delete(archivo);
+                                } catch (IOException e) {
+                                   e.printStackTrace();
+                                }
+                            }
+
                             if(firmado != null && firmado.exists() && firmado.isFile())
                                 archivosFirmados.add(firmado);
                         }
@@ -384,8 +396,10 @@ public class FirmadorImpl implements Firmador{
     private File procesarFirma(File archivo, PrivateKey key, Provider provider, Certificate cert, Map<String,String> parametros){
         String destino = parametros.containsKey(PARAM_DESTINO) ? parametros.get(PARAM_DESTINO) : ConfiguracionUtil.getDirFirmados();
         ByteArrayOutputStream fos = null;
+        PdfReader pdf = null;
+        ByteArrayOutputStream qr = null;
         try {
-            PdfReader pdf = new PdfReader(archivo.getCanonicalPath());
+            pdf = new PdfReader(archivo.getCanonicalPath());
             fos = new ByteArrayOutputStream();
             PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
@@ -396,7 +410,7 @@ public class FirmadorImpl implements Firmador{
             X509Certificate x509Certificate = (X509Certificate) cert;
             Principal principal = x509Certificate.getSubjectDN();
             String fullDns = principal.getName();
-            ByteArrayOutputStream qr = QRCode.from(fullDns).withSize(50, 50).stream();
+            qr = QRCode.from(fullDns).withSize(50, 50).stream();
             String[] dns = fullDns.split(",");
             Map<String,String> datos = new HashMap<>();
             datos.put("APELLIDOS","");
@@ -432,20 +446,20 @@ public class FirmadorImpl implements Firmador{
         } catch (IOException | DocumentException | GeneralSecurityException e) {
             Log.error("Error al firmar el archivo " + archivo.getName(), e);
             // No se usa System.exit, solo se retorna null
+        }finally{
+            try {
+                if (qr != null) {
+                    qr.close();
+                }
+                if (pdf != null) {
+                    pdf.close();
+                }
+                if (fos != null) {
+                    fos.close();
+                }
+            }catch(Exception ex) {  }
         }
         return null;
-    }
-
-    /**
-     * Limpia el directorio de caché de archivos temporales.
-     */
-    private void cleanCache(){
-        String cache = ConfiguracionUtil.getDirCache();
-        File dir = new File(cache);
-        if(dir != null && dir.exists() && dir.isDirectory()){
-            for(File f : dir.listFiles())
-                FileUtils.deleteQuietly(f);
-        }
     }
 
     /**

@@ -200,7 +200,6 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
           return confs ? JSON.parse(confs) : null;
         })()
       `);
-      console.log('Configuraciones obtenidas:', confs);
     } else {
       console.log('Ventana aún cargando, esperando...');
       // Esperar a que termine de cargar
@@ -255,8 +254,6 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     const archivosParam = rutasLocales.join(',');
     
     const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${position}`];
-
-    console.log("Argumentos", args);
 
     // Usar spawn para mejor control del output en tiempo real
     const javaProcess = spawn(javaPath, args, {
