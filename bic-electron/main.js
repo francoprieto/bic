@@ -286,6 +286,23 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     javaProcess.on('close', (code) => {
       console.log(`Proceso Java terminado con código: ${code}`);
       
+      // Limpiar archivos de cache después de la firma
+      try {
+        const cacheDir = path.join(bicHome, "cache");
+        if (fs.existsSync(cacheDir)) {
+          const files = fs.readdirSync(cacheDir);
+          files.forEach(file => {
+            const filePath = path.join(cacheDir, file);
+            if (fs.statSync(filePath).isFile()) {
+              fs.unlinkSync(filePath);
+              console.log(`Archivo eliminado de cache: ${file}`);
+            }
+          });
+        }
+      } catch (cleanupError) {
+        console.error('Error al limpiar cache:', cleanupError);
+      }
+      
       if (code === 0) {
         event.sender.send('firma-resultado', { 
           success: true, 
