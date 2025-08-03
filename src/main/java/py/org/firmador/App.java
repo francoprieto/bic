@@ -46,9 +46,16 @@ public class App {
             Log.error("Error al procesar respuesta", jpe);
             System.exit(3);
         }
+        boolean quiet = false;
+        if(parametros.containsKey("quiet") && parametros.get("quiet").equals("true")) quiet = true;
+        if(!quiet) MensajeUtil.showMessage(resultado);
 
-        MensajeUtil.showMessage(resultado);
-        Log.info("Listo! " + json);
+        if(resultado.getTipo().equalsIgnoreCase("error")) {
+            Log.error(json);
+            System.exit(1);
+        }else
+            Log.info("Listo! " + json);
+
         System.exit(0);
     }
 

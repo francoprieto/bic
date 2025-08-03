@@ -35,7 +35,6 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.TimeUnit;
 
 public class FirmadorImpl implements Firmador{
 
@@ -53,12 +52,14 @@ public class FirmadorImpl implements Firmador{
     private static final String PARAM_ARCHIVO_HEADERS = "archivo-headers";
     private static final String PARAM_POSICION = "posicion";
 
+
     /**
      * Valida los parámetros relacionados a archivos.
      * @param parametros Mapa de parámetros
      * @return true si los parámetros son válidos, false en caso contrario
      */
     private boolean validarParametrosArchivos(Map<String,String> parametros){
+
         if(parametros.containsKey(PARAM_ARCHIVO)){
             File archivo = new File(parametros.get(PARAM_ARCHIVO));
             if(!archivo.exists() || !archivo.isFile()){
@@ -89,6 +90,7 @@ public class FirmadorImpl implements Firmador{
             }
             return true;
         }
+
         Log.error("No se ha definido un archivo!");
         return false;
     }
