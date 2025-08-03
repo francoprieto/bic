@@ -35,6 +35,7 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeUnit;
 
 public class FirmadorImpl implements Firmador{
 
@@ -146,10 +147,6 @@ public class FirmadorImpl implements Firmador{
                     if(resultados.trim().length() > 0) resultados += ",";
                     resultados += "[{\"archivo\":\"" + file.getName() + "\", \"resultado\":\"" + res + "\"}]";
                 }
-                if(file.getAbsolutePath().contains(".bic") && file.getAbsolutePath().contains("cache")) {
-                    Log.info("Eliminando archivo cacheado: " + file.getAbsolutePath());
-                    FileUtils.deleteQuietly(file);
-                }
             }
         }
         if(resultados.trim().length() == 0) return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
@@ -253,15 +250,6 @@ public class FirmadorImpl implements Firmador{
                     for(File archivo : archivos) {
                         if(archivo.exists() && archivo.isFile()) {
                             File firmado = this.procesarFirma(archivo, privateKey, providerPKCS11, cert, parametros);
-
-                            if(!firmado.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache")
-                             && archivo.getAbsolutePath().contains(".bic" + ConfiguracionUtil.SLASH + "cache")){
-                                try {
-                                    FileUtils.delete(archivo);
-                                } catch (IOException e) {
-                                   e.printStackTrace();
-                                }
-                            }
 
                             if(firmado != null && firmado.exists() && firmado.isFile())
                                 archivosFirmados.add(firmado);
@@ -398,10 +386,11 @@ public class FirmadorImpl implements Firmador{
         ByteArrayOutputStream fos = null;
         PdfReader pdf = null;
         ByteArrayOutputStream qr = null;
+        PdfStamper stp = null;
         try {
             pdf = new PdfReader(archivo.getCanonicalPath());
             fos = new ByteArrayOutputStream();
-            PdfStamper stp = PdfStamper.createSignature(pdf, fos, '\0');
+            stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
             Map<String,Float> coor = this.getPosicion(parametros, pdf);
             Rectangle firma = new Rectangle(coor.get("eix"), coor.get("eiy"), coor.get("esx"), coor.get("esy"));
@@ -451,13 +440,20 @@ public class FirmadorImpl implements Firmador{
                 if (qr != null) {
                     qr.close();
                 }
+                if (stp != null) {
+                    stp.close();
+                }
                 if (pdf != null) {
                     pdf.close();
                 }
                 if (fos != null) {
                     fos.close();
                 }
-            }catch(Exception ex) {  }
+                // Pequeño retraso para asegurar que los recursos se liberen completamente
+                Thread.sleep(100);
+            }catch(Exception ex) { 
+                Log.warn("Error al cerrar recursos: " + ex.getMessage());
+            }
         }
         return null;
     }
