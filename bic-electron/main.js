@@ -253,7 +253,7 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     // Ajusta el nombre del JAR
     const archivosParam = rutasLocales.join(',');
     
-    const args = ['-jar', jarPath, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${position}`];
+    const args = ['-jar', jarPath, `--quiet=true`, `--pin=${password}`, `--archivos=${archivosParam}`, `--destino=${dir}`, `--posicion=${position}`];
 
     // Usar spawn para mejor control del output en tiempo real
     const javaProcess = spawn(javaPath, args, {
