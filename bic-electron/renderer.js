@@ -185,7 +185,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Recibe el resultado final de la firma
   window.electronAPI?.onFromMain('firma-resultado', (event, { success, output, stderr, error, exitCode }) => {
-    const timestamp = new Date().toLocaleTimeString();
+    
+    /*const timestamp = new Date().toLocaleTimeString();
     
     if (success) {
       const successMessage = `[${timestamp}] ✅ Proceso completado exitosamente (código: ${exitCode})`;
@@ -201,7 +202,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (error) {
         resultDiv.innerHTML += `<div class="error-details bg-red-50 dark:bg-red-900 p-2 rounded mt-2 font-mono text-sm">${error}</div>`;
       }
-    }
+    }*/
     
     // Limpiar el buffer para la próxima ejecución
     javaOutputBuffer = '';
