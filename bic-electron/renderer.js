@@ -5,7 +5,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const resultDiv = document.getElementById('result');
   const signBtn = document.getElementById('signBtn');
   const selectAllCheckbox = document.getElementById('selectAll');
-  const signSpinner = document.getElementById('signSpinner'); // <-- Add this line
+  const signSpinner = document.getElementById('signSpinner');
+  const msgDiv = document.getElementById('msg'); 
 
   // Variables para paginación
   let allPdfs = [];
@@ -38,9 +39,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const globalIdx = startIdx + idx;
       const checked = selectedPdfs.has(pdf) ? 'checked' : '';
       return `
-        <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
+        <div class="flex items-center bg-gray-300 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
           <input type="checkbox" id="pdf-${globalIdx}" name="pdfs" value="${pdf["url"]}" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" ${checked}>
-          <label for="pdf-${globalIdx}" class="text-gray-800 dark:text-gray-300 break-all cursor-pointer" title="${pdf["url"]}">${pdf["nombre"]}</label>
+          <label for="pdf-${globalIdx}" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer" title="${pdf["url"]}">${pdf["nombre"]}</label>
         </div>
       `;
     }).join('');
@@ -203,7 +204,14 @@ window.addEventListener('DOMContentLoaded', () => {
     const { success, output, exitCode } = payload;
     if (signSpinner) signSpinner.style.display = 'none';
     enableFirmarButton(); // Habilitar botón después de firmar
-    console.log("payload:", payload.output);
+    const msg = JSON.parse(output);
+    const textMsg = msg.mensaje.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '');
+    if (success) {
+      msgDiv.innerHTML = `<div class="success text-green-600">Firma exitosa: ${msg.mensaje}</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="error text-red-600">Error al firmar: ${msg.mensaje}</div>`;
+    }
+    console.log(msg);
     javaOutputBuffer = '';
   });
 });

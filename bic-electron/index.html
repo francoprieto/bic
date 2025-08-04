@@ -42,11 +42,15 @@
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
             </svg>
             <span class="ml-2 text-blue-700 dark:text-blue-400 font-semibold">Firmando...</span>
+           
           </div>          
         </div>
-
-        <div class="flex items-center ml-2 mb-3">
+        
+        <div id="msg"></div>
+        
+        <div class="flex items-center rounded-lg shadow p-2 mb-3 pdf-item w-full">
           <input type="checkbox" id="selectAll" class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+          <label for="selectAll" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer">Archivos</label>
         </div>
 
         <div class="pdf-list mb-6 w-full h-full" id="pdfList">
