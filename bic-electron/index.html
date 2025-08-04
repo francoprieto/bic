@@ -23,6 +23,7 @@
   <div class="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-xl p-0">
     <div class="border-b border-gray-200 dark:border-gray-700 flex" role="tablist">
       <button id="tab-firmar" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white dark:bg-gray-900 rounded-tl-lg  dark:text-blue-400" role="tab" aria-selected="true" aria-controls="tabpanel-firmar">Firma</button>
+      <button id="tab-log" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-log">Log</button>
       <button id="tab-config" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-config">Configuración</button>
     </div>
     <div id="tabpanel-firmar" class="tab-panel" role="tabpanel" aria-labelledby="tab-firmar">
@@ -47,6 +48,15 @@
 
       </form>
       
+    </div>
+
+    <div id="tabpanel-log" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-log">
+      <div class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full h-fit max-w-3xl">
+        <div class="flex flex-col mb-3">
+          <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Log de Firmas</div>
+          <div id="result" class="mt-1"></div>
+        </div>
+      </div>      
     </div>
 
     <div id="tabpanel-config" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-config">
@@ -125,7 +135,7 @@
       </div>
     </div>
   </div>
-  <div id="result" class="mt-6"></div>
+  
   <script>
     // Alternancia de modo oscuro
     const root = document.documentElement;
@@ -155,23 +165,42 @@
     // Alternancia de tabs
     const tabFirmar = document.getElementById('tab-firmar');
     const tabConfig = document.getElementById('tab-config');
+    const tabLog = document.getElementById('tab-log');
     const panelFirmar = document.getElementById('tabpanel-firmar');
     const panelConfig = document.getElementById('tabpanel-config');
+    const panelLog = document.getElementById('tabpanel-log');
     tabFirmar.addEventListener('click', () => {
       tabFirmar.classList.add('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
       tabFirmar.classList.remove('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
       tabConfig.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
       tabConfig.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
+      tabLog.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
+      tabLog.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');  
       panelFirmar.classList.remove('hidden');
       panelConfig.classList.add('hidden');
+      panelLog.classList.add('hidden');
     });
     tabConfig.addEventListener('click', () => {
       tabConfig.classList.add('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
       tabConfig.classList.remove('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
       tabFirmar.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
       tabFirmar.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
+      tabLog.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
+      tabLog.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');  
       panelConfig.classList.remove('hidden');
       panelFirmar.classList.add('hidden');
+      panelLog.classList.add('hidden');
+    });
+    tabLog.addEventListener('click', () => {
+      tabLog.classList.add('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
+      tabLog.classList.remove('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
+      tabFirmar.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
+      tabFirmar.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');
+      tabConfig.classList.remove('text-blue-700', 'bg-white', 'dark:bg-gray-900', 'dark:text-blue-400');
+      tabConfig.classList.add('text-gray-500', 'bg-gray-100', 'dark:bg-gray-800', 'dark:text-gray-400');  
+      panelLog.classList.remove('hidden');
+      panelFirmar.classList.add('hidden');
+      panelConfig.classList.add('hidden');
     });
 
     // Gestión de configuración en localStorage

@@ -173,7 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Mostrar el output en tiempo real
     if (resultDiv.innerHTML === '') {
-      resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
+      resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
     }
     
     const outputDiv = resultDiv.querySelector('.java-output');
