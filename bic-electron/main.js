@@ -6,6 +6,7 @@ const https = require('https');
 const http = require('http');
 const { execFile, spawn } = require('child_process');
 const os = require('os');
+const { exitCode } = require('process');
 
 let mainWindow;
 let pdfUrls = [];
@@ -263,10 +264,12 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
 
     let stdoutData = '';
     let stderrData = '';
+    let ultimoMensaje = '';
 
     // Capturar stdout en tiempo real
     javaProcess.stdout.on('data', (data) => {
       const output = data.toString();
+      if(output) ultimoMensaje  = output.trim();
       stdoutData += output;
       console.log('Java stdout:', output);
       // Enviar output en tiempo real al renderer
@@ -276,6 +279,7 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     // Capturar stderr en tiempo real
     javaProcess.stderr.on('data', (data) => {
       const output = data.toString();
+      if(output) ultimoMensaje = output.trim();
       stderrData += output;
       console.log('Java stderr:', output);
       // Enviar output en tiempo real al renderer
@@ -302,19 +306,20 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
       } catch (cleanupError) {
         console.error('Error al limpiar cache:', cleanupError);
       }
-      
+      const partesMensaje = ultimoMensaje.split('{');
+      ultimoMensaje = partesMensaje.length > 1 ? partesMensaje[1].trim() : ultimoMensaje;
+      ultimoMensaje = ultimoMensaje.startsWith('{') ? ultimoMensaje.trim() : '{' + ultimoMensaje.trim();
+
       if (code === 0) {
         event.sender.send('firma-resultado', { 
           success: true, 
-          output: stdoutData,
-          stderr: stderrData,
+          output: ultimoMensaje,
           exitCode: code
         });
       } else {
         event.sender.send('firma-resultado', { 
           success: false, 
-          error: stderrData || `Proceso terminado con código ${code}`,
-          stdout: stdoutData,
+          output: ultimoMensaje,
           exitCode: code
         });
       }
@@ -325,10 +330,11 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
       console.error('Error ejecutando Java:', error);
       event.sender.send('firma-resultado', { 
         success: false, 
-        error: error.message 
+        output: error.message ,
+        exitCode: 1
       });
     });
   } catch (err) {
-    event.sender.send('firma-resultado', { success: false, error: err.message });
+    event.sender.send('firma-resultado', { success: false, output: err.message, exitCode: 1 });
   }
 }); 

@@ -5,6 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const resultDiv = document.getElementById('result');
   const signBtn = document.getElementById('signBtn');
   const selectAllCheckbox = document.getElementById('selectAll');
+  const signSpinner = document.getElementById('signSpinner'); // <-- Add this line
 
   // Variables para paginación
   let allPdfs = [];
@@ -137,6 +138,18 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function disableFirmarButton() {
+    signBtn.disabled = true;  
+    signBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+    signBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+  }
+
+  function enableFirmarButton() {
+    signBtn.disabled = false;     
+    signBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+    signBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+  }
+
   // Actualiza el estado del checkbox de seleccionar todos
   function updateSelectAllCheckbox() {
     if (!selectAllCheckbox) return;
@@ -151,7 +164,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Maneja el envío del formulario
   signForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    console.log("submitted!");
+    
     const password = document.getElementById('password').value;
     const pdfs = Array.from(selectedPdfs);
     if (pdfs.length === 0) {
@@ -159,6 +172,8 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
     resultDiv.innerHTML = '';
+    if (signSpinner) signSpinner.style.display = 'flex'; // <-- Show spinner
+    disableFirmarButton(); // Deshabilitar botón mientras se firma
     window.electronAPI?.sendToMain('firmar-pdfs', { pdfs, password });
   });
 
@@ -184,27 +199,11 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Recibe el resultado final de la firma
-  window.electronAPI?.onFromMain('firma-resultado', (event, { success, output, stderr, error, exitCode }) => {
-    
-    /*const timestamp = new Date().toLocaleTimeString();
-    
-    if (success) {
-      const successMessage = `[${timestamp}] ✅ Proceso completado exitosamente (código: ${exitCode})`;
-      resultDiv.innerHTML += `<div class="result text-green-600 font-bold mt-2">${successMessage}</div>`;
-      
-      if (output && output.trim()) {
-        resultDiv.innerHTML += `<div class="final-output bg-green-50 dark:bg-green-900 p-2 rounded mt-2 font-mono text-sm">${output}</div>`;
-      }
-    } else {
-      const errorMessage = `[${timestamp}] ❌ Error en el proceso (código: ${exitCode || 'N/A'})`;
-      resultDiv.innerHTML += `<div class="error text-red-600 font-bold mt-2">${errorMessage}</div>`;
-      
-      if (error) {
-        resultDiv.innerHTML += `<div class="error-details bg-red-50 dark:bg-red-900 p-2 rounded mt-2 font-mono text-sm">${error}</div>`;
-      }
-    }*/
-    
-    // Limpiar el buffer para la próxima ejecución
+  window.electronAPI?.onFromMain('firma-resultado', (event, payload) => {
+    const { success, output, exitCode } = payload;
+    if (signSpinner) signSpinner.style.display = 'none';
+    enableFirmarButton(); // Habilitar botón después de firmar
+    console.log("payload:", payload.output);
     javaOutputBuffer = '';
   });
-}); 
+});
