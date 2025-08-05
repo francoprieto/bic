@@ -243,6 +243,10 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal
     const rutasLocales = [];
+
+    if (!fs.existsSync(path.join(bicHome, "cache"))) 
+      fs.mkdirSync(path.join(bicHome, "cache"), { recursive: true });
+
     for (const pdf of pdfs) {
       const nombre = pdf.nombre;
       const destino = path.join(bicHome, "cache", nombre);
