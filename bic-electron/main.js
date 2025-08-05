@@ -19,7 +19,7 @@ app.setAsDefaultProtocolClient('bic');
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 650,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

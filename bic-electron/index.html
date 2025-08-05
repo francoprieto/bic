@@ -48,9 +48,9 @@
         
         <div id="msg"></div>
         
-        <div class="flex items-center rounded-lg shadow p-2 mb-3 pdf-item w-full">
-          <input type="checkbox" id="selectAll" class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-          <label for="selectAll" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer">Archivos</label>
+        <div class="flex items-center rounded-lg shadow-lg bg-gray-400 dark:bg-blue-700 p-2 mb-3 pdf-item w-full">
+          <input type="checkbox" id="selectAll" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+          <label for="selectAll" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer ml-1">Archivos</label>
         </div>
 
         <div class="pdf-list mb-6 w-full h-full" id="pdfList">
@@ -116,6 +116,27 @@
                 </div>
               </div>
             </div>         
+          </div>
+        </div>
+
+        <div class="flex flex-row">
+          <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mt-2 w-full rounded-lg shadow-md">
+            <label class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Apariencia de la firma</label>
+            <div class="flex flex-row">
+              <img src="./firma.png" title="Apariencia ilustrativa de ejemplo" height="80" width="320"/>
+              <div class="flex flex-col pl-3 w-full">
+                <div class="flex flex-row w-full m-2">
+                  <input id="file-chooser" type="file" accept="image/*" class="hidden" />
+                  <input id="file-btn" type="button" value="Seleccionar imagen" onclick="document.getElementById('file-chooser').click();" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 text-sm rounded" />
+                </div>
+                <div class="flex flex-row">
+                  <label for="alto" class="text-xs text-gray-700 dark:text-gray-200 p-1 m-1">Alto</label>
+                  <input id="alto" type="number" min="10" max="100" value="40" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
+                  <label for="ancho" class="text-xs text-gray-700 dark:text-gray-200 p-1 m-1">Alto</label>
+                  <input id="ancho" type="number" min="10" max="200" value="160" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
+                </div>
+              </div>
+            </div>    
           </div>
         </div>
 
