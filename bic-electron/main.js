@@ -19,7 +19,7 @@ app.setAsDefaultProtocolClient('bic');
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 800,
+    height: 650,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -129,7 +129,7 @@ app.on('window-all-closed', () => {
 });
 
 // Función para descargar un archivo
-function descargarArchivo(pdf, destino) {
+function descargarArchivo(pdf, destino, ssl) {
   
   const url = pdf.url;
   let opt = {medhod: 'GET'};
@@ -147,10 +147,11 @@ function descargarArchivo(pdf, destino) {
 
     if(url.startsWith('https')){
       protocolo = https;
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
     }else{
       protocolo = http;
     }
-
+    
     const file = fs.createWriteStream(destino);
     protocolo.get(opt, (response) => {
       if (response.statusCode !== 200) {
@@ -162,6 +163,7 @@ function descargarArchivo(pdf, destino) {
         file.close(() => resolve(destino));
       });
     }).on('error', (err) => {
+      dialog.showErrorBox('Error', 'Error al descargar: ' + url + '\n' + err);
       fs.unlink(destino, () => reject(err));
     });
   });
@@ -234,7 +236,7 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   console.log("pos",JSON.stringify(posicion));
   
   const dir = confs.directorio;
-
+  const ssl = confs.inseguro ? confs.inseguro : false;
   // Ejecutar la aplicación Java
   // Ajusta la ruta y los argumentos según tu app Java
   const javaPath = 'java';
@@ -250,7 +252,7 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
     for (const pdf of pdfs) {
       const nombre = pdf.nombre;
       const destino = path.join(bicHome, "cache", nombre);
-      await descargarArchivo(pdf, destino);
+      await descargarArchivo(pdf, destino, ssl);
       rutasLocales.push(destino);
     }
 
