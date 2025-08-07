@@ -25,7 +25,7 @@
   <div class="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-xl p-0">
     <div class="border-b border-gray-200 dark:border-gray-700 flex" role="tablist">
       <button id="tab-firmar" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white dark:bg-gray-900 rounded-tl-lg  dark:text-blue-400" role="tab" aria-selected="true" aria-controls="tabpanel-firmar">Firma</button>
-      <button id="tab-log" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-log">Log</button>
+      <button id="tab-log" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-log">Log</button>
       <button id="tab-config" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-config">Configuración</button>
     </div>
     <div id="tabpanel-firmar" class="tab-panel" role="tabpanel" aria-labelledby="tab-firmar">
@@ -123,20 +123,27 @@
 
         <div class="flex flex-row">
           <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mt-2 w-full rounded-lg shadow-md">
-            <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Apariencia de la firma</div>
+            <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-2">Apariencia de la firma</div>
             <div class="flex flex-row">
-              <img id="img-apariencia" src="./firma.png" title="Apariencia ilustrativa de ejemplo" alt="Apariencia de la firma" height="80" width="320"/>
-              <div class="flex flex-col pl-3 w-full">
-                <div class="flex flex-col justify-cente w-full m-2">
+              
+              <div class="w-400 h-100 w-[400px]  h-[90px] overflow-auto">
+                <img id="img-apariencia" src="./firma.png" title="Apariencia ilustrativa de ejemplo" alt="Apariencia de la firma"/>
+              </div>
+
+              <div class="flex flex-col pl-3 w-[400px] h-[90px]">
+
+                <div class="flex flex-col justify-cente m-2">
                   <input id="file-chooser" type="file" accept="image/*" class="hidden" />
                   <input id="file-btn" type="button" value="Seleccionar otra imagen" onclick="document.getElementById('file-chooser').click();" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-2 text-sm rounded" />
                 </div>
-                <div class="flex flex-row justify-center">
+
+                <div class="flex flex-row justify-center ">
                   <label for="alto" class="text-xs text-gray-700 dark:text-gray-200 p-1 m-1">Alto</label>
-                  <input id="alto" onchange="ajustarApariencia()" type="number" min="10" max="100" value="40" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
+                  <input id="alto" type="number" min="10" max="100" value="40" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
                   <label for="largo" class="text-xs text-gray-700 dark:text-gray-200 p-1 m-1">Largo</label>
-                  <input id="largo" onchange="ajustarApariencia()" type="number" min="10" max="200" value="160" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
+                  <input id="largo"  type="number" min="10" max="200" value="160" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-20"/>
                 </div>
+
               </div>
             </div>    
           </div>
@@ -255,17 +262,10 @@
       const largo = document.getElementById('largo').value;
 
       if(!apariencia) return;
-
-      let h = alto ? alto : 0;
-      let w = largo ? largo : 0;
-
-      if(h > 0) h = h * 2;
-      if(w > 0) w = w * 2;
-
-      apariencia.style.height = h;
-      apariencia.style.widows = w;
-
-      return false;
+      let h = alto * 2;
+      let w = largo * 2;
+      apariencia.style.height = h + 'px';
+      apariencia.style.width = w + 'px';
 
     }
 
@@ -316,6 +316,8 @@
           posicion: 'ci', // Centro inferior
           pagina: 'pp',   // Primera página
           numeroPagina: '',
+          alto: '40',
+          largo: '160',
           directorio: homeDir // Home del usuario real
         };
         localStorage.setItem('conf', JSON.stringify(config));
@@ -350,12 +352,16 @@
         const elem = document.getElementById('largo');
         if (elem) elem.value = config.largo;
       }  
-      
+      const ie = document.getElementById('largo');
+      if (config.inseguro && ie) {
+        ie.checked  = true;
+      }else if(ie) ie.checked  = false;
+
       if (config.proxy) {
         const elem = document.getElementById('proxy');
         if (elem) elem.value = config.largo;
       }       
-
+      ajustarApariencia();
       console.log('Configuración cargada:', config);
     }
 
@@ -366,6 +372,8 @@
         || e.target.id === 'largo' || e.target.id === 'alto' || e.target.id === 'proxy') {
         guardarConfiguracion();
       }
+      if(e.target.id === 'alto' || e.target.id === 'largo')
+        ajustarApariencia();
     });
 
     // Cargar configuración al iniciar
