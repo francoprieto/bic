@@ -16,18 +16,22 @@
   </style>
 </head>
 <body class="bg-gray-300 min-h-screen flex flex-col items-center justify-start transition-colors duration-300 dark:bg-gray-700">
+  
   <div class="flex flex-row">
     <button id="toggleDark" type="button" class="fixed top-1 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow-xl">
       <span id="darkIcon" title="Cambiar de modo a claro u oscuro">🌙</span>
     </button>
     <h1 class="text-2xl text-blue-700 dark:text-blue-400 bg-white dark:bg-gray-900 font-semibold font-serif italic mb-2 mt-2 p-1 border border-blue-700 dark:border-blue-400 pl-2 pr-2 rounded-lg shadow-lg">BiC</h1>
   </div>
+
   <div class="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-xl p-0">
+
     <div class="border-b border-gray-200 dark:border-gray-700 flex" role="tablist">
       <button id="tab-firmar" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white dark:bg-gray-900 rounded-tl-lg  dark:text-blue-400" role="tab" aria-selected="true" aria-controls="tabpanel-firmar">Firma</button>
       <button id="tab-log" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-log">Log</button>
       <button id="tab-config" class="tab-btn flex-1 px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-tr-lg  dark:text-gray-400" role="tab" aria-selected="false" aria-controls="tabpanel-config">Configuración</button>
     </div>
+    
     <div id="tabpanel-firmar" class="tab-panel" role="tabpanel" aria-labelledby="tab-firmar">
 
       <form id="signForm" class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full max-h-[460px] overflow-y-auto max-w-3xl">
@@ -76,9 +80,14 @@
       <div id="confForm" class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full max-h-[460px] overflow-y-auto max-w-3xl">
 
         <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 rounded-lg shadow-md">
-          <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-5">Posición de la firma</div>
+          <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-1">Posición de la firma</div>
+          
           <div class="flex flex-col">
+            <div class="flex flex-row w-full justify-center">
+              <input title="Margen superior" id="ms" type="number" min="0" max="100" class="px-2 py-1 mb-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-12"/>
+            </div>
             <div class="flex flex-row w-full">
+              <span class="text-xs text-gray-700 dark:text-gray-200 w-16"></span>
               <div class="flex flex-row w-1/3 border-t-2 border-l-2 border-dotted border-gray-500 mr-5">
                 <div class="flex flex-col w-full text-center pt-1">
                   <input id="esi" type="radio" name="posicion" value="esi"/>
@@ -97,9 +106,24 @@
                   <label for="esd" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina superior derecha</label>
                 </div>
               </div>
+              <span class="text-xs text-gray-700 dark:text-gray-200 w-10"></span>
             </div>
+
             <div class="flex flex-row w-full">
-              <div class="flex flex-row w-1/3 border-b-2 border-l-2 border-dotted border-gray-500 mr-5 mt-5">
+              <span class="text-xs text-gray-700 dark:text-gray-200">
+                <input id="ml" title="Margen izquierda" type="number" min="0" max="100" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-12"/>                
+              </span>
+              <div class="flex flex-row w-1/3"></div>
+              <div class="flex flex-row w-1/3"></div>
+              <div class="flex flex-row w-1/3"></div>
+              <span class="text-xs text-gray-700 dark:text-gray-200">
+                <input id="mr" title="Margen derecha" type="number" min="0" max="100" class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-12"/>                
+              </span>
+            </div>
+
+            <div class="flex flex-row w-full">
+              <span class="text-xs text-gray-700 dark:text-gray-200 w-16"></span>
+              <div class="flex flex-row w-1/3 border-b-2 border-l-2 border-dotted border-gray-500 mr-5 pt-5">
                 <div class="flex flex-col w-full text-center pb-1">
                   <label for="eii" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior izquierda</label>
                   <input id="eii" type="radio" name="posicion" value="eii"/>
@@ -111,13 +135,17 @@
                   <input id="ci" type="radio" name="posicion" value="ci"/>
                 </div>
               </div>
-              <div class="flex flex-row w-1/3 border-b-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5 mt-5">
+              <div class="flex flex-row w-1/3 border-b-2 border-r-2 border-dotted border-gray-500 ml-5 mr-5 pt-5">
                 <div class="flex flex-col w-full text-center pb-1">
                   <label for="eid" class="text-xs text-gray-700 dark:text-gray-200 p-1">Esquina inferior derecha</label>
                   <input id="eid" type="radio" name="posicion" value="eid"/>
                 </div>
               </div>
-            </div>         
+              <span class="text-xs text-gray-700 dark:text-gray-200 w-10"></span>
+            </div> 
+            <div class="flex flex-row w-full justify-center">
+              <input id="mi" title="Margen inferior" type="number" min="0" max="100" class="px-2 py-1 mt-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-12"/>
+            </div>        
           </div>
         </div>
 
@@ -135,8 +163,8 @@
                 <input id="file-chooser" type="file" accept="image/png" class="hidden" />
 
                 <div class="flex flex-row justify-cente m-2">
-                  <input id="default-btn" type="button" value="Apariencia por defecto" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-1 text-sm rounded" onclick="defaultFirma()" /> 
                   <input id="file-btn" type="button" value="Seleccionar otra imagen" onclick="document.getElementById('file-chooser').click();" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-1 text-sm rounded" />
+                  <input id="default-btn" type="button" value="Apariencia por defecto" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-1 text-sm rounded" onclick="defaultFirma()" /> 
                 </div>
 
                 <div class="flex flex-row justify-center ">
@@ -282,7 +310,11 @@
         alto: document.getElementById('alto')?.value || '',
         largo: document.getElementById('largo')?.value || '',
         inseguro: document.querySelector('input[name="inseguro"]').checked || false,
-        proxy: document.getElementById('proxy')?.value || ''
+        proxy: document.getElementById('proxy')?.value || '',
+        ms: document.querySelector('input[name="ms"]')?.value || '',
+        mi: document.querySelector('input[name="mi"]')?.value || '',
+        ml: document.querySelector('input[name="ml"]')?.value || '',
+        mr: document.querySelector('input[name="mr"]')?.value || '',
       };
       
       localStorage.setItem('conf', JSON.stringify(config));
@@ -320,6 +352,10 @@
           numeroPagina: '',
           alto: '40',
           largo: '160',
+          ms: '10',
+          mi: '10',
+          ml: '10',
+          mr: '10',
           directorio: homeDir // Home del usuario real
         };
         localStorage.setItem('conf', JSON.stringify(config));
@@ -355,6 +391,26 @@
         if (elem) elem.value = config.largo;
       }  
 
+      if (config.ms) {
+        const elem = document.getElementById('ms');
+        if (elem) elem.value = config.ms;
+      }
+
+      if (config.mi) {
+        const elem = document.getElementById('mi');
+        if (elem) elem.value = config.mi;
+      }  
+
+      if (config.ml) {
+        const elem = document.getElementById('ml');
+        if (elem) elem.value = config.ml;
+      }
+
+      if (config.mr) {
+        const elem = document.getElementById('mr');
+        if (elem) elem.value = config.mr;
+      } 
+
       if (config.proxy) {
         const elem = document.getElementById('proxy');
         if (elem) elem.value = config.largo;
@@ -374,8 +430,8 @@
 
     // Agregar listeners para guardar configuración automáticamente
     document.addEventListener('change', (e) => {
-      if (e.target.name === 'posicion' || e.target.name === 'pagina' || e.target.name === 'inseguro'
-        || e.target.name === 'numeroPagina' || e.target.placeholder === 'Directorio'
+      if (e.target.name === 'posicion' || e.target.name === 'pagina' || e.target.name === 'inseguro' || e.target.id === 'ml' || e.target.id === 'mr'
+        || e.target.name === 'numeroPagina' || e.target.placeholder === 'Directorio' || e.target.id === 'ms' || e.target.id === 'mi'
         || e.target.id === 'largo' || e.target.id === 'alto' || e.target.id === 'proxy') {
         guardarConfiguracion();
       }
