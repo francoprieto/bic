@@ -131,10 +131,12 @@
               </div>
 
               <div class="flex flex-col pl-3 w-[400px] h-[90px]">
+                
+                <input id="file-chooser" type="file" accept="image/png" class="hidden" />
 
-                <div class="flex flex-col justify-cente m-2">
-                  <input id="file-chooser" type="file" accept="image/*" class="hidden" />
-                  <input id="file-btn" type="button" value="Seleccionar otra imagen" onclick="document.getElementById('file-chooser').click();" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-2 text-sm rounded" />
+                <div class="flex flex-row justify-cente m-2">
+                  <input id="default-btn" type="button" value="Apariencia por defecto" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-1 text-sm rounded" onclick="defaultFirma()" /> 
+                  <input id="file-btn" type="button" value="Seleccionar otra imagen" onclick="document.getElementById('file-chooser').click();" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-1 m-1 text-sm rounded" />
                 </div>
 
                 <div class="flex flex-row justify-center ">
@@ -380,6 +382,29 @@
       if(e.target.id === 'alto' || e.target.id === 'largo')
         ajustarApariencia();
     });
+
+    document.getElementById('file-chooser').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        const arrayBuffer = event.target.result;
+        const ext = file.name.split('.').pop().toLowerCase();
+        // Save image via Electron IPC
+        if (window.electronAPI && window.electronAPI.saveSignatureImage) {
+          const savedName = await window.electronAPI.saveSignatureImage(arrayBuffer, ext);
+          document.getElementById('img-apariencia').src = `./${savedName}?${Date.now()}`;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function defaultFirma() {
+      if (window.electronAPI && window.electronAPI.saveDefaultImage) {
+        window.electronAPI.saveDefaultImage();
+        document.getElementById('img-apariencia').src = './firma.png';
+      }
+    };
 
     // Cargar configuración al iniciar
     cargarConfiguracion();

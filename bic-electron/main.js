@@ -8,6 +8,8 @@ const { execFile, spawn } = require('child_process');
 const os = require('os');
 const { exitCode } = require('process');
 
+const firmaPath = path.join(__dirname, 'firma.png');
+
 let mainWindow;
 let pdfUrls = [];
 let bicHome;
@@ -191,6 +193,19 @@ ipcMain.handle('get-confs', async () => {
   }
 });
 
+ipcMain.handle('save-signature-image', async (event, buffer, ext) => {
+  const targetPath = path.join(__dirname, `firma.${ext}`);
+  fs.writeFileSync(targetPath, Buffer.from(buffer));
+  return `firma.${ext}`;
+});
+
+ipcMain.handle('save-default-image', async () => {
+  const targetPath = path.join(__dirname, 'firma.png');
+  const sourcePath = path.join(__dirname, 'default.png');
+  fs.copyFileSync(sourcePath, targetPath);
+  return targetPath;
+});
+
 ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   // Obtener las configuraciones del localStorage
   let confs = null;
@@ -294,7 +309,7 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
 
     // Manejar cuando el proceso termina
     javaProcess.on('close', (code) => {
-      console.log(`Proceso Java terminado con código: ${code}`);
+      console.log(`Proceso Java terminado con codigo: ${code}`);
       
       // Limpiar archivos de cache después de la firma
       try {

@@ -5,5 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendToMain: (channel, data) => ipcRenderer.send(channel, data),
   onFromMain: (channel, callback) => ipcRenderer.on(channel, (event, ...data) => callback(event, ...data)),
   getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
-  getConfs: () => ipcRenderer.invoke('get-confs')
+  getConfs: () => ipcRenderer.invoke('get-confs'),
+  saveSignatureImage: (buffer, ext) => ipcRenderer.invoke('save-signature-image', buffer, ext),
+  saveDefaultImage: () => ipcRenderer.invoke('save-default-image')
 }); 

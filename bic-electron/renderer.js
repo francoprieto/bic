@@ -205,11 +205,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (signSpinner) signSpinner.style.display = 'none';
     enableFirmarButton(); // Habilitar botón después de firmar
     const msg = JSON.parse(output);
-    const textMsg = msg.mensaje.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '');
+    const textMsg = msg.mensaje.replace('\n','<br />');
+    const cerrar = '<div class="absolute top-1 left-2">&times;</div>';
     if (success) {
-      msgDiv.innerHTML = `<div class="success text-green-600">Firma exitosa: ${msg.mensaje}</div>`;
-    } else {
-      msgDiv.innerHTML = `<div class="error text-red-600">Error al firmar: ${msg.mensaje}</div>`;
+      msgDiv.innerHTML = `<div id="msg-info" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+    } else { 
+      msgDiv.innerHTML = `<div id="msg-error" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
     }
     console.log(msg);
     javaOutputBuffer = '';
