@@ -171,7 +171,7 @@
             <div class="block text-blue-700 dark:text-blue-400 font-semibold text-sm pt-2 pb-2 whitespace-nowrap">Descargas</div>
             <div class="flex flex-row">
               <label for="inseguro" class="text-xs text-gray-700 dark:text-gray-200 p-1">No validar certificados SSL (inseguro)</label>
-              <input type="checkbox" name="inseguro" id="inserguro" class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"/>
+              <input type="checkbox" name="inseguro" id="inseguro" class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"/>
             </div>
             <div class="flex flex-row pt-2">
               <label for="proxy" class="text-xs text-gray-700 dark:text-gray-200 p-1">Usar proxy:</label>
@@ -352,15 +352,20 @@
         const elem = document.getElementById('largo');
         if (elem) elem.value = config.largo;
       }  
-      const ie = document.getElementById('largo');
-      if (config.inseguro && ie) {
-        ie.checked  = true;
-      }else if(ie) ie.checked  = false;
 
       if (config.proxy) {
         const elem = document.getElementById('proxy');
         if (elem) elem.value = config.largo;
       }       
+
+      const insec = document.getElementById('inseguro');
+      if(insec){
+        if (config.inseguro) {
+          insec.checked  = true;
+        }else if(insecure) 
+          insec.checked  = false;
+      }
+
       ajustarApariencia();
       console.log('Configuración cargada:', config);
     }
