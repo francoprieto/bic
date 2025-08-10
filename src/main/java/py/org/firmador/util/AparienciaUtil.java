@@ -4,9 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import py.org.firmador.Log;
 import py.org.firmador.bic.FirmadorImpl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -113,28 +118,28 @@ public class AparienciaUtil {
                     retorno.put("esy", cropBox.getTop(marginTop));
                     break;
                 case "esquina-superior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(margin));
-                    retorno.put("eiy", cropBox.getTop(height));
-                    retorno.put("esx", cropBox.getLeft(width));
-                    retorno.put("esy", cropBox.getTop(margin));
+                    retorno.put("eix", cropBox.getLeft(marginLeft));
+                    retorno.put("eiy", cropBox.getTop(height + marginTop));
+                    retorno.put("esx", cropBox.getLeft(marginLeft + width));
+                    retorno.put("esy", cropBox.getTop(marginTop));
                     break;
                 case "esquina-superior-derecha":
-                    retorno.put("eix", cropBox.getRight(width));
-                    retorno.put("eiy", cropBox.getTop(height));
-                    retorno.put("esx", cropBox.getRight(margin));
-                    retorno.put("esy", cropBox.getTop(margin));
+                    retorno.put("eix", cropBox.getRight(marginRight + width));
+                    retorno.put("eiy", cropBox.getTop(marginTop + height));
+                    retorno.put("esx", cropBox.getRight(marginRight));
+                    retorno.put("esy", cropBox.getTop(marginTop));
                     break;
                 case "esquina-inferior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(margin));
-                    retorno.put("eiy", cropBox.getBottom(margin));
-                    retorno.put("esx", cropBox.getLeft(width));
-                    retorno.put("esy", cropBox.getBottom(height));
+                    retorno.put("eix", cropBox.getLeft(marginLeft));
+                    retorno.put("eiy", cropBox.getBottom(marginBottom));
+                    retorno.put("esx", cropBox.getLeft(width + marginLeft));
+                    retorno.put("esy", cropBox.getBottom(height + marginBottom));
                     break;
                 case "esquina-inferior-derecha":
-                    retorno.put("eix", cropBox.getRight(width));
-                    retorno.put("eiy", cropBox.getBottom(margin));
-                    retorno.put("esx", cropBox.getRight(margin));
-                    retorno.put("esy", cropBox.getBottom(height));
+                    retorno.put("eix", cropBox.getRight(width + marginRight));
+                    retorno.put("eiy", cropBox.getBottom(marginBottom + height));
+                    retorno.put("esx", cropBox.getRight(marginRight));
+                    retorno.put("esy", cropBox.getBottom(height + marginBottom));
                     break;
                 default:
                     // Ya está el default
@@ -142,6 +147,27 @@ public class AparienciaUtil {
             }
         }
         return retorno;
+    }
+
+    public static byte[] getImagen(Map<String,String> parametros){
+        if(parametros.containsKey(FirmadorImpl.PARAM_POSICION) && parametros.get(FirmadorImpl.PARAM_POSICION) != null){
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+
+                Map<String, String> cp = mapper.readValue(parametros.get(FirmadorImpl.PARAM_POSICION), Map.class);
+
+                if (cp.containsKey("imagen") && cp.get("imagen") != null) {
+                    File img = new File(cp.get("imagen"));
+                    if(img.isFile() && FilenameUtils.getExtension(img.getName()).equalsIgnoreCase("png")){
+                        return IOUtils.toByteArray(new FileInputStream(img));
+                    }
+                }
+
+            }catch(IOException e){
+                return null;
+            }
+        }
+        return null;
     }
 
 }

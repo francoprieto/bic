@@ -248,6 +248,22 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   else if(confs.posicion === 'eii') posicion['lugar'] = 'esquina-inferior-izquierda';
   else if(confs.posicion === 'eid') posicion['lugar'] = 'esquina-inferior-derecha';
 
+  if(confs.ms) posicion['mt'] = confs.ms;
+  if(confs.mi) posicion['mb'] = confs.mb;
+  if(confs.ml) posicion['ml'] = confs.ml;
+  if(confs.mr) posicion['mr'] = confs.mr;
+
+  if(confs.largo) posicion['ancho'] = confs.largo;
+  if(confs.alto) posicion['alto'] = confs.alto;
+
+  const targetPath = path.join(__dirname, 'firma.png');
+  const sourcePath = path.join(__dirname, 'default.png');
+  const targetStat = fs.statSync(targetPath);
+  const sourceStat = fs.statSync(sourcePath);
+  
+  if(targetStat.size !== sourceStat.size)
+    posicion['imagen'] = targetPath;
+
   console.log("pos",JSON.stringify(posicion));
   
   const dir = confs.directorio;

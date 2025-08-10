@@ -305,33 +305,43 @@ public class FirmadorImpl implements Firmador{
             Principal principal = x509Certificate.getSubjectDN();
             String fullDns = principal.getName();
             int tam = coor.get("hqr").intValue();
-            qr = QRCode.from(fullDns).withSize(tam, tam).stream();
-            String[] dns = fullDns.split(",");
-            Map<String,String> datos = new HashMap<>();
-            datos.put("APELLIDOS","");
-            datos.put("NOMBRES","");
-            datos.put("SERIAL","");
-            for(String dn : dns){
-                if(dn.contains("SURNAME=")) datos.put("APELLIDOS",dn.replace("SURNAME=",""));
-                if(dn.contains("GIVENNAME=")) datos.put("NOMBRES",dn.replace("GIVENNAME=",""));
-                if(dn.contains("SERIALNUMBER=")) datos.put("SERIAL",dn.replace("SERIALNUMBER=",""));
+            byte[] img = AparienciaUtil.getImagen(parametros);
+            if(img == null) {
+                qr = QRCode.from(fullDns).withSize(tam, tam).stream();
+                String[] dns = fullDns.split(",");
+                Map<String, String> datos = new HashMap<>();
+                datos.put("APELLIDOS", "");
+                datos.put("NOMBRES", "");
+                datos.put("SERIAL", "");
+                for (String dn : dns) {
+                    if (dn.contains("SURNAME=")) datos.put("APELLIDOS", dn.replace("SURNAME=", ""));
+                    if (dn.contains("GIVENNAME=")) datos.put("NOMBRES", dn.replace("GIVENNAME=", ""));
+                    if (dn.contains("SERIALNUMBER=")) datos.put("SERIAL", dn.replace("SERIALNUMBER=", ""));
+                }
+                String fecha = ConfiguracionUtil.ahora();
+                if (fecha != null && fecha.trim().length() > 0)
+                    datos.put("FECHA", fecha);
+                if (datos.containsKey("SERIAL"))
+                    datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
+                sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() +
+                        (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "") +
+                        (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
+                        (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             }
-            String fecha = ConfiguracionUtil.ahora();
-            if(fecha != null && fecha.trim().length() > 0)
-                datos.put("FECHA", fecha);
-            if(datos.containsKey("SERIAL"))
-                datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
-            sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() +
-                                (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "") +
-                                (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
-                                (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;
-            sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
+
+            if(img == null) {
+                sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
+                sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
+            }else {
+                sap.setSignatureGraphic(Image.getInstance(img));
+                sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC);
+            }
             sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
-            sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
+
             MakeSignature.signDetached(sap, digest, es, certs, null, null, null, 0, MakeSignature.CryptoStandard.CMS);
             byte[] data = fos.toByteArray();
             File firmado = new File(destino +  ConfiguracionUtil.SLASH + archivo.getName());
