@@ -30,8 +30,10 @@ public class AparienciaUtil {
         if(pdf == null) return new HashMap<>();
         ResourceBundle conf = ResourceBundle.getBundle("bic");
         Integer h = Integer.valueOf(conf.getString("firma.alto"));
+        h = h * 2;
         float height = h * 0.75f;
         Integer w = Integer.valueOf(conf.getString("firma.ancho"));
+        w = w * 2;
         float width = w * 0.75f;
 
         float margin = Integer.valueOf(conf.getString("firma.margen")) * 0.75f;
@@ -74,11 +76,11 @@ public class AparienciaUtil {
 
                 if(cp.containsKey("ancho") && cp.get("ancho") != null) {
                     w = Integer.valueOf(cp.get("ancho"));
-                    width = w * 0.75f;
+                    width = (w * 2) * 0.75f;
                 }
                 if(cp.containsKey("alto") && cp.get("alto") != null){
                     h = Integer.valueOf(cp.get("alto"));
-                    height = h * 0.75f;
+                    height = (h * 2) * 0.75f;
                 }
                 if(cp.containsKey("mt") && cp.get("mt") != null)
                     marginTop = Integer.valueOf(cp.get("mt")) * 0.75f;

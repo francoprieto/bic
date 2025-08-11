@@ -208,9 +208,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const textMsg = msg.mensaje.replace('\n','<br />');
     const cerrar = '<div class="absolute top-1 left-2">&times;</div>';
     if (success) {
-      msgDiv.innerHTML = `<div id="msg-info" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+      msgDiv.innerHTML = `<div id="msg-info" title="Click para cerrar" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 hover:bg-green-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
     } else { 
-      msgDiv.innerHTML = `<div id="msg-error" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+      msgDiv.innerHTML = `<div id="msg-error" title="Click para cerrar" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 hover:bg-red-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
     }
     console.log(msg);
     javaOutputBuffer = '';
