@@ -20,15 +20,19 @@
   "build": {
     "appId": "py.org.firmador.bic",
     "productName": "Bic",
-    "directories":{ "output": "dist" },
+    "directories": {
+      "output": "dist"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
+      "allowElevation": false, 
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icon.ico",
       "createDesktopShortcut": false,
       "createStartMenuShortcut": true
     },
-    "win": { "target": "nsis"}
+    "win": {
+      "target": "nsis"
+    }
   }
 }

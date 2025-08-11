@@ -94,44 +94,13 @@
     <div class="container">
         <h1>🧪 Pruebas BIC - Firmador</h1>
         
-        <div class="test-section">
-            <h3>📋 Pruebas Básicas</h3>
-            <div class="description">Enlaces básicos para probar la funcionalidad del firmador BIC</div>
-            <a href="bic://parametro1,parametro2" class="test-link">Prueba Básica</a>
-            <a href="bic://test,archivo.pdf" class="test-link">Prueba con PDF</a>
-            <a href="bic://demo,archivo.txt" class="test-link">Prueba con TXT</a>
-        </div>
 
         <div class="test-section">
             <h3>🔐 Pruebas de Firma</h3>
             <div class="description">Enlaces específicos para probar diferentes tipos de firma</div>
-            <a href="bic://firmar,doc1.pdf" class="test-link success">Firmar Documento</a>
-            <a href="bic://verificar,doc2.pdf" class="test-link">Verificar Firma</a>
-            <a href="bic://certificado,info" class="test-link">Obtener Certificado</a>
+            <a href="bic://firmar?paramsurl=http://127.0.0.1:5500/bic-electron/test-params.json" class="test-link success">Firmar Documento</a>
         </div>
 
-        <div class="test-section">
-            <h3>⚠️ Pruebas de Error</h3>
-            <div class="description">Enlaces para probar el manejo de errores y casos límite</div>
-            <a href="bic://error,archivo_inexistente.pdf" class="test-link danger">Archivo Inexistente</a>
-            <a href="bic://invalid,parametros_invalidos" class="test-link danger">Parámetros Inválidos</a>
-            <a href="bic://timeout,archivo_grande.pdf" class="test-link danger">Timeout</a>
-        </div>
-
-        <div class="test-section">
-            <h3>🔄 Pruebas de Configuración</h3>
-            <div class="description">Enlaces para probar diferentes configuraciones</div>
-            <a href="bic://config,mostrar" class="test-link">Mostrar Configuración</a>
-            <a href="bic://config,reset" class="test-link">Reset Configuración</a>
-            <a href="bic://config,test" class="test-link">Test Configuración</a>
-        </div>
-
-        <div class="custom-test">
-            <h3>🎯 Prueba Personalizada</h3>
-            <div class="description">Ingresa tus propios parámetros para probar</div>
-            <input type="text" id="customParams" placeholder="Ej: firmar,mi_archivo.pdf" value="bic://">
-            <button onclick="testCustom()">Probar</button>
-        </div>
     </div>
 
     <script>
