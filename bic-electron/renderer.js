@@ -39,10 +39,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const globalIdx = startIdx + idx;
       const checked = selectedPdfs.has(pdf) ? 'checked' : '';
       return `
-        <div class="flex items-center bg-gray-300 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
+      <div class="flex flex-row bg-gray-300 dark:bg-gray-700 rounded-lg shadow p-2 mb-3 pdf-item w-full">
+        <div class="flex items-center w-5/6">
           <input type="checkbox" id="pdf-${globalIdx}" name="pdfs" value="${pdf["url"]}" class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" ${checked}>
           <label for="pdf-${globalIdx}" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer" title="${pdf["url"]}">${pdf["nombre"]}</label>
         </div>
+        <div id="${pdf["id"]}" class="flex flex-row justify-end w-1/6">
+        </div>
+      </div>
       `;
     }).join('');
     renderPagination();
@@ -209,6 +213,25 @@ window.addEventListener('DOMContentLoaded', () => {
     const cerrar = '<div class="absolute top-1 left-2">&times;</div>';
     if (success) {
       msgDiv.innerHTML = `<div id="msg-info" title="Click para cerrar" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 hover:bg-green-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+
+      const conf = localStorage.getItem('conf');
+      if(!conf) return;
+      const dir = (JSON.parse(conf)).directorio;
+      
+      selectedPdfs.forEach((elem) => {
+        const id = elem.id;
+        const opts = document.getElementById(id);
+        
+        if(opts && conf){
+          const uri = dir + "/" + elem.nombre;
+          opts.innerHTML=`<span class=><a href="${uri}" title="Descargar ${elem.nombre}" target="_new">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"/>
+            </svg>          
+          </a></span>`;
+        }
+      });
+
     } else { 
       msgDiv.innerHTML = `<div id="msg-error" title="Click para cerrar" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 hover:bg-red-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
     }

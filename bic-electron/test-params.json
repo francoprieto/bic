@@ -1,8 +1,8 @@
 [
-{"nombre": "Ley 5189-2014.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-07/c%29%20N%C3%B3mina%20de%20funcionarios%20permanentes%2C%20contratados%20y%20de%20elecci%C3%B3n%20popular.pdf"}
-, {"nombre": "Decreto 1041-2024.pdf", "url": "https://www.mef.gov.py/sites/default/files/2024-07/archivo_8.pdf"}
-, {"nombre":"PGN.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-01/LEY%207408-2024%20-%20QUE%20APRUEBA%20EL%20PGN%20PARA%20EL%20EJERCICIO%20FISCAL%202025_1.pdf"}
-, {"nombre":"Clasificador PGN.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-01/Clasificador%20PGN%202025_ocred.pdf"}
-, {"nombre":"OrganigramaGerencia.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-08/GERENCIA_GENERAL_29_07_2025.pdf"}
-, {"nombre":"OrganigramaVAF.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-07/VAF_25_07_2025.pdf"}
+{"id": "3df0f2ff-0686-492d-9389-071acdb72456","nombre": "Ley 5189-2014.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-07/c%29%20N%C3%B3mina%20de%20funcionarios%20permanentes%2C%20contratados%20y%20de%20elecci%C3%B3n%20popular.pdf"}
+, {"id": "c0a86750-1a37-4e33-a177-86a2c7510ee0","nombre": "Decreto 1041-2024.pdf", "url": "https://www.mef.gov.py/sites/default/files/2024-07/archivo_8.pdf"}
+, {"id": "1d5651ec-f08c-4a64-8206-05d3a1215258","nombre":"PGN.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-01/LEY%207408-2024%20-%20QUE%20APRUEBA%20EL%20PGN%20PARA%20EL%20EJERCICIO%20FISCAL%202025_1.pdf"}
+, {"id": "f6c49c89-7420-48e8-922d-c26c2d4517f1","nombre":"Clasificador PGN.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-01/Clasificador%20PGN%202025_ocred.pdf"}
+, {"id": "084386ec-8d22-4d2e-90c8-45345b2b56b0","nombre":"OrganigramaGerencia.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-08/GERENCIA_GENERAL_29_07_2025.pdf"}
+, {"id": "9c6fb3d9-4d68-4ebc-9005-67dc6166e950","nombre":"OrganigramaVAF.pdf", "url": "https://www.mef.gov.py/sites/default/files/2025-07/VAF_25_07_2025.pdf"}
 ]
