@@ -4,7 +4,8 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dist": "electron-builder --win --x64"
+    "prepare-win64": "curl -o ../target/jre.zip -XGET https://download.java.net/java/GA/jdk11/9/GPL/openjdk-11.0.2_windows-x64_bin.zip --insecure && unzip ../target/jre.zip && mkdir -p dist/win-unpacked/resources && mv jdk-11* dist/win-unpacked/resources/",
+    "dist-win64": "electron-builder --win --x64"
   },
   "keywords": [],
   "author": "",
