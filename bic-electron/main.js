@@ -264,15 +264,16 @@ ipcMain.on('firmar-pdfs', async (event, { pdfs, password }) => {
   if(targetStat.size !== sourceStat.size)
     posicion['imagen'] = targetPath;
 
-  console.log("pos",JSON.stringify(posicion));
-  
   const dir = confs.directorio;
   const ssl = confs.inseguro ? confs.inseguro : false;
   // Ejecutar la aplicación Java
   // Ajusta la ruta y los argumentos según tu app Java
-  const javaPath = 'java';
+  const javaExec = path.join('.','resources','jdk','bin','java');
+  const javaPath = fs.existsSync(javaExec) ? javaExec : 'java';
   const jarPath = path.resolve(__dirname, '../target/bic-jar-with-dependencies.jar');
-  
+
+  console.log('JAVA_HOME', javaPath);
+
   try {
     // Descargar los PDFs seleccionados a una carpeta temporal
     const rutasLocales = [];
