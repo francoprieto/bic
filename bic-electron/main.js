@@ -37,11 +37,31 @@ function createWindow() {
 let pdfBuffer = null;
 
 // Nueva función para leer archivo remoto en variable
-function leerArchivoRemotoEnVariable(url, mainWindow, dialog) {
+function leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog) {
+
+  const url = jsonParams.uri;
+  const headers = jsonParams.headers || {};
+
   return new Promise((resolve, reject) => {
-    const protocolo = url.startsWith('https') ? https : http;
+    let protocolo;
+    
+    let opt = {medhod: 'GET'};
+
+    const uri = new URL(url);
+    opt['hostname'] = uri.hostname;
+    opt['port'] = uri.port;
+    opt['path'] = uri.pathname;
+    opt['headers'] = headers;
+
+    if(url.startsWith('https')){
+      protocolo = https;
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+    }else{
+      protocolo = http;
+    }
+
     let data = [];
-    protocolo.get(url, (response) => {
+    protocolo.get(opt, (response) => {
       if (response.statusCode !== 200) {
         dialog.showErrorBox('Error', 'Error al leer los parámetros: ' + url);
         return;
@@ -52,6 +72,7 @@ function leerArchivoRemotoEnVariable(url, mainWindow, dialog) {
       response.on('end', () => {
         resolve(Buffer.concat(data));
         const parms = JSON.parse(data);
+        console.log('Datos recibidos:', parms);
         parms.forEach(element => {
           pdfUrls.push(element);
         });
@@ -86,7 +107,11 @@ app.on('open-url', (event, url) => {
     } else {
       const paramsurl = urlObj.searchParams.get('paramsurl');
       if (paramsurl) {
-        leerArchivoRemotoEnVariable(paramsurl, mainWindow, dialog);
+        const val = atob(paramsurl);
+        if(val){
+          const jsonParams = JSON.parse(val);
+          leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog);
+        }
       }
     }
   }
@@ -110,13 +135,17 @@ app.whenReady().then(() => {
       } else {
         const paramsurl = urlObj.searchParams.get('paramsurl');
         if (paramsurl) {
-          leerArchivoRemotoEnVariable(paramsurl, mainWindow, dialog).then(()=>{
-            if (pdfUrls.length > 0 && mainWindow) {
-              mainWindow.webContents.on('did-finish-load', () => {
-                mainWindow.webContents.send('set-pdf-urls', pdfUrls);
-              });
-            }
-          });
+          const val = atob(paramsurl);
+          if(val){
+            const jsonParams = JSON.parse(val);
+            leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog).then(()=>{
+              if (pdfUrls.length > 0 && mainWindow) {
+                mainWindow.webContents.on('did-finish-load', () => {
+                  mainWindow.webContents.send('set-pdf-urls', pdfUrls);
+                });
+              }
+            });
+          }
         }
       }
     }
@@ -157,7 +186,7 @@ function descargarArchivo(pdf, destino, ssl) {
     const file = fs.createWriteStream(destino);
     protocolo.get(opt, (response) => {
       if (response.statusCode !== 200) {
-        reject(new Error('Error al descargar: ' + url));
+        dialog.showErrorBox('Error', 'Error al descargar: ' + response.statusCode);
         return;
       }
       response.pipe(file);
