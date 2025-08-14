@@ -50,7 +50,7 @@ function leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog) {
     const uri = new URL(url);
     opt['hostname'] = uri.hostname;
     opt['port'] = uri.port;
-    opt['path'] = uri.pathname;
+    opt['path'] = uri.pathname + uri.search;
     opt['headers'] = headers;
 
     if(url.startsWith('https')){
@@ -59,11 +59,11 @@ function leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog) {
     }else{
       protocolo = http;
     }
-
+    console.log("request", opt);
     let data = [];
     protocolo.get(opt, (response) => {
       if (response.statusCode !== 200) {
-        dialog.showErrorBox('Error', 'Error al leer los parámetros: ' + url);
+        dialog.showErrorBox('Error', 'Error al leer los parámetros: ' + response.statusCode);
         return;
       }
       response.on('data', (chunk) => {
@@ -106,6 +106,7 @@ app.on('open-url', (event, url) => {
       leerArchivoSimple(filesParam, mainWindow, dialog);
     } else {
       const paramsurl = urlObj.searchParams.get('paramsurl');
+      
       if (paramsurl) {
         const val = atob(paramsurl);
         if(val){
@@ -174,7 +175,7 @@ function descargarArchivo(pdf, destino, ssl) {
     const uri = new URL(url);
     opt['hostname'] = uri.hostname;
     opt['port'] = uri.port;
-    opt['path'] = uri.pathname;
+    opt['path'] = uri.pathname + uri.search;
 
     if(url.startsWith('https')){
       protocolo = https;
