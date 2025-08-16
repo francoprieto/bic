@@ -6,7 +6,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+            "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",
@@ -21,7 +21,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+            "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",
@@ -36,7 +36,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+            "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",
@@ -51,7 +51,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+            "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",
@@ -66,7 +66,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+            "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",
@@ -81,7 +81,7 @@
         "callback": "http://localhost:8080/upload",
         "callbackMethod": "PUT",
         "callbackHeaders": {
-            "Content-Type": "application/json"
+           "User-Agent": "application/bic"
         },
         "callbackBody": {
             "id": "3df0f2ff-0686-492d-9389-071acdb72456",

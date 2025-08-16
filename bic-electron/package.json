@@ -5,12 +5,12 @@
   "scripts": {
     "build-fat-win64": "node ./tooling.js fat win64 && electron-builder --win --x64"
   },
-
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "form-data": "^4.0.4",
     "npx": "^10.2.2"
   },
   "devDependencies": {
@@ -20,19 +20,24 @@
   "build": {
     "appId": "py.org.firmador.bic",
     "productName": "Bic",
-    "icon": "assets/icon.png", 
+    "icon": "assets/icon.png",
     "asar": false,
     "directories": {
       "output": "dist"
     },
-    "files": ["**/*", "!extraResources/**"],
+    "files": [
+      "**/*",
+      "!extraResources/**"
+    ],
     "extraResources": [
       {
         "from": "./extraResources",
         "to": ".",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
-    ],    
+    ],
     "nsis": {
       "oneClick": false,
       "perMachine": false,

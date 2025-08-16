@@ -1,11 +1,14 @@
 const { app, protocol, BrowserWindow, ipcMain, dialog } = require("electron");
-const path = require("path");
+
 
 const fs = require("fs");
 const https = require("https");
 const http = require("http");
-const { execFile, spawn } = require("child_process");
+const FormData = require("form-data");
 const os = require("os");
+const path = require("path");
+
+const { execFile, spawn } = require("child_process");
 const { exitCode } = require("process");
 
 const firmaPath = path.join(__dirname, "firma.png");
@@ -256,9 +259,11 @@ function uploadFiles(pdfs){
 
     if (pdf.callback) {
 
+      const form = new FormData();
+
       const url = pdf.callback;
       const method = pdf.callbackMethod || "POST";
-      const headers = pdf.callbackHeaders || {};
+      const headers = pdf.callbackHeaders;
       const atributo = pdf.callbackAtributo || "file";
 
       // Leer el archivo firmado
@@ -270,47 +275,35 @@ function uploadFiles(pdfs){
         return;
       }
 
-      const fileData = fs.readFileSync(filePath);
-
-      // Construir cuerpo multipart/form-data
-      const boundary = "----BICBoundary" + Math.random().toString(16).slice(2);
-      let multipartBody = "";
-
       // Agregar campos adicionales si existen en callbackBody
       const body = pdf.callbackBody || {};
       if (typeof body === "object" && body !== null) {
         for (const key in body) {
-          if (key !== atributo) {
-            multipartBody += `--${boundary}\r\n`;
-            multipartBody += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
-            multipartBody += `${body[key]}\r\n`;
-          }
+
+          if (key !== atributo) 
+            form.append(key, body[key]);
+
         }
       }
-      console.log("Cuerpo multipart:", multipartBody);
-      // Agregar el archivo
-      multipartBody += `--${boundary}\r\n`;
-      multipartBody += `Content-Disposition: form-data; name="${atributo}"; filename="${pdf.nombre}"\r\n`;
-      multipartBody += `Content-Type: application/pdf\r\n\r\n`;
 
-      const preFileBuffer = Buffer.from(multipartBody, "utf8");
-      const postFileBuffer = Buffer.from(`\r\n--${boundary}--\r\n`, "utf8");
-
-      // Combinar todo en un solo buffer
-      const finalBody = Buffer.concat([preFileBuffer, fileData, postFileBuffer]);
-
+      form.append(atributo, fs.createReadStream(filePath));
 
       let opt = { method: method };
+      let formHeaders = form.getHeaders();
+
+      if(headers && typeof headers === "object") {
+        for (const key in headers) {
+          formHeaders[key] = headers[key];
+        }
+      }
 
       const uri = new URL(url);
       opt["hostname"] = uri.hostname;
       opt["port"] = uri.port;
       opt["path"] = uri.pathname + uri.search;
-      opt["headers"] = {
-        ...headers,
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": finalBody.length,
-      };
+      opt["headers"] = formHeaders;
+
+      console.log("upload opts", opt);
 
       let protocolo;
       if (url.startsWith("https")) {
@@ -338,9 +331,7 @@ function uploadFiles(pdfs){
         console.error("Error al subir archivo:", err);
       });
 
-      // Enviar el cuerpo como JSON
-      req.write(JSON.stringify(body));
-      req.end();
+      form.pipe(req);
     }
   });
 }
