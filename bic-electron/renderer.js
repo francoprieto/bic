@@ -6,7 +6,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const signBtn = document.getElementById('signBtn');
   const selectAllCheckbox = document.getElementById('selectAll');
   const signSpinner = document.getElementById('signSpinner');
-  const msgDiv = document.getElementById('msg'); 
+  const msgDiv = document.getElementById('msg');
 
   // Variables para paginación
   let allPdfs = [];
@@ -24,7 +24,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Función para renderizar la lista de PDFs con paginación
   function renderPdfList() {
-    
+
     pdfList.innerHTML = '';
     if (!allPdfs || allPdfs.length === 0) {
       pdfList.innerHTML = '<div class="text-gray-500">No hay archivos para firmar.</div>';
@@ -70,7 +70,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateSelectAllCheckbox();
     // Listener para el checkbox de seleccionar todos
     if (selectAllCheckbox) {
-      selectAllCheckbox.onchange = function() {
+      selectAllCheckbox.onchange = function () {
         if (this.checked) {
           pagePdfs.forEach(pdf => selectedPdfs.add(pdf));
         } else {
@@ -144,13 +144,13 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function disableFirmarButton() {
-    signBtn.disabled = true;  
+    signBtn.disabled = true;
     signBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
     signBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
   }
 
   function enableFirmarButton() {
-    signBtn.disabled = false;     
+    signBtn.disabled = false;
     signBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
     signBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
   }
@@ -169,7 +169,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Maneja el envío del formulario
   signForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const password = document.getElementById('password').value;
     const pdfs = Array.from(selectedPdfs);
     if (pdfs.length === 0) {
@@ -190,12 +190,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const timestamp = new Date().toLocaleTimeString();
     const outputLine = `[${timestamp}] [${type.toUpperCase()}] ${data}`;
     javaOutputBuffer += outputLine;
-    
+
     // Mostrar el output en tiempo real
     if (resultDiv.innerHTML === '') {
       resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
     }
-    
+
     const outputDiv = resultDiv.querySelector('.java-output');
     if (outputDiv) {
       outputDiv.innerHTML += outputLine.replace(/\n/g, '<br>');
@@ -209,22 +209,22 @@ window.addEventListener('DOMContentLoaded', () => {
     if (signSpinner) signSpinner.style.display = 'none';
     enableFirmarButton(); // Habilitar botón después de firmar
     const msg = JSON.parse(output);
-    const textMsg = msg.mensaje.replace('\n','<br />');
+    const textMsg = msg.mensaje.replace('\n', '<br />');
     const cerrar = '<div class="absolute top-1 left-2">&times;</div>';
     if (success) {
       msgDiv.innerHTML = `<div id="msg-info" title="Click para cerrar" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 hover:bg-green-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
 
       const conf = localStorage.getItem('conf');
-      if(!conf) return;
+      if (!conf) return;
       const dir = (JSON.parse(conf)).directorio;
-      
+
       selectedPdfs.forEach((elem) => {
         const id = elem.id;
         const opts = document.getElementById(id);
-        
-        if(opts && conf){
+
+        if (opts && conf) {
           const uri = dir + "/" + elem.nombre;
-          opts.innerHTML=`<span class=><a href="${uri}" title="Descargar ${elem.nombre}" target="_new">
+          opts.innerHTML = `<span class=><a href="${uri}" title="Descargar ${elem.nombre}" target="_new">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
               <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"/>
             </svg>          
@@ -232,7 +232,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    } else { 
+    } else {
       msgDiv.innerHTML = `<div id="msg-error" title="Click para cerrar" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 hover:bg-red-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
     }
     console.log(msg);

@@ -250,7 +250,99 @@ ipcMain.handle("save-default-image", async () => {
 });
 
 function uploadFiles(pdfs){
-  console.log('Archivos a firmar--', pdfs);
+  console.log("Subiendo archivos...", pdfs);
+
+  pdfs.forEach(async (pdf) => {
+
+    if (pdf.callback) {
+
+      const url = pdf.callback;
+      const method = pdf.callbackMethod || "POST";
+      const headers = pdf.callbackHeaders || {};
+      const atributo = pdf.callbackAtributo || "file";
+
+      // Leer el archivo firmado
+      const filePath = path.join(
+        pdf.local ? pdf.local : path.join(bicHome, "cache", pdf.nombre)
+      );
+      if (!fs.existsSync(filePath)) {
+        console.error("Archivo no encontrado para subir:", filePath);
+        return;
+      }
+
+      const fileData = fs.readFileSync(filePath);
+
+      // Construir cuerpo multipart/form-data
+      const boundary = "----BICBoundary" + Math.random().toString(16).slice(2);
+      let multipartBody = "";
+
+      // Agregar campos adicionales si existen en callbackBody
+      const body = pdf.callbackBody || {};
+      if (typeof body === "object" && body !== null) {
+        for (const key in body) {
+          if (key !== atributo) {
+            multipartBody += `--${boundary}\r\n`;
+            multipartBody += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
+            multipartBody += `${body[key]}\r\n`;
+          }
+        }
+      }
+      console.log("Cuerpo multipart:", multipartBody);
+      // Agregar el archivo
+      multipartBody += `--${boundary}\r\n`;
+      multipartBody += `Content-Disposition: form-data; name="${atributo}"; filename="${pdf.nombre}"\r\n`;
+      multipartBody += `Content-Type: application/pdf\r\n\r\n`;
+
+      const preFileBuffer = Buffer.from(multipartBody, "utf8");
+      const postFileBuffer = Buffer.from(`\r\n--${boundary}--\r\n`, "utf8");
+
+      // Combinar todo en un solo buffer
+      const finalBody = Buffer.concat([preFileBuffer, fileData, postFileBuffer]);
+
+
+      let opt = { method: method };
+
+      const uri = new URL(url);
+      opt["hostname"] = uri.hostname;
+      opt["port"] = uri.port;
+      opt["path"] = uri.pathname + uri.search;
+      opt["headers"] = {
+        ...headers,
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": finalBody.length,
+      };
+
+      let protocolo;
+      if (url.startsWith("https")) {
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+        protocolo = https;
+      } else {
+        protocolo = http;
+      }
+
+      console.log("Subiendo a", url, "con opciones", opt);
+
+      const req = protocolo.request(opt, (res) => {
+        let responseData = "";
+        res.on("data", (chunk) => {
+          responseData += chunk;
+        });
+        res.on("end", () => {
+          console.log(
+            `Respuesta del servidor (${res.statusCode}): ${responseData}`
+          );
+        });
+      });
+
+      req.on("error", (err) => {
+        console.error("Error al subir archivo:", err);
+      });
+
+      // Enviar el cuerpo como JSON
+      req.write(JSON.stringify(body));
+      req.end();
+    }
+  });
 }
 
 ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
@@ -337,6 +429,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
     for (const pdf of pdfs) {
       const nombre = pdf.nombre;
       const destino = path.join(bicHome, "cache", nombre);
+      pdf["local"] = path.join(dir, nombre);
       await descargarArchivo(pdf, destino, ssl);
       rutasLocales.push(destino);
     }
@@ -418,7 +511,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
           output: ultimoMensaje,
           exitCode: code,
         });
-
+      
         uploadFiles(pdfs);
       } else {
         event.sender.send("firma-resultado", {
