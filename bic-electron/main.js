@@ -256,11 +256,12 @@ function uploadFiles(pdfs, ssl, event){
 
   event.sender.send('firma-progreso','Subiendo...');
 
-  let errores = '';
-  let i = 0;
+  let errores = [];
+  let completados = 0;
   const cant = pdfs.length;
+
   pdfs.forEach((pdf) => {
-    i++;
+  
     if (pdf.callback) {
 
       const form = new FormData();
@@ -277,107 +278,118 @@ function uploadFiles(pdfs, ssl, event){
       );
 
       if (!fs.existsSync(filePath)) {
-        if(errores && errores.length > 0) errores += '<br />';
-        errores += "Archivo no encontrado para subir: " + filePath;
+        errores.push("Archivo no encontrado para subir: " + filePath);
         event.sender.send("java-output", { type: "stderr", data: "Archivo no encontrado para subir: " + filePath });
         pdf['bicMsg'] = "Archivo no encontrado para subir: " + filePath;
-        encontrado = false;
+        completados++;
+        if (completados === cant) {
+          sendUploadSummary(event, errores);
+        }
+        return;
       }
 
-      if(encontrado){
-        // Agregar campos adicionales si existen en callbackBody
-        const body = pdf.callbackBody || {};
-        if (typeof body === "object" && body !== null) {
-          for (const key in body) {
-            if (key !== atributo) 
-              form.append(key, body[key]);
+    
+      // Agregar campos adicionales si existen en callbackBody
+      const body = pdf.callbackBody || {};
+      if (typeof body === "object" && body !== null) {
+        for (const key in body) {
+          if (key !== atributo) 
+            form.append(key, body[key]);
+        }
+      }
+
+      form.append(atributo, fs.createReadStream(filePath));
+
+      let opt = { method: method };
+      let formHeaders = form.getHeaders();
+
+      if(headers && typeof headers === "object") {
+        for (const key in headers) {
+          formHeaders[key] = headers[key];
+        }
+      }
+
+      const uri = new URL(url);
+      opt["hostname"] = uri.hostname;
+      opt["port"] = uri.port;
+      opt["path"] = uri.pathname + uri.search;
+      opt["headers"] = formHeaders;
+
+      console.log("upload opts", opt);
+
+      let protocolo;
+      if (url.startsWith("https")) {
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+        protocolo = https;
+      } else {
+        protocolo = http;
+      }
+
+      console.log("Subiendo a", url, "con opciones", opt);
+
+      const req = protocolo.request(opt, (res) => {
+        let responseData = "";
+        res.on("data", (chunk) => {
+          responseData += chunk;
+        });
+        res.on("end", () => {
+          completados++;
+          if(res.statusCode > 200){
+            errores.push(`No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`);
+            event.sender.send("java-output", { type: "stderr", data: `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}` });
+            pdf['bicMsg'] = `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`;
           }
-        }
-
-        form.append(atributo, fs.createReadStream(filePath));
-
-        let opt = { method: method };
-        let formHeaders = form.getHeaders();
-
-        if(headers && typeof headers === "object") {
-          for (const key in headers) {
-            formHeaders[key] = headers[key];
+          if (completados === cant) {
+            sendUploadSummary(event, errores);
           }
-        }
-
-        const uri = new URL(url);
-        opt["hostname"] = uri.hostname;
-        opt["port"] = uri.port;
-        opt["path"] = uri.pathname + uri.search;
-        opt["headers"] = formHeaders;
-
-        console.log("upload opts", opt);
-
-        let protocolo;
-        if (url.startsWith("https")) {
-          process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
-          protocolo = https;
-        } else {
-          protocolo = http;
-        }
-
-        console.log("Subiendo a", url, "con opciones", opt);
-
-        const req = protocolo.request(opt, (res) => {
-          let responseData = "";
-          res.on("data", (chunk) => {
-            responseData += chunk;
-          });
-          res.on("end", () => {
-
-            if(res.statusCode > 200){
-              if(errores && errores.length > 0) errores += '<br />';
-              errores += `No se pudo subir (${res.statusCode}) ${responseData}`;
-              event.sender.send("java-output", { type: "stderr", data: `No se pudo subir (${res.statusCode}) ${responseData}` });
-              pdf['bicMsg'] = `No se pudo subir (${res.statusCode}) ${responseData}`;
-            }
-
-          });
         });
+      });
         
-        req.on("error", (err) => {
-          if(errores && errores.length > 0) errores += '<br />';
-          errores += 'No se pudo subir: ' + err;
-          event.sender.send("java-output", { type: "stderr", data: `No se pudo subir: ${err.toString()}` });
-          pdf['bicMsg'] =  `No se pudo subir: ${err.toString()}`;
-        });
+      req.on("error", (err) => {
+        completados++;
+        errores.push('No se pudo subir: ' + err);
+        event.sender.send("java-output", { type: "stderr", data: `No se pudo subir: ${err.toString()}` });
+        pdf['bicMsg'] =  `No se pudo subir: ${err.toString()}`;
+        if (completados === cant) {
+          sendUploadSummary(event, errores);
+        }        
+      });
         
-        req.on("end",()=> {
-          pdf['bicMsg'] =  'ok';
-        });
+      req.on("end",()=> {
+        pdf['bicMsg'] =  'ok';
+      });
 
-        form.pipe(req);
-      }
-
-      if(i === cant){
-        if(errores && errores.length > 0) {
-          const msg = {
-            success: false,
-            output: errores,
-            exitCode: 1
-          };
-          console.log(msg);
-          event.sender.send("firma-resultado", msg);
-        } else {
-          const msg = {
-            success: true,
-            output: "Archivos subidos correctamente",
-            exitCode: 0
-          };
-          console.log(msg);
-          event.sender.send("firma-resultado", msg);
-        }
-      }
-
+      form.pipe(req);
+    }else{
+      completados++;
+      if (completados === cant) {
+        sendUploadSummary(event, errores);
+      }      
     }
 
   });
  
+}
+
+function sendUploadSummary(event, errores) {
+  console.log("Subida finalizada. Errores:", errores);
+
+  let msg = {};
+  if (errores.length === 0) {
+    msg='{"mensaje":"Todos los archivos se subieron correctamente."}';
+    event.sender.send("firma-resultado", {
+      success: true,
+      output: msg,
+      exitCode: 0,
+    });
+  } else {
+    msg='{"mensaje":"Algunos archivos no se subieron correctamente."}';
+    event.sender.send("firma-resultado", {
+      success: false,
+      output: msg,
+      exitCode: 1,
+    });
+  }
 }
 
 ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
@@ -547,6 +559,11 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
         : "{" + ultimoMensaje.trim();
 
       if (code === 0) {
+
+        pdfs.forEach((pdf) => {
+          pdf['bicFirmado'] = true;
+        });        
+
         if(manual)
           event.sender.send("firma-resultado", {
             success: true,
