@@ -31,17 +31,17 @@ public class Log {
         if(msg == null || msg.length() < 0) return;
         switch(tipo){
             case INFO:
-                System.out.println(sdf.format(ahora) + " - INFO: " + msg);
+                System.out.println("INFO: " + msg);
                 //log.info(msg);
                 break;
             case ERROR:
-                System.err.println(sdf.format(ahora) + " - ERROR: " + msg);
+                System.err.println("ERROR: " + msg);
                 if(ex != null){
                     ex.printStackTrace();
                 }
                 break;
             case WARN:
-                System.out.println(sdf.format(ahora) + " - WARN: " + msg);
+                System.out.println("WARN: " + msg);
                 break;
             default:
                 break;

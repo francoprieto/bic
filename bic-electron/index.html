@@ -60,14 +60,17 @@
             disabled>
             Firmar
           </button>
-          <div id="signSpinner" class="flex items-center justify-center" style="display: none;">
-            <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-              viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-            <span class="ml-2 text-blue-700 dark:text-blue-400 font-semibold">Firmando...</span>
-
+          <div id="signSpinner" class="flex flex-row w-1/2" style="display: none;">
+            <div class="flex flex-row w-6 h-6 items-center justify-center">
+              <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            </div>
+            <div class="flex w-full flex-row ml-2 text-blue-700 dark:text-blue-400 font-semibold">
+              <span id="progreso"></span>
+            </div>
           </div>
         </div>
 
@@ -244,12 +247,17 @@
             <input type="text" placeholder="Directorio"
               class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm" />
             <div class="block text-blue-700 dark:text-blue-400 font-semibold text-sm pt-2 pb-2 whitespace-nowrap">
-              Descargas</div>
+              Cargas y Descargas</div>
             <div class="flex flex-row">
-              <label for="inseguro" class="text-xs text-gray-700 dark:text-gray-200 p-1">No validar certificados SSL
-                (inseguro)</label>
               <input type="checkbox" name="inseguro" id="inseguro"
                 class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+              <label for="inseguro" class="text-xs text-gray-700 dark:text-gray-200 p-1">No validar certificados SSL
+                (inseguro)</label>
+            </div>
+            <div class="flex flex-row">
+              <input type="checkbox" name="manual" id="manual"
+                class="mr-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                <label for="manual" class="text-xs text-gray-700 dark:text-gray-200 p-1">Subir manualmente archivos firmados</label>
             </div>
             <div class="flex flex-row pt-2">
               <label for="proxy" class="text-xs text-gray-700 dark:text-gray-200 p-1">Usar proxy:</label>
@@ -359,6 +367,7 @@
         alto: document.getElementById('alto')?.value || '',
         largo: document.getElementById('largo')?.value || '',
         inseguro: document.querySelector('input[name="inseguro"]').checked || false,
+        manual: document.querySelector('input[name="manual"]').checked || false,
         proxy: document.getElementById('proxy')?.value || '',
         ms: document.querySelector('input[name="ms"]')?.value || '',
         mi: document.querySelector('input[name="mi"]')?.value || '',
@@ -405,6 +414,8 @@
           mi: '50',
           ml: '50',
           mr: '50',
+          manual: false,
+          inseguro: false,
           directorio: homeDir // Home del usuario real
         };
         localStorage.setItem('conf', JSON.stringify(config));
@@ -469,8 +480,16 @@
       if (insec) {
         if (config.inseguro) {
           insec.checked = true;
-        } else if (insecure)
+        } else
           insec.checked = false;
+      }
+
+      const man = document.getElementById('manual');
+      if (man) {
+        if (config.manual) {
+          man.checked = true;
+        } else
+          man.checked = false;
       }
 
       ajustarApariencia();
@@ -480,7 +499,7 @@
     // Agregar listeners para guardar configuración automáticamente
     document.addEventListener('change', (e) => {
       if (e.target.name === 'posicion' || e.target.name === 'pagina' || e.target.name === 'inseguro' || e.target.id === 'ml' || e.target.id === 'mr'
-        || e.target.name === 'numeroPagina' || e.target.placeholder === 'Directorio' || e.target.id === 'ms' || e.target.id === 'mi'
+        || e.target.name === 'numeroPagina' || e.target.placeholder === 'Directorio' || e.target.id === 'ms' || e.target.id === 'mi'|| e.target.name === 'manual'
         || e.target.id === 'largo' || e.target.id === 'alto' || e.target.id === 'proxy') {
         guardarConfiguracion();
       }

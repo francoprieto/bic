@@ -7,6 +7,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const selectAllCheckbox = document.getElementById('selectAll');
   const signSpinner = document.getElementById('signSpinner');
   const msgDiv = document.getElementById('msg');
+  const progresoDiv = document.getElementById('progreso');
 
   // Variables para paginación
   let allPdfs = [];
@@ -188,7 +189,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Recibe el output en tiempo real del programa Java
   window.electronAPI?.onFromMain('java-output', (event, { type, data }) => {
     const timestamp = new Date().toLocaleTimeString();
-    const outputLine = `[${timestamp}] [${type.toUpperCase()}] ${data}`;
+    const outputLine = `<br/>[${timestamp}] [${type.toUpperCase()}] ${data}`;
     javaOutputBuffer += outputLine;
 
     // Mostrar el output en tiempo real
@@ -198,9 +199,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const outputDiv = resultDiv.querySelector('.java-output');
     if (outputDiv) {
-      outputDiv.innerHTML += outputLine.replace(/\n/g, '<br>');
+      outputDiv.innerHTML += outputLine;
       outputDiv.scrollTop = outputDiv.scrollHeight; // Auto-scroll al final
     }
+  });
+
+  window.electronAPI?.onFromMain('firma-progreso', (event, payload) => {
+    if (signSpinner) signSpinner.style.display = 'inline-flex';
+    disableFirmarButton();
+    progresoDiv.innerHTML = payload;
   });
 
   // Recibe el resultado final de la firma
@@ -210,9 +217,9 @@ window.addEventListener('DOMContentLoaded', () => {
     enableFirmarButton(); // Habilitar botón después de firmar
     const msg = JSON.parse(output);
     const textMsg = msg.mensaje.replace('\n', '<br />');
-    const cerrar = '<div class="absolute top-1 left-2">&times;</div>';
+    const cerrar = '<div class="absolute top-1 left-2 pl-1 pr-1 border border-white rounded-xl">&times;</div>';
     if (success) {
-      msgDiv.innerHTML = `<div id="msg-info" title="Click para cerrar" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 hover:bg-green-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+      msgDiv.innerHTML = `<div id="msg-info" title="Click para cerrar" onclick="document.getElementById('msg-info').style.display='none'" class="success text-sm cursor-pointer text-white bg-green-600 hover:bg-green-700 rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">${textMsg} ${cerrar}</div>`;
 
       const conf = localStorage.getItem('conf');
       if (!conf) return;
@@ -224,7 +231,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (opts && conf) {
           const uri = dir + "/" + elem.nombre;
-          opts.innerHTML = `<span class=><a href="${uri}" title="Descargar ${elem.nombre}" target="_new">
+          opts.innerHTML = `<span><a href="${uri}" title="Abrir ${elem.nombre}" target="_new">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
               <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"/>
             </svg>          
@@ -233,7 +240,7 @@ window.addEventListener('DOMContentLoaded', () => {
       });
 
     } else {
-      msgDiv.innerHTML = `<div id="msg-error" title="Click para cerrar" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 hover:bg-red-700 rounded-md shadow-xl absolute top-1 left-1 pt-5 p-3">${textMsg} ${cerrar}</div>`;
+      msgDiv.innerHTML = `<div id="msg-error" title="Click para cerrar" onclick="document.getElementById('msg-error').style.display='none'" class="error text-sm cursor-pointer text-white bg-red-600 hover:bg-red-700 rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">${textMsg} ${cerrar}</div>`;
     }
     console.log(msg);
     javaOutputBuffer = '';

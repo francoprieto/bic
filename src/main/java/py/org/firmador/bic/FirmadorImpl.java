@@ -188,7 +188,7 @@ public class FirmadorImpl implements Firmador{
                         configurado = true;
                         break;
                     }catch(Exception pe){
-                        Log.info("No es el slot " + s );
+                        //Log.info("No es el slot " + s );
                     }
                 }
 

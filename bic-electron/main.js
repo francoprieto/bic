@@ -252,11 +252,15 @@ ipcMain.handle("save-default-image", async () => {
   return targetPath;
 });
 
-function uploadFiles(pdfs){
-  console.log("Subiendo archivos...", pdfs);
+function uploadFiles(pdfs, ssl, event){
 
-  pdfs.forEach(async (pdf) => {
+  event.sender.send('firma-progreso','Subiendo...');
 
+  let errores = '';
+  let i = 0;
+  const cant = pdfs.length;
+  pdfs.forEach((pdf) => {
+    i++;
     if (pdf.callback) {
 
       const form = new FormData();
@@ -265,75 +269,115 @@ function uploadFiles(pdfs){
       const method = pdf.callbackMethod || "POST";
       const headers = pdf.callbackHeaders;
       const atributo = pdf.callbackAtributo || "file";
+      let encontrado = true;
 
       // Leer el archivo firmado
       const filePath = path.join(
         pdf.local ? pdf.local : path.join(bicHome, "cache", pdf.nombre)
       );
+
       if (!fs.existsSync(filePath)) {
-        console.error("Archivo no encontrado para subir:", filePath);
-        return;
+        if(errores && errores.length > 0) errores += '<br />';
+        errores += "Archivo no encontrado para subir: " + filePath;
+        event.sender.send("java-output", { type: "stderr", data: "Archivo no encontrado para subir: " + filePath });
+        pdf['bicMsg'] = "Archivo no encontrado para subir: " + filePath;
+        encontrado = false;
       }
 
-      // Agregar campos adicionales si existen en callbackBody
-      const body = pdf.callbackBody || {};
-      if (typeof body === "object" && body !== null) {
-        for (const key in body) {
+      if(encontrado){
+        // Agregar campos adicionales si existen en callbackBody
+        const body = pdf.callbackBody || {};
+        if (typeof body === "object" && body !== null) {
+          for (const key in body) {
+            if (key !== atributo) 
+              form.append(key, body[key]);
+          }
+        }
 
-          if (key !== atributo) 
-            form.append(key, body[key]);
+        form.append(atributo, fs.createReadStream(filePath));
 
+        let opt = { method: method };
+        let formHeaders = form.getHeaders();
+
+        if(headers && typeof headers === "object") {
+          for (const key in headers) {
+            formHeaders[key] = headers[key];
+          }
+        }
+
+        const uri = new URL(url);
+        opt["hostname"] = uri.hostname;
+        opt["port"] = uri.port;
+        opt["path"] = uri.pathname + uri.search;
+        opt["headers"] = formHeaders;
+
+        console.log("upload opts", opt);
+
+        let protocolo;
+        if (url.startsWith("https")) {
+          process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+          protocolo = https;
+        } else {
+          protocolo = http;
+        }
+
+        console.log("Subiendo a", url, "con opciones", opt);
+
+        const req = protocolo.request(opt, (res) => {
+          let responseData = "";
+          res.on("data", (chunk) => {
+            responseData += chunk;
+          });
+          res.on("end", () => {
+
+            if(res.statusCode > 200){
+              if(errores && errores.length > 0) errores += '<br />';
+              errores += `No se pudo subir (${res.statusCode}) ${responseData}`;
+              event.sender.send("java-output", { type: "stderr", data: `No se pudo subir (${res.statusCode}) ${responseData}` });
+              pdf['bicMsg'] = `No se pudo subir (${res.statusCode}) ${responseData}`;
+            }
+
+          });
+        });
+        
+        req.on("error", (err) => {
+          if(errores && errores.length > 0) errores += '<br />';
+          errores += 'No se pudo subir: ' + err;
+          event.sender.send("java-output", { type: "stderr", data: `No se pudo subir: ${err.toString()}` });
+          pdf['bicMsg'] =  `No se pudo subir: ${err.toString()}`;
+        });
+        
+        req.on("end",()=> {
+          pdf['bicMsg'] =  'ok';
+        });
+
+        form.pipe(req);
+      }
+
+      if(i === cant){
+        if(errores && errores.length > 0) {
+          const msg = {
+            success: false,
+            output: errores,
+            exitCode: 1
+          };
+          console.log(msg);
+          event.sender.send("firma-resultado", msg);
+        } else {
+          const msg = {
+            success: true,
+            output: "Archivos subidos correctamente",
+            exitCode: 0
+          };
+          console.log(msg);
+          event.sender.send("firma-resultado", msg);
         }
       }
 
-      form.append(atributo, fs.createReadStream(filePath));
-
-      let opt = { method: method };
-      let formHeaders = form.getHeaders();
-
-      if(headers && typeof headers === "object") {
-        for (const key in headers) {
-          formHeaders[key] = headers[key];
-        }
-      }
-
-      const uri = new URL(url);
-      opt["hostname"] = uri.hostname;
-      opt["port"] = uri.port;
-      opt["path"] = uri.pathname + uri.search;
-      opt["headers"] = formHeaders;
-
-      console.log("upload opts", opt);
-
-      let protocolo;
-      if (url.startsWith("https")) {
-        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-        protocolo = https;
-      } else {
-        protocolo = http;
-      }
-
-      console.log("Subiendo a", url, "con opciones", opt);
-
-      const req = protocolo.request(opt, (res) => {
-        let responseData = "";
-        res.on("data", (chunk) => {
-          responseData += chunk;
-        });
-        res.on("end", () => {
-          console.log(
-            `Respuesta del servidor (${res.statusCode}): ${responseData}`
-          );
-        });
-      });
-
-      req.on("error", (err) => {
-        console.error("Error al subir archivo:", err);
-      });
-
-      form.pipe(req);
     }
+
   });
+ 
 }
 
 ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
@@ -399,6 +443,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
 
   const dir = confs.directorio;
   const ssl = confs.inseguro ? confs.inseguro : false;
+  const manual = confs.manual ? confs.manual : false;
   // Ejecutar la aplicación Java
   // Ajusta la ruta y los argumentos según tu app Java
   const javaExec = path.join(".", "resources", "jdk", "bin", "java");
@@ -421,9 +466,14 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       const nombre = pdf.nombre;
       const destino = path.join(bicHome, "cache", nombre);
       pdf["local"] = path.join(dir, nombre);
-      await descargarArchivo(pdf, destino, ssl);
+      event.sender.send("firma-progreso","Descargando...");
+      await descargarArchivo(pdf, destino, ssl).then(() => {
+        event.sender.send("java-output", { type: "stdout", data: 'Descargado: ' + pdf.url });
+      });
       rutasLocales.push(destino);
     }
+
+    event.sender.send("firma-progreso","Firmando...");
 
     const position = JSON.stringify(posicion).replaceAll('"', '"');
     // Ajusta el nombre del JAR
@@ -497,13 +547,15 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
         : "{" + ultimoMensaje.trim();
 
       if (code === 0) {
-        event.sender.send("firma-resultado", {
-          success: true,
-          output: ultimoMensaje,
-          exitCode: code,
-        });
-      
-        uploadFiles(pdfs);
+        if(manual)
+          event.sender.send("firma-resultado", {
+            success: true,
+            output: ultimoMensaje,
+            exitCode: code,
+          });
+        else if(!manual) 
+          uploadFiles(pdfs, ssl, event);
+
       } else {
         event.sender.send("firma-resultado", {
           success: false,
