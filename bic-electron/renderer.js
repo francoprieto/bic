@@ -226,14 +226,44 @@ window.addEventListener('DOMContentLoaded', () => {
     selectedPdfs.forEach((elem) => {
       const id = elem.id;
       const opts = document.getElementById(id);
+      
+      if(opts && conf){
+        opts.innerHTML = '';
 
-      if (opts && conf && elem.bicFirmado === true) {
-        const uri = dir + "/" + elem.nombre;
-        opts.innerHTML = `<span><a href="${uri}" title="Abrir ${elem.nombre}" target="_new">
-          <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"/>
-          </svg>          
-        </a></span>`;
+        if (payload['firmados'] && payload['firmados'].includes(id)) {
+          const uri = dir + "/" + elem.nombre;
+          opts.innerHTML = `<span><a href="${uri}" title="Abrir ${elem.nombre}" target="_new">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"/>
+            </svg>          
+          </a></span>`;
+        }
+        if (payload['subidos']) {
+
+          const subidos = payload['subidos'];
+          
+          subidos.forEach((ns)=> {
+            
+            if (ns['id'] === id) {
+              const fueSubido = ns['subido'];
+              if (!fueSubido) {
+                opts.innerHTML += `<span class="text-red-700 pl-2">
+                  <a href="#" title="${ns['msg']}" target="_new">
+                    <svg class="shrink-0 inline w-6 h-6 me-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+                    </svg> 
+                  </a>               
+                </span>`;
+              }else{
+                opts.innerHTML += `<span class="text-green-700 pl-2" title="Archivo subido correctamente">
+                    <svg class="shrink-0 inline w-6 h-6 me-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+                    </svg>              
+                </span>`;              
+              }
+            }
+          });
+        }
       }
     });
 

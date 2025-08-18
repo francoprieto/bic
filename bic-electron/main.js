@@ -15,6 +15,8 @@ const firmaPath = path.join(__dirname, "firma.png");
 
 let mainWindow;
 let pdfUrls = [];
+let firmados = [];
+let subidos = [];
 let bicHome;
 let firmaSimple = true;
 
@@ -253,7 +255,7 @@ ipcMain.handle("save-default-image", async () => {
 });
 
 function uploadFiles(pdfs, ssl, event){
-
+  subidos = [];
   event.sender.send('firma-progreso','Subiendo...');
 
   let errores = [];
@@ -280,7 +282,7 @@ function uploadFiles(pdfs, ssl, event){
       if (!fs.existsSync(filePath)) {
         errores.push("Archivo no encontrado para subir: " + filePath);
         event.sender.send("java-output", { type: "stderr", data: "Archivo no encontrado para subir: " + filePath });
-        pdf['bicMsg'] = "Archivo no encontrado para subir: " + filePath;
+        subidos.push({id: pdf.id, subido: false, msg: "Archivo no encontrado para subir: " + filePath});
         completados++;
         if (completados === cant) {
           sendUploadSummary(event, errores);
@@ -334,11 +336,14 @@ function uploadFiles(pdfs, ssl, event){
         });
         res.on("end", () => {
           completados++;
+
           if(res.statusCode > 200){
             errores.push(`No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`);
             event.sender.send("java-output", { type: "stderr", data: `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}` });
-            pdf['bicMsg'] = `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`;
-          }
+            subidos.push({id: pdf.id, subido: false, msg: `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`});
+          }else if(res.statusCode === 200)
+            subidos.push({id: pdf.id, subido: true, msg: ''});
+          
           if (completados === cant) {
             sendUploadSummary(event, errores);
           }
@@ -349,16 +354,12 @@ function uploadFiles(pdfs, ssl, event){
         completados++;
         errores.push('No se pudo subir: ' + err);
         event.sender.send("java-output", { type: "stderr", data: `No se pudo subir: ${err.toString()}` });
-        pdf['bicMsg'] =  `No se pudo subir: ${err.toString()}`;
+        subidos.push({id: pdf.id, subido: false, msg: `No se pudo subir: ${err.toString()}`});
         if (completados === cant) {
           sendUploadSummary(event, errores);
         }        
       });
         
-      req.on("end",()=> {
-        pdf['bicMsg'] =  'ok';
-      });
-
       form.pipe(req);
     }else{
       completados++;
@@ -381,6 +382,8 @@ function sendUploadSummary(event, errores) {
       success: true,
       output: msg,
       exitCode: 0,
+      firmados: firmados,
+      subidos: []
     });
   } else {
     msg='{"mensaje":"Algunos archivos no se subieron correctamente."}';
@@ -388,6 +391,8 @@ function sendUploadSummary(event, errores) {
       success: false,
       output: msg,
       exitCode: 1,
+      firmados: firmados,
+      subidos: subidos
     });
   }
 }
@@ -557,11 +562,13 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       ultimoMensaje = ultimoMensaje.startsWith("{")
         ? ultimoMensaje.trim()
         : "{" + ultimoMensaje.trim();
+      
+      firmados = [];
 
       if (code === 0) {
-
+        
         pdfs.forEach((pdf) => {
-          pdf['bicFirmado'] = true;
+          firmados.push(pdf.id);
         });        
 
         if(manual)
@@ -569,6 +576,8 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
             success: true,
             output: ultimoMensaje,
             exitCode: code,
+            firmados: firmados,
+            subidos: []
           });
         else if(!manual) 
           uploadFiles(pdfs, ssl, event);
@@ -578,6 +587,8 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
           success: false,
           output: ultimoMensaje,
           exitCode: code,
+          firmados: [],
+          subidos: []
         });
       }
     });
@@ -589,6 +600,8 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
         success: false,
         output: error.message,
         exitCode: 1,
+        firmados: [],
+        subidos: []
       });
     });
   } catch (err) {
@@ -596,6 +609,8 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       success: false,
       output: err.message,
       exitCode: 1,
+      firmados: [],
+      subidos: []
     });
   }
 });

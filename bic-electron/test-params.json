@@ -24,8 +24,8 @@
             "User-Agent": "application/bic"
         },
         "callbackBody": {
-            "id": "3df0f2ff-0686-492d-9389-071acdb72456",
-            "nombre": "Ley 5189-2014.pdf"
+            "id": "c0a86750-1a37-4e33-a177-86a2c7510ee0",
+            "nombre": "Decreto 1041-2024.pdf"
         },
         "callbackAtributo" : "file"
     },
@@ -39,8 +39,8 @@
             "User-Agent": "application/bic"
         },
         "callbackBody": {
-            "id": "3df0f2ff-0686-492d-9389-071acdb72456",
-            "nombre": "Ley 5189-2014.pdf"
+             "id": "1d5651ec-f08c-4a64-8206-05d3a1215258",
+            "nombre": "PGN.pdf"
         },
         "callbackAtributo" : "file"
     },
@@ -54,8 +54,8 @@
             "User-Agent": "application/bic"
         },
         "callbackBody": {
-            "id": "3df0f2ff-0686-492d-9389-071acdb72456",
-            "nombre": "Ley 5189-2014.pdf"
+            "id": "f6c49c89-7420-48e8-922d-c26c2d4517f1",
+            "nombre": "Clasificador PGN.pdf"
         },
         "callbackAtributo" : "file"
     },
@@ -69,8 +69,8 @@
             "User-Agent": "application/bic"
         },
         "callbackBody": {
-            "id": "3df0f2ff-0686-492d-9389-071acdb72456",
-            "nombre": "Ley 5189-2014.pdf"
+            "id": "084386ec-8d22-4d2e-90c8-45345b2b56b0",
+            "nombre": "OrganigramaGerencia.pdf"
         },
         "callbackAtributo" : "file"
     },
@@ -84,8 +84,8 @@
            "User-Agent": "application/bic"
         },
         "callbackBody": {
-            "id": "3df0f2ff-0686-492d-9389-071acdb72456",
-            "nombre": "Ley 5189-2014.pdf"
+            "id": "9c6fb3d9-4d68-4ebc-9005-67dc6166e950",
+            "nombre": "OrganigramaVAF.pdf"
         },
         "callbackAtributo" : "file"
     }
