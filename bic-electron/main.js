@@ -267,10 +267,10 @@ function uploadFiles(pdfs, ssl, event){
     if (pdf.callback) {
 
       const form = new FormData();
-
+      console.log("PDF----> " + pdf.callbackHeaders);
       const url = pdf.callback;
       const method = pdf.callbackMethod || "POST";
-      const headers = pdf.callbackHeaders;
+      const headers = JSON.parse(pdf.callbackHeaders ? pdf.callbackHeaders : "{}");
       const atributo = pdf.callbackAtributo || "file";
       let encontrado = true;
 
@@ -292,22 +292,39 @@ function uploadFiles(pdfs, ssl, event){
 
     
       // Agregar campos adicionales si existen en callbackBody
-      const body = pdf.callbackBody || {};
+      const body = JSON.parse(pdf.callbackBody) || {};
+      
       if (typeof body === "object" && body !== null) {
         for (const key in body) {
-          if (key !== atributo) 
-            form.append(key, body[key]);
+          if (key !== atributo) {
+            const valBody = body[key];
+            if (typeof valBody !== "object" && valBody !== null){
+              console.log("Agregando el campo " + key + " al body, con valor:  " + valBody.toString());
+              form.append(key, valBody.toString());
+            }
+          }
         }
       }
-
+      
       form.append(atributo, fs.createReadStream(filePath));
 
       let opt = { method: method };
       let formHeaders = form.getHeaders();
-
+      
       if(headers && typeof headers === "object") {
         for (const key in headers) {
-          formHeaders[key] = headers[key];
+          // Only set headers with valid types
+          const value = headers[key];
+          if (
+            typeof value === "string" ||
+            Buffer.isBuffer(value) ||
+            value instanceof Uint8Array
+          ) {
+            formHeaders[key.toString()] = value;
+            console.log("Agregando " + key + " : " + value + " a los headers");
+          } else {
+            console.warn("Header ignorado por tipo inválido:", key, value);
+          }
         }
       }
 
@@ -349,7 +366,9 @@ function uploadFiles(pdfs, ssl, event){
           }
         });
       });
-        
+      
+      form.pipe(req);
+
       req.on("error", (err) => {
         completados++;
         errores.push('No se pudo subir: ' + err);
@@ -359,8 +378,7 @@ function uploadFiles(pdfs, ssl, event){
           sendUploadSummary(event, errores);
         }        
       });
-        
-      form.pipe(req);
+
     }else{
       completados++;
       if (completados === cant) {
