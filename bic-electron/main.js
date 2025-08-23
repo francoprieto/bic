@@ -7,6 +7,7 @@ const http = require("http");
 const FormData = require("form-data");
 const os = require("os");
 const path = require("path");
+const pako = require("pako");
 
 const { execFile, spawn } = require("child_process");
 const { exitCode } = require("process");
@@ -122,7 +123,10 @@ app.on("open-url", (event, url) => {
       const paramsurl = urlObj.searchParams.get("paramsurl");
 
       if (paramsurl) {
-        const val = atob(paramsurl);
+        let b64 = paramsurl.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const bytes = Buffer.from(b64, 'base64');     // Buffer (Uint8Array)
+        val = pako.ungzip(bytes, { to: 'string' });
         if (val) {
           const jsonParams = JSON.parse(val);
           leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog);
@@ -150,7 +154,11 @@ app.whenReady().then(() => {
       } else {
         const paramsurl = urlObj.searchParams.get("paramsurl");
         if (paramsurl) {
-          const val = atob(paramsurl);
+          let b64 = paramsurl.replace(/-/g, '+').replace(/_/g, '/');;
+          while (b64.length % 4) b64 += '=';
+          const bytes = Buffer.from(b64, 'base64');     // Buffer (Uint8Array)
+          val = pako.ungzip(bytes, { to: 'string' });
+
           if (val) {
             const jsonParams = JSON.parse(val);
             leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog).then(
