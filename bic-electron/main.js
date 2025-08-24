@@ -120,7 +120,17 @@ app.on("open-url", (event, url) => {
     if (filesParam) {
       leerArchivoSimple(filesParam, mainWindow, dialog);
     } else {
-      const paramsurl = urlObj.searchParams.get("paramsurl");
+      let paramsurl = urlObj.searchParams.get("gzipurl");
+      let val = '';
+      if (paramsurl) {
+        let b64 = paramsurl.replace(/-/g, '+').replace(/_/g, '/');;
+        while (b64.length % 4) b64 += '=';
+        const bytes = Buffer.from(b64, 'base64');     // Buffer (Uint8Array)
+        val = pako.ungzip(bytes, { to: 'string' });
+      }else{
+        paramsurl = urlObj.searchParams.get("paramsurl");
+        if(paramsurl) val = paramsurl;
+      }
 
       if (paramsurl) {
         let b64 = paramsurl.replace(/-/g, '+').replace(/_/g, '/');
@@ -152,26 +162,31 @@ app.whenReady().then(() => {
           });
         }
       } else {
-        const paramsurl = urlObj.searchParams.get("paramsurl");
+        let paramsurl = urlObj.searchParams.get("gzipurl");
+        let val = '';
         if (paramsurl) {
           let b64 = paramsurl.replace(/-/g, '+').replace(/_/g, '/');;
           while (b64.length % 4) b64 += '=';
           const bytes = Buffer.from(b64, 'base64');     // Buffer (Uint8Array)
           val = pako.ungzip(bytes, { to: 'string' });
-
-          if (val) {
-            const jsonParams = JSON.parse(val);
-            leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog).then(
-              () => {
-                if (pdfUrls.length > 0 && mainWindow) {
-                  mainWindow.webContents.on("did-finish-load", () => {
-                    mainWindow.webContents.send("set-pdf-urls", pdfUrls);
-                  });
-                }
-              }
-            );
-          }
+        }else{
+          paramsurl = urlObj.searchParams.get("paramsurl");
+          if(paramsurl) val = paramsurl;
         }
+        
+        if (val) {
+          const jsonParams = JSON.parse(val);
+          leerArchivoRemotoEnVariable(jsonParams, mainWindow, dialog).then(
+            () => {
+              if (pdfUrls.length > 0 && mainWindow) {
+                mainWindow.webContents.on("did-finish-load", () => {
+                  mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+                });
+              }
+            }
+          );
+        }
+
       }
     }
   }
