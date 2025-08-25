@@ -12,7 +12,8 @@
   "dependencies": {
     "form-data": "^4.0.4",
     "npx": "^10.2.2",
-    "pako": "^2.1.0"
+    "pako": "^2.1.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "electron": "^37.2.4",

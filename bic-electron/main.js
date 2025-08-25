@@ -11,10 +11,12 @@ const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const fs = require("fs");
 const https = require("https");
 const http = require("http");
+const url = require("url");
 const FormData = require("form-data");
 const os = require("os");
 const path = require("path");
 const pako = require("pako");
+const { v4: uuidv4 } = require("uuid");
 const { spawn } = require("child_process");
 
 // --- VARIABLES GLOBALES ---
@@ -22,6 +24,7 @@ let mainWindow;
 let pdfUrls = [];
 let firmados = [];
 let subidos = [];
+let local = false;
 let bicHome;
 const firmaPath = path.join(__dirname, "firma.png");
 
@@ -113,13 +116,15 @@ function leerArchivoSimple(filesParam) {
   const lista = filesParam.split(",");
   lista.forEach((element) => {
     const cleanUrl = element.split(/[?#]/)[0];
+    const uid = uuidv4();
     pdfUrls.push({
       nombre: path.basename(cleanUrl),
       url: element,
+      id: uid
     });
   });
-
   if (mainWindow) {
+    local = true;
     mainWindow.webContents.send("set-pdf-urls", pdfUrls);
   }
 }
@@ -254,8 +259,7 @@ ipcMain.handle("save-default-image", async () => {
 // --- SUBIR ARCHIVOS ---
 function uploadFiles(pdfs, ssl, event) {
   subidos = [];
-  event.sender.send("firma-progreso", "Subiendo...");
-
+  
   let errores = [];
   let completados = 0;
   const cant = pdfs.length;
@@ -270,6 +274,7 @@ function uploadFiles(pdfs, ssl, event) {
       return finalizar();
     }
 
+    event.sender.send("firma-progreso", "Subiendo...");
     try {
       const form = new FormData();
       const url = pdf.callback;
@@ -437,11 +442,19 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
     for (const pdf of pdfs) {
-      const destino = path.join(cacheDir, pdf.nombre);
-      pdf.local = path.join(dir, pdf.nombre);
-      event.sender.send("firma-progreso", "Descargando...");
-      await descargarArchivo(pdf, destino, ssl);
-      rutasLocales.push(destino);
+      if(pdf.url?.startsWith('file://')){ // Cuando los archivos a firmar son locales
+        const localFile = url.fileURLToPath(pdf.url);
+        if(localFile.startsWith('\\\\c\\'))
+          rutasLocales.push(localFile.replace('\\\\c\\','C:\\'));  
+        else 
+          rutasLocales.push(localFile);
+      }else{ // Cuando hay que descargar los archivos a firmar
+        const destino = path.join(cacheDir, pdf.nombre);
+        pdf.local = path.join(dir, pdf.nombre);
+        event.sender.send("firma-progreso", "Descargando...");
+        await descargarArchivo(pdf, destino, ssl);
+        rutasLocales.push(destino);
+      }
     }
 
     // Ejecutar proceso Java
@@ -477,44 +490,65 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       } catch (cleanupError) {
         console.error("Error limpiando cache:", cleanupError);
       }
-
-      firmados = code === 0 ? pdfs.map((p) => p.id) : [];
-      if (code === 0) {
-        if (manual) {
-          event.sender.send("firma-resultado", {
-            success: true,
-            output: ultimoMensaje,
-            exitCode: 0,
-            firmados,
-            subidos: [],
-          });
-        } else {
-          uploadFiles(pdfs, ssl, event);
-        }
-      } else {
+      
+      if(code === 1){
+        const errMsg = ultimoMensaje.replace('ERROR:','');
         event.sender.send("firma-resultado", {
           success: false,
-          output: ultimoMensaje,
-          exitCode: code,
+          output: errMsg,
+          exitCode: 1,
           firmados: [],
           subidos: [],
         });
+
+      }else{
+
+        firmados = code === 0 ? pdfs.map((p) => p.id) : [];
+        const msg = ultimoMensaje.replace('INFO:','').replace('WARN:','').replace('Listo!','');
+
+        if (code === 0) {
+          
+          if (manual || local) {
+            event.sender.send("firma-resultado", {
+              success: true,
+              output: msg,
+              exitCode: 0,
+              firmados,
+              subidos: [],
+            });
+          } else {
+            uploadFiles(pdfs, ssl, event);
+          }
+        } else {
+          event.sender.send("firma-resultado", {
+            success: false,
+            output: msg,
+            exitCode: code,
+            firmados: [],
+            subidos: [],
+          });
+        }
+
       }
+
     });
 
     javaProcess.on("error", (error) => {
+      
       event.sender.send("firma-resultado", {
         success: false,
-        output: error.message,
+        output: JSON.stringify(errMsg),
         exitCode: 1,
         firmados: [],
         subidos: [],
       });
     });
   } catch (err) {
+    
+    const errMsg = {"mensaje": err.message};
     event.sender.send("firma-resultado", {
       success: false,
-      output: err.message,
+      output: JSON.stringify(errMsg),
       exitCode: 1,
       firmados: [],
       subidos: [],
