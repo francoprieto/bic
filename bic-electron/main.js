@@ -162,7 +162,13 @@ app.whenReady().then(() => {
 
   // Manejo de parámetros iniciales (cuando app abre con bic://)
   const arg = process.argv.find((a) => a.startsWith("bic://"));
-  if (!arg) return;
+  if (!arg){
+    local = true;
+    mainWindow.webContents.on("did-finish-load", () => {
+      mainWindow.webContents.send("archivos-locales", local);
+    });    
+    return;
+  } 
 
   const urlObj = new URL(arg);
   const filesParam = urlObj.searchParams.get("files");
@@ -254,6 +260,20 @@ ipcMain.handle("save-default-image", async () => {
   const sourcePath = path.join(__dirname, "default.png");
   fs.copyFileSync(sourcePath, targetPath);
   return targetPath;
+});
+
+ipcMain.handle("select-files", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: ['pdf']
+  });
+  const seleccion = result.filePaths;
+  let lista = '';
+  for(let i=0; i<seleccion.length;i++){
+    if(i > 0) lista += ',';
+    lista += seleccion[i];
+  }
+  leerArchivoSimple(lista);
 });
 
 // --- SUBIR ARCHIVOS ---

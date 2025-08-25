@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
   getConfs: () => ipcRenderer.invoke('get-confs'),
   saveSignatureImage: (buffer, ext) => ipcRenderer.invoke('save-signature-image', buffer, ext),
-  saveDefaultImage: () => ipcRenderer.invoke('save-default-image')
+  saveDefaultImage: () => ipcRenderer.invoke('save-default-image'),
+  seleccionarArchivos: () => ipcRenderer.invoke('select-files')
 }); 

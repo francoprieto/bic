@@ -13,10 +13,12 @@ window.addEventListener("DOMContentLoaded", () => {
   const signForm = document.getElementById("signForm");
   const resultDiv = document.getElementById("result");
   const signBtn = document.getElementById("signBtn");
+  const fileSelectBtn = document.getElementById("fileSelect");
   const selectAllCheckbox = document.getElementById("selectAll");
   const signSpinner = document.getElementById("signSpinner");
   const msgDiv = document.getElementById("msg");
   const progresoDiv = document.getElementById("progreso");
+  const seleccionBtn = document.getElementById("fileSelect");
 
   // --- VARIABLES DE ESTADO ---
   let allPdfs = [];
@@ -30,6 +32,7 @@ window.addEventListener("DOMContentLoaded", () => {
     allPdfs = pdfs || [];
     currentPage = 1;
     selectedPdfs.clear();
+    fileSelectBtn.classList.add('hidden');
     renderPdfList();
   });
 
@@ -45,8 +48,17 @@ window.addEventListener("DOMContentLoaded", () => {
     handleFirmaResultado(payload);
   });
 
-  // --- RENDERIZADO DE PDFs ---
+  window.electronAPI?.onFromMain("archivos-locales", (event, payload) =>{
+    if(payload){
+      fileSelectBtn.classList.remove('hidden');
+      disableFirmarButton();
+    }
+  });
 
+
+  
+
+  // --- RENDERIZADO DE PDFs ---
   function renderPdfList() {
     pdfList.innerHTML = "";
 
@@ -135,7 +147,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- UI HELPERS ---
-
   function restoreSelections(pagePdfs, startIdx) {
     pagePdfs.forEach((pdf, idx) => {
       const globalIdx = startIdx + idx;
@@ -189,6 +200,11 @@ window.addEventListener("DOMContentLoaded", () => {
     selectAllCheckbox.checked = allSelected && pagePdfs.length > 0;
     selectAllCheckbox.indeterminate = !allSelected && someSelected;
   }
+  seleccionBtn.addEventListener("click", seleccionarArchivos);
+
+  function seleccionarArchivos() {    
+    window.electronAPI?.seleccionarArchivos();
+  };
 
   // --- FORMULARIO DE FIRMA ---
   signForm.addEventListener("submit", (e) => {
