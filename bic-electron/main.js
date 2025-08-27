@@ -271,7 +271,9 @@ ipcMain.handle("select-files", async () => {
   let lista = '';
   for(let i=0; i<seleccion.length;i++){
     if(i > 0) lista += ',';
-    lista += seleccion[i];
+    const path = seleccion[i].replace('C:','file://C').replaceAll('\\','/');
+    console.log('archivo->', path);
+    lista += path;
   }
   leerArchivoSimple(lista);
 });
