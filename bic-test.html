@@ -94,47 +94,49 @@
     <div class="container">
         <h1>🧪 Pruebas BIC - Firmador</h1>
         
-
-        <div class="test-section">
-            <h3>🔐 Pruebas de Firma</h3>
-            <div class="description">Enlaces específicos para probar diferentes tipos de firma</div>
-            <a 
-            href="bic://firmar?paramsurl=eyJ1cmkiOiJodHRwOi8vMTI3LjAuMC4xOjMwMDAvYmljLWVsZWN0cm9uL3Rlc3QtcGFyYW1zLmpzb24iLCJoZWFkZXJzIjp7IkNvbnRlbnQtVHlwZSI6ImFwcGxpY2F0aW9uL2pzb24ifX0=" 
-            class="test-link success">Firmar Documento</a>
-            
-            <a _ngcontent-ng-c3149039610="" class="btn btn-primary mb-3" href="bic://firmar?paramsurl=eyJ1cmkiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvaW5kaWNhZG9yLXZlcmlmaWNhY2lvbi1tZWRpb3MvZmlybWFyP2luZGljYWRvcj0xMzIwMCIsImhlYWR=">Firmar</a>
-            
-        </div>
-
+        <form id="frm1" enctype='multipart/form-data'>
+            <div class="test-section">
+                <h3>Firma de archivos locales</h3>
+                <input type="file" id="archivosLocales" name="files" dirname="~/Downloads" accept="application/pdf" multiple/>
+                <br /><br />
+                <button class="test-link success" id="pruebaLocales">Firmar Documento</button>
+                <div id="bic1"></div>
+            </div>
+        </form>
     </div>
 
     <script>
-        function testCustom() {
-            const input = document.getElementById('customParams');
-            const params = input.value;
-            
-            if (params && params.trim() !== '') {
-                // Si no empieza con bic://, lo agregamos
-                const url = params.startsWith('bic://') ? params : `bic://${params}`;
-                window.location.href = url;
-            } else {
-                alert('Por favor ingresa parámetros válidos');
-            }
-        }
 
-        // Permitir usar Enter para ejecutar la prueba personalizada
-        document.getElementById('customParams').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                testCustom();
+        const fileInput = document.getElementById('archivosLocales');
+        const btnLocales = document.getElementById('pruebaLocales');
+        const url1 = document.getElementById('bic1');
+        
+        let files;
+
+        const baseUrl='bic://firmar?'
+
+        fileInput.addEventListener('change', (event) => {
+            event.preventDefault();
+            files = event.target.files; 
+        });
+        
+        btnLocales.addEventListener('click', (event) => {
+            event.preventDefault();
+            if(files && files.length > 0){
+                var url = baseUrl + 'files=';
+                for(let i=0;files.length>i; i++){
+                    if(i > 0) url = url + ',';
+                    url = url + '~/Downloads/' + files[i].name;
+                }
+                url = encodeURI(url);
+                url1.innerHTML = url;
+                window.document.location=url;
+            }else{
+                alert('Sin archivos a firmar');
             }
         });
 
-        // Log de clicks para debugging
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A' && e.target.href.startsWith('bic://')) {
-                console.log('Probando BIC con:', e.target.href);
-            }
-        });
+
     </script>
 </body>
 </html>

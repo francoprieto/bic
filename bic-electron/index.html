@@ -60,6 +60,11 @@
             disabled>
             Firmar
           </button>
+          <button id="fileSelect" type="button" 
+            class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors">
+            Seleccionar Archivos
+          </button>
+          
           <div id="signSpinner" class="flex flex-row w-1/2" style="display: none;">
             <div class="flex flex-row w-6 h-6 items-center justify-center">
               <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -297,6 +302,7 @@
         darkIcon.textContent = '🌙';
       }
     });
+
     // Alternancia de tabs
     const tabFirmar = document.getElementById('tab-firmar');
     const tabConfig = document.getElementById('tab-config');
@@ -378,8 +384,6 @@
       localStorage.setItem('conf', JSON.stringify(config));
       console.log('Configuración guardada:', config);
     }
-
-
 
     // Función para cargar configuración
     async function cargarConfiguracion() {
