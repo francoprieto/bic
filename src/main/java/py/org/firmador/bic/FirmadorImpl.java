@@ -20,12 +20,14 @@ import py.org.firmador.dto.Resultado;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
 import py.org.firmador.util.AparienciaUtil;
 import py.org.firmador.util.ConfiguracionUtil;
+import py.org.firmador.util.MensajeUtil;
 import py.org.firmador.util.WebUtil;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.FailedLoginException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
@@ -54,6 +56,8 @@ public class FirmadorImpl implements Firmador{
     private static final String PARAM_ARCHIVO_HEADERS = "archivo-headers";
     public static final String PARAM_POSICION = "posicion";
 
+
+    public static final String PIN_ERROR="PIN o password incorrecto";
 
     /**
      * Valida los parámetros relacionados a archivos.
@@ -124,7 +128,14 @@ public class FirmadorImpl implements Firmador{
             Log.error("Error al cacherar los archivos", ex);
             return new Resultado("error", "Error al cacherar los archivos");
         }
-        List<File> firmados = firmarArchivos(configuracion, parametros, archivos);
+
+        List<File> firmados = null;
+        try {
+            firmados = firmarArchivos(configuracion, parametros, archivos);
+        } catch (FailedLoginException e) {
+            return new Resultado("error", PIN_ERROR);
+        }
+
         if(firmados == null || firmados.isEmpty())
             return new Resultado("error", "Archivos no firmados\nVerifique que el token este conectado.");
         String resultados = "";
@@ -164,7 +175,7 @@ public class FirmadorImpl implements Firmador{
      * @param archivos Archivos a firmar
      * @return Lista de archivos firmados
      */
-    private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos){
+    private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
         Provider providerPKCS11 = Security.getProvider(Firmador.SUN_PKCS11_PROVIDER_NAME);
         List<Libs> libs = configuracion.getLibs();
         List<File> archivosFirmados = new ArrayList<>();
@@ -265,7 +276,12 @@ public class FirmadorImpl implements Firmador{
                     return new ArrayList<>();
                 } catch (KeyStoreException e) {
                     encontrado = false;
-                    Log.warn("Configuracion no soportada: " + lib.getName() + " - " + file);
+                    String error = MensajeUtil.getStackTraceAsString(e);
+                    if (error != null && error.contains("javax.security.auth.login.FailedLoginException")){
+                        Log.error(PIN_ERROR);
+                        throw new FailedLoginException();
+                    }else
+                        Log.warn("Configuracion no soportada: " + lib.getName() + " - " + file);
                 }
                 if(encontrado) break;
             }

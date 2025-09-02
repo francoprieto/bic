@@ -3,6 +3,8 @@ package py.org.firmador.util;
 import py.org.firmador.dto.Resultado;
 
 import javax.swing.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 public class MensajeUtil {
 
@@ -33,6 +35,13 @@ public class MensajeUtil {
                 "Information",
                 JOptionPane.INFORMATION_MESSAGE
         );
+    }
+
+    public static String getStackTraceAsString(Throwable throwable) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        throwable.printStackTrace(pw);
+        return sw.toString();
     }
 
 }
