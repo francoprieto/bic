@@ -4,6 +4,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 logs/
+bic-electron/firma.png
+bic-electron/extraResources/
+bic-electron/dist/
 
 ### STS ###
 .apt_generated

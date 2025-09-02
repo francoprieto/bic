@@ -1,11 +1,8 @@
 package py.org.firmador;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-@Slf4j
 public class Log {
     
     private static final int INFO=0;
@@ -34,19 +31,17 @@ public class Log {
         if(msg == null || msg.length() < 0) return;
         switch(tipo){
             case INFO:
-                System.out.println(sdf.format(ahora) + " - INFO: " + msg);
-                log.info(msg);
+                System.out.println("INFO: " + msg);
+                //log.info(msg);
                 break;
             case ERROR:
-                System.err.println(sdf.format(ahora) + " - ERROR: " + msg);
+                System.err.println("ERROR: " + msg);
                 if(ex != null){
-                    log.error(msg, ex);
                     ex.printStackTrace();
-                }else log.error(msg);
+                }
                 break;
             case WARN:
-                System.out.println(sdf.format(ahora) + " - WARN: " + msg);
-                log.warn(msg);
+                System.out.println("WARN: " + msg);
                 break;
             default:
                 break;
