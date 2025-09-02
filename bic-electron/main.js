@@ -113,6 +113,7 @@ function leerArchivoRemotoEnVariable(jsonParams) {
  * Procesa lista de archivos enviada en la URL
  */
 function leerArchivoSimple(filesParam) {
+  if(!filesParam || filesParam.trim() === '') return;
   const lista = filesParam.split(",");
   lista.forEach((element) => {
     const cleanUrl = element.split(/[?#]/)[0];
@@ -272,8 +273,8 @@ ipcMain.handle("select-files", async () => {
   for(let i=0; i<seleccion.length;i++){
     if(i > 0) lista += ',';
     const path = seleccion[i].replace('C:','file://C').replaceAll('\\','/');
-    console.log('archivo->', path);
-    lista += path;
+    if(path.toLocaleLowerCase().endsWith('.pdf'))
+      lista += path;
   }
   leerArchivoSimple(lista);
 });
