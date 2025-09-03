@@ -24,7 +24,7 @@
     "appId": "py.org.firmador.bic",
     "productName": "Bic",
     "icon": "assets/icon.png",
-    "asar": false,
+    
     "directories": {
       "output": "dist"
     },
