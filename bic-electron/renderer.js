@@ -52,7 +52,6 @@ window.addEventListener("DOMContentLoaded", () => {
     //enableFirmarButton();
     updateSignBtnState();
     fileSelectBtn.classList.remove('hidden');
-    resetBtn.classList.add('hidden'); 
     window.electronAPI?.sendToMain("reset-app");   
   });
 

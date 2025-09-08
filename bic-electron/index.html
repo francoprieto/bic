@@ -58,15 +58,7 @@
             disabled>
             Firmar
           </button>
-          <button id="fileSelect" type="button" 
-            class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors">
-            Seleccionar Archivos
-          </button>
-          <button id="reiniciar" type="button" 
-            class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors">
-            Reiniciar
-          </button>
-
+          
           <div id="signSpinner" class="flex flex-row w-1/2" style="display: none;">
             <div class="flex flex-row w-6 h-6 items-center justify-center">
               <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -84,9 +76,28 @@
         <div id="msg"></div>
 
         <div class="flex items-center rounded-lg shadow-lg bg-gray-400 dark:bg-blue-700 p-2 mb-3 pdf-item w-full">
-          <input type="checkbox" id="selectAll"
-            class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-          <label for="selectAll" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer ml-1">Archivos</label>
+          <div id="titulo-archivos" class="flex w-[20%]">
+            <input type="checkbox" id="selectAll"
+              class="mr-4 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+            <label for="selectAll" class="text-gray-900 dark:text-gray-300 break-all cursor-pointer ml-1">Archivos</label>
+          </div>
+          <div id="controles" class="flex w-[80%] justify-end">
+
+            <div id="fileSelect" title="Abrir archivos">
+              <svg class="w-6 h-6 ml-2 text-gray-800 dark:text-white cursor-pointer" 
+                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19V6a1 1 0 0 1 1-1h4.032a1 1 0 0 1 .768.36l1.9 2.28a1 1 0 0 0 .768.36H16a1 1 0 0 1 1 1v1M3 19l3-8h15l-3 8H3Z"/>
+              </svg>
+            </div>
+
+            <div id="reiniciar" title="Reiniciar aplicación">
+              <svg class="w-6 h-6 ml-2 text-gray-800 dark:text-white cursor-pointer" 
+                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+              </svg>
+            </div>
+
+          </div>
         </div>
 
         <div class="pdf-list mb-6 w-full h-full" id="pdfList">
