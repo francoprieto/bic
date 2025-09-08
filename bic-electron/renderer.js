@@ -14,11 +14,11 @@ window.addEventListener("DOMContentLoaded", () => {
   const resultDiv = document.getElementById("result");
   const signBtn = document.getElementById("signBtn");
   const fileSelectBtn = document.getElementById("fileSelect");
+  const resetBtn = document.getElementById("reiniciar");
   const selectAllCheckbox = document.getElementById("selectAll");
   const signSpinner = document.getElementById("signSpinner");
   const msgDiv = document.getElementById("msg");
   const progresoDiv = document.getElementById("progreso");
-  const seleccionBtn = document.getElementById("fileSelect");
 
   // --- VARIABLES DE ESTADO ---
   let allPdfs = [];
@@ -36,6 +36,27 @@ window.addEventListener("DOMContentLoaded", () => {
     renderPdfList();
   });
 
+  resetBtn.addEventListener("click", ()=>{
+    allPdfs = [];
+    currentPage = 1;
+    selectedPdfs.clear();
+    pdfList.innerHTML = "";
+    resultDiv.innerHTML = "";
+    progresoDiv.innerHTML = "";
+    msgDiv.innerHTML = "";
+    if (signSpinner) signSpinner.style.display = "none";
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    //enableFirmarButton();
+    updateSignBtnState();
+    fileSelectBtn.classList.remove('hidden');
+    resetBtn.classList.add('hidden'); 
+    window.electronAPI?.sendToMain("reset-app");   
+  });
+
+
   window.electronAPI?.onFromMain("java-output", (event, { type, data }) => {
     appendJavaOutput(type, data);
   });
@@ -51,6 +72,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.electronAPI?.onFromMain("archivos-locales", (event, payload) =>{
     if(payload){
       fileSelectBtn.classList.remove('hidden');
+      resetBtn.classList.remove('hidden');
       disableFirmarButton();
     }
   });
@@ -200,7 +222,8 @@ window.addEventListener("DOMContentLoaded", () => {
     selectAllCheckbox.checked = allSelected && pagePdfs.length > 0;
     selectAllCheckbox.indeterminate = !allSelected && someSelected;
   }
-  seleccionBtn.addEventListener("click", seleccionarArchivos);
+  
+  fileSelectBtn.addEventListener("click", seleccionarArchivos);
 
   function seleccionarArchivos() {    
     window.electronAPI?.seleccionarArchivos();

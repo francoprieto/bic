@@ -196,6 +196,12 @@ app.whenReady().then(() => {
   }
 });
 
+ipcMain.on("reset-app", () => {
+  pdfUrls = [];
+  firmados = [];
+  subidos = [];
+});
+
 // --- SALIR CUANDO TODAS LAS VENTANAS SE CIERREN ---
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
