@@ -68,9 +68,10 @@ function decodeAndUnzip(base64Str) {
  * Descarga archivo remoto y lo agrega a pdfUrls
  */
 function leerArchivoRemotoEnVariable(jsonParams) {
+  
   const url = jsonParams.uri;
   const headers = jsonParams.headers || {};
-  const opt = {
+  let opt = {
     method: "GET",
     hostname: new URL(url).hostname,
     port: new URL(url).port,
@@ -78,6 +79,12 @@ function leerArchivoRemotoEnVariable(jsonParams) {
     headers,
   };
 
+  getConfs().then((c)=>{ 
+    if (c?.proxy)
+      opt['proxy'] = c.proxy;    
+  });
+
+  console.log('conf ::::: ', opt);
   return new Promise((resolve, reject) => {
     const protocolo = url.startsWith("https") ? https : http;
     if (url.startsWith("https")) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
@@ -208,15 +215,18 @@ app.on("window-all-closed", () => {
 });
 
 // --- DESCARGAR ARCHIVO ---
-function descargarArchivo(pdf, destino, ssl) {
+function descargarArchivo(pdf, destino, ssl, proxy) {
   const url = pdf.url;
-  const opt = {
+  let opt = {
     method: "GET",
     hostname: new URL(url).hostname,
     port: new URL(url).port,
     path: new URL(url).pathname + new URL(url).search,
     headers: pdf.headers || {},
   };
+  
+  if(proxy)
+    opt['proxy'] = proxy;
 
   return new Promise((resolve, reject) => {
     const protocolo = url.startsWith("https") ? https : http;
@@ -286,7 +296,7 @@ ipcMain.handle("select-files", async () => {
 });
 
 // --- SUBIR ARCHIVOS ---
-function uploadFiles(pdfs, ssl, event) {
+function uploadFiles(pdfs, ssl, proxy, event) {
   subidos = [];
   
   let errores = [];
@@ -337,7 +347,7 @@ function uploadFiles(pdfs, ssl, event) {
       });
 
       const uri = new URL(url);
-      const opt = {
+      let opt = {
         method,
         hostname: uri.hostname,
         port: uri.port,
@@ -345,8 +355,13 @@ function uploadFiles(pdfs, ssl, event) {
         headers: formHeaders,
       };
 
+      if(proxy)
+        opt['proxy'] = proxy;
+
       const protocolo = url.startsWith("https") ? https : http;
-      if (url.startsWith("https")) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+      if (url.startsWith("https")){ 
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1 
+      };
 
       const req = protocolo.request(opt, (res) => {
         let responseData = "";
@@ -403,9 +418,7 @@ function sendUploadSummary(event, errores) {
   }
 }
 
-// --- FIRMAR PDFs ---
-ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
-  // Recuperar configuraciones del localStorage
+async function getConfs() {
   let confs = null;
   try {
     if (!mainWindow.webContents.isLoading()) {
@@ -428,6 +441,14 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       subidos: [],
     });
   }
+  return confs;
+}
+
+// --- FIRMAR PDFs ---
+ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
+  // Recuperar configuraciones del localStorage
+  let confs = await getConfs();
+  if (!confs) return;
 
   // Construir objeto posición
   let posicion = {
@@ -459,7 +480,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
   const dir = confs.directorio;
   const ssl = confs.inseguro || false;
   const manual = confs.manual || false;
-
+  const proxy = confs.proxy || null;
   const javaExec = path.join(".", "resources", "jdk", "bin", "java");
   const javaPath = fs.existsSync(javaExec) ? javaExec : "java";
   const jarPath = path.resolve(__dirname, "../target/bic-jar-with-dependencies.jar");
@@ -481,7 +502,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
         const destino = path.join(cacheDir, pdf.nombre);
         pdf.local = path.join(dir, pdf.nombre);
         event.sender.send("firma-progreso", "Descargando...");
-        await descargarArchivo(pdf, destino, ssl);
+        await descargarArchivo(pdf, destino, ssl, proxy);
         rutasLocales.push(destino);
       }
     }
@@ -497,7 +518,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       `--destino=${dir}`,
       `--posicion=${JSON.stringify(posicion)}`,
     ];
-
+   
     const javaProcess = spawn(javaPath, args, { stdio: ["pipe", "pipe", "pipe"] });
 
     let ultimoMensaje = "";
@@ -546,7 +567,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
               subidos: [],
             });
           } else {
-            uploadFiles(pdfs, ssl, event);
+            uploadFiles(pdfs, ssl, confs.proxy, event);
           }
         } else {
           event.sender.send("firma-resultado", {
