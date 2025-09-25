@@ -2,6 +2,7 @@ package py.org.firmador.bic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.Rectangle;
@@ -17,13 +18,16 @@ import py.org.firmador.dto.Conf;
 import py.org.firmador.dto.Libs;
 import py.org.firmador.dto.Resultado;
 import py.org.firmador.exceptions.UnsupportedPlatformException;
+import py.org.firmador.util.AparienciaUtil;
 import py.org.firmador.util.ConfiguracionUtil;
+import py.org.firmador.util.MensajeUtil;
 import py.org.firmador.util.WebUtil;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.FailedLoginException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
@@ -50,8 +54,10 @@ public class FirmadorImpl implements Firmador{
     private static final String PARAM_CALLBACK_PARAMETERS = "callback-parameters";
     private static final String PARAM_ARCHIVO_NOMBRE = "archivo-nombre";
     private static final String PARAM_ARCHIVO_HEADERS = "archivo-headers";
-    private static final String PARAM_POSICION = "posicion";
+    public static final String PARAM_POSICION = "posicion";
 
+
+    public static final String PIN_ERROR="PIN o password incorrecto";
 
     /**
      * Valida los parámetros relacionados a archivos.
@@ -122,7 +128,14 @@ public class FirmadorImpl implements Firmador{
             Log.error("Error al cacherar los archivos", ex);
             return new Resultado("error", "Error al cacherar los archivos");
         }
-        List<File> firmados = firmarArchivos(configuracion, parametros, archivos);
+
+        List<File> firmados = null;
+        try {
+            firmados = firmarArchivos(configuracion, parametros, archivos);
+        } catch (FailedLoginException e) {
+            return new Resultado("error", PIN_ERROR);
+        }
+
         if(firmados == null || firmados.isEmpty())
             return new Resultado("error", "Archivos no firmados\nVerifique que el token este conectado.");
         String resultados = "";
@@ -162,7 +175,7 @@ public class FirmadorImpl implements Firmador{
      * @param archivos Archivos a firmar
      * @return Lista de archivos firmados
      */
-    private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos){
+    private List<File> firmarArchivos(Conf configuracion, Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
         Provider providerPKCS11 = Security.getProvider(Firmador.SUN_PKCS11_PROVIDER_NAME);
         List<Libs> libs = configuracion.getLibs();
         List<File> archivosFirmados = new ArrayList<>();
@@ -186,7 +199,7 @@ public class FirmadorImpl implements Firmador{
                         configurado = true;
                         break;
                     }catch(Exception pe){
-                        Log.info("No es el slot " + s );
+                        //Log.info("No es el slot " + s );
                     }
                 }
 
@@ -263,7 +276,12 @@ public class FirmadorImpl implements Firmador{
                     return new ArrayList<>();
                 } catch (KeyStoreException e) {
                     encontrado = false;
-                    Log.warn("Configuracion no soportada: " + lib.getName() + " - " + file);
+                    String error = MensajeUtil.getStackTraceAsString(e);
+                    if (error != null && error.contains("javax.security.auth.login.FailedLoginException")){
+                        Log.error(PIN_ERROR);
+                        throw new FailedLoginException();
+                    }else
+                        Log.warn("Configuracion no soportada: " + lib.getName() + " - " + file);
                 }
                 if(encontrado) break;
             }
@@ -273,106 +291,7 @@ public class FirmadorImpl implements Firmador{
         return archivosFirmados;
     }
 
-    /**
-     * Obtiene la posición de la firma en el PDF según los parámetros.
-     * @param parametros Parámetros de la firma
-     * @param pdf Lector PDF
-     * @return Mapa con las coordenadas y página
-     */
-    private Map<String, Float> getPosicion(Map<String,String> parametros, PdfReader pdf){
-        if(pdf == null) return new HashMap<>();
-        ResourceBundle conf = ResourceBundle.getBundle("bic");
-        Integer height = Integer.valueOf(conf.getString("firma.alto"));
-        Integer width = Integer.valueOf(conf.getString("firma.ancho"));
-        Integer margin = Integer.valueOf(conf.getString("firma.margen"));
-        height = height + margin;
-        width = width + margin;
 
-        Map<String, Float> retorno = new HashMap<>();
-        Rectangle cropBox = null;
-        String pos = "";
-
-        if(parametros.containsKey(PARAM_POSICION) && parametros.get(PARAM_POSICION) != null){
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                Map<String, String> cp = mapper.readValue(parametros.get(PARAM_POSICION), Map.class);
-                if(cp.containsKey("pagina")){
-                    if(cp.get("pagina").equals("primera")){
-                        retorno.put("pagina",1f);
-                        cropBox = pdf.getCropBox(1);
-                    }else if(cp.get("pagina").equals("ultima")) {
-                        retorno.put("pagina", (float) pdf.getNumberOfPages());
-                        cropBox = pdf.getCropBox(pdf.getNumberOfPages());
-                    }else{
-                        String pag = cp.get("pagina");
-                        Integer ip = Integer.valueOf(pag);
-                        if(ip.intValue() > pdf.getNumberOfPages()) ip = pdf.getNumberOfPages();
-                        retorno.put("pagina",Float.valueOf(ip));
-                        cropBox = pdf.getCropBox(ip);
-                    }
-                }
-                if(cp.containsKey("lugar") && cp.get("lugar").trim().length() > 0)
-                    pos = cp.get("lugar").trim();
-            }catch(JsonProcessingException jpe){
-                Log.warn("Posicion de la firma invalida, se asume valores por defecto!");
-            }
-        }
-
-        if(cropBox == null){
-            cropBox = pdf.getCropBox(1);
-            retorno.put("pagina",1f);
-        }
-
-        if(cropBox != null){
-            Float mitadFirmaFloat = width / 2f;
-            Float mitadPaginaFloat = cropBox.getWidth() / 2f;
-            int mitadFirma = mitadFirmaFloat.intValue();
-            int mitadPagina = mitadPaginaFloat.intValue();
-
-            // centro-inferior (default)
-            retorno.put("eix", cropBox.getLeft(margin));
-            retorno.put("eiy", cropBox.getBottom(margin));
-            retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
-            retorno.put("esy", cropBox.getBottom(height));
-
-            switch (pos) {
-                case "esquina-superior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(margin));
-                    retorno.put("eiy", cropBox.getTop(height));
-                    retorno.put("esx", cropBox.getLeft(width));
-                    retorno.put("esy", cropBox.getTop(margin));
-                    break;
-                case "esquina-superior-derecha":
-                    retorno.put("eix", cropBox.getRight(width));
-                    retorno.put("eiy", cropBox.getTop(height));
-                    retorno.put("esx", cropBox.getRight(margin));
-                    retorno.put("esy", cropBox.getTop(margin));
-                    break;
-                case "esquina-inferior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(margin));
-                    retorno.put("eiy", cropBox.getBottom(margin));
-                    retorno.put("esx", cropBox.getLeft(width));
-                    retorno.put("esy", cropBox.getBottom(height));
-                    break;
-                case "esquina-inferior-derecha":
-                    retorno.put("eix", cropBox.getRight(width));
-                    retorno.put("eiy", cropBox.getBottom(margin));
-                    retorno.put("esx", cropBox.getRight(margin));
-                    retorno.put("esy", cropBox.getBottom(height));
-                    break;
-                case "centro-superior":
-                    retorno.put("eix", cropBox.getLeft(margin));
-                    retorno.put("eiy", cropBox.getTop(height));
-                    retorno.put("esx", cropBox.getLeft(mitadPagina + mitadFirma));
-                    retorno.put("esy", cropBox.getTop(margin));
-                    break;
-                default:
-                    // Ya está el default
-                    break;
-            }
-        }
-        return retorno;
-    }
 
     /**
      * Procesa la firma de un archivo PDF.
@@ -394,40 +313,51 @@ public class FirmadorImpl implements Firmador{
             fos = new ByteArrayOutputStream();
             stp = PdfStamper.createSignature(pdf, fos, '\0');
             PdfSignatureAppearance sap = stp.getSignatureAppearance();
-            Map<String,Float> coor = this.getPosicion(parametros, pdf);
+            Map<String,Float> coor = AparienciaUtil.getPosicion(parametros, pdf);
             Rectangle firma = new Rectangle(coor.get("eix"), coor.get("eiy"), coor.get("esx"), coor.get("esy"));
             sap.setVisibleSignature(firma, coor.get("pagina").intValue(), null);
             sap.setCertificate(cert);
             X509Certificate x509Certificate = (X509Certificate) cert;
             Principal principal = x509Certificate.getSubjectDN();
             String fullDns = principal.getName();
-            qr = QRCode.from(fullDns).withSize(50, 50).stream();
-            String[] dns = fullDns.split(",");
-            Map<String,String> datos = new HashMap<>();
-            datos.put("APELLIDOS","");
-            datos.put("NOMBRES","");
-            datos.put("SERIAL","");
-            for(String dn : dns){
-                if(dn.contains("SURNAME=")) datos.put("APELLIDOS",dn.replace("SURNAME=",""));
-                if(dn.contains("GIVENNAME=")) datos.put("NOMBRES",dn.replace("GIVENNAME=",""));
-                if(dn.contains("SERIALNUMBER=")) datos.put("SERIAL",dn.replace("SERIALNUMBER=",""));
+            int tam = coor.get("hqr").intValue();
+            byte[] img = AparienciaUtil.getImagen(parametros);
+            if(img == null) {
+                qr = QRCode.from(fullDns).withSize(tam, tam).stream();
+                String[] dns = fullDns.split(",");
+                Map<String, String> datos = new HashMap<>();
+                datos.put("APELLIDOS", "");
+                datos.put("NOMBRES", "");
+                datos.put("SERIAL", "");
+                for (String dn : dns) {
+                    if (dn.contains("SURNAME=")) datos.put("APELLIDOS", dn.replace("SURNAME=", ""));
+                    if (dn.contains("GIVENNAME=")) datos.put("NOMBRES", dn.replace("GIVENNAME=", ""));
+                    if (dn.contains("SERIALNUMBER=")) datos.put("SERIAL", dn.replace("SERIALNUMBER=", ""));
+                }
+                String fecha = ConfiguracionUtil.ahora();
+                if (fecha != null && fecha.trim().length() > 0)
+                    datos.put("FECHA", fecha);
+                if (datos.containsKey("SERIAL"))
+                    datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
+                sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() +
+                        (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "") +
+                        (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
+                        (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             }
-            String fecha = ConfiguracionUtil.ahora();
-            if(fecha != null && fecha.trim().length() > 0)
-                datos.put("FECHA", fecha);
-            if(datos.containsKey("SERIAL"))
-                datos.put("SERIAL", datos.get("SERIAL").trim().contains("CI") ? datos.get("SERIAL").trim().replace("CI", "CI ") : datos.get("SERIAL").trim());
-            sap.setLayer2Text("Firmado digitalmente por:\n" + datos.get("APELLIDOS").trim() +
-                                (datos.get("NOMBRES").length() > 0 ? ", " + datos.get("NOMBRES").trim() : "") +
-                                (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
-                                (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;
-            sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
+
+            if(img == null) {
+                sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
+                sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
+            }else {
+                sap.setSignatureGraphic(Image.getInstance(img));
+                sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC);
+            }
             sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
-            sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
+
             MakeSignature.signDetached(sap, digest, es, certs, null, null, null, 0, MakeSignature.CryptoStandard.CMS);
             byte[] data = fos.toByteArray();
             File firmado = new File(destino +  ConfiguracionUtil.SLASH + archivo.getName());

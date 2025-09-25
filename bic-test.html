@@ -94,73 +94,49 @@
     <div class="container">
         <h1>🧪 Pruebas BIC - Firmador</h1>
         
-        <div class="test-section">
-            <h3>📋 Pruebas Básicas</h3>
-            <div class="description">Enlaces básicos para probar la funcionalidad del firmador BIC</div>
-            <a href="bic://parametro1,parametro2" class="test-link">Prueba Básica</a>
-            <a href="bic://test,archivo.pdf" class="test-link">Prueba con PDF</a>
-            <a href="bic://demo,archivo.txt" class="test-link">Prueba con TXT</a>
-        </div>
-
-        <div class="test-section">
-            <h3>🔐 Pruebas de Firma</h3>
-            <div class="description">Enlaces específicos para probar diferentes tipos de firma</div>
-            <a href="bic://firmar,doc1.pdf" class="test-link success">Firmar Documento</a>
-            <a href="bic://verificar,doc2.pdf" class="test-link">Verificar Firma</a>
-            <a href="bic://certificado,info" class="test-link">Obtener Certificado</a>
-        </div>
-
-        <div class="test-section">
-            <h3>⚠️ Pruebas de Error</h3>
-            <div class="description">Enlaces para probar el manejo de errores y casos límite</div>
-            <a href="bic://error,archivo_inexistente.pdf" class="test-link danger">Archivo Inexistente</a>
-            <a href="bic://invalid,parametros_invalidos" class="test-link danger">Parámetros Inválidos</a>
-            <a href="bic://timeout,archivo_grande.pdf" class="test-link danger">Timeout</a>
-        </div>
-
-        <div class="test-section">
-            <h3>🔄 Pruebas de Configuración</h3>
-            <div class="description">Enlaces para probar diferentes configuraciones</div>
-            <a href="bic://config,mostrar" class="test-link">Mostrar Configuración</a>
-            <a href="bic://config,reset" class="test-link">Reset Configuración</a>
-            <a href="bic://config,test" class="test-link">Test Configuración</a>
-        </div>
-
-        <div class="custom-test">
-            <h3>🎯 Prueba Personalizada</h3>
-            <div class="description">Ingresa tus propios parámetros para probar</div>
-            <input type="text" id="customParams" placeholder="Ej: firmar,mi_archivo.pdf" value="bic://">
-            <button onclick="testCustom()">Probar</button>
-        </div>
+        <form id="frm1" enctype='multipart/form-data'>
+            <div class="test-section">
+                <h3>Firma de archivos locales</h3>
+                <input type="file" id="archivosLocales" name="files" dirname="~/Downloads" accept="application/pdf" multiple/>
+                <br /><br />
+                <button class="test-link success" id="pruebaLocales">Firmar Documento</button>
+                <div id="bic1"></div>
+            </div>
+        </form>
     </div>
 
     <script>
-        function testCustom() {
-            const input = document.getElementById('customParams');
-            const params = input.value;
-            
-            if (params && params.trim() !== '') {
-                // Si no empieza con bic://, lo agregamos
-                const url = params.startsWith('bic://') ? params : `bic://${params}`;
-                window.location.href = url;
-            } else {
-                alert('Por favor ingresa parámetros válidos');
-            }
-        }
 
-        // Permitir usar Enter para ejecutar la prueba personalizada
-        document.getElementById('customParams').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                testCustom();
+        const fileInput = document.getElementById('archivosLocales');
+        const btnLocales = document.getElementById('pruebaLocales');
+        const url1 = document.getElementById('bic1');
+        
+        let files;
+
+        const baseUrl='bic://firmar?'
+
+        fileInput.addEventListener('change', (event) => {
+            event.preventDefault();
+            files = event.target.files; 
+        });
+        
+        btnLocales.addEventListener('click', (event) => {
+            event.preventDefault();
+            if(files && files.length > 0){
+                var url = baseUrl + 'files=';
+                for(let i=0;files.length>i; i++){
+                    if(i > 0) url = url + ',';
+                    url = url + '~/Downloads/' + files[i].name;
+                }
+                url = encodeURI(url);
+                url1.innerHTML = url;
+                window.document.location=url;
+            }else{
+                alert('Sin archivos a firmar');
             }
         });
 
-        // Log de clicks para debugging
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A' && e.target.href.startsWith('bic://')) {
-                console.log('Probando BIC con:', e.target.href);
-            }
-        });
+
     </script>
 </body>
 </html>

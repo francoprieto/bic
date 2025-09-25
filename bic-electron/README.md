@@ -13,6 +13,7 @@ Permite recibir una lista de URLs de archivos PDF desde una web (usando un proto
 ```bash
 npm install
 npm install --save-dev electron
+npm install --save-dev electron-builder
 ```
 
 2. Ajusta la ruta del JAR en `main.js`:
@@ -68,3 +69,4 @@ Esto abrirá la app Electron y mostrará la lista de archivos para firmar.
 ---
 
 ¿Dudas o problemas? ¡Contacta al desarrollador! 
+
