@@ -1,63 +1,76 @@
 package py.org.firmador;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.signatures.PdfPKCS7;
+import com.itextpdf.signatures.PdfSigner;
+import com.itextpdf.signatures.SignatureUtil;
+import org.bouncycastle.cert.ocsp.*;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import py.org.firmador.util.OcspChecker;
 
-import org.apache.commons.net.ntp.NTPUDPClient;
-import org.apache.commons.net.ntp.TimeInfo;
-import org.apache.commons.net.ntp.TimeStamp;
-import py.org.firmador.dto.Conf;
-import py.org.firmador.util.ConfiguracionUtil;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.ResourceBundle;
-import java.util.TimeZone;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.security.Security;
+import java.security.cert.*;
+import java.util.*;
 
 public class Test {
-/*
-    public static void main( String[] args ) throws Exception{
 
-        String archivos = "--archivos=C:\\Users\\franco\\Downloads\\test.pdf";
-        String destino = "--destino=C:\\Users\\franco\\Documents";
-
-        if(!ConfiguracionUtil.getOS().equals(ConfiguracionUtil.WIN)){
-            archivos = "--archivos=/Users/francoprieto/Downloads/test.pdf,/Users/francoprieto/Downloads/Fact Contado 0010140021559.pdf";
-            destino = "--destino=/Users/francoprieto/Documents";
-        }
-
-        String posicion = "--posicion={\"lugar\":\"centro-superior\",\"pagina\":\"primera\"}";
-        App.main(new String[]{"--pin=04209217", archivos, destino});
-
-    }*/
-    public static String getCurrentDateTimeFromNTP() {
-        try {
-            URL url = new URL("http://worldtimeapi.org/api/timezone/Etc/UTC");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("GET");
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuilder content = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-            in.close();
-            con.disconnect();
-            // Parse UTC datetime from response
-            String json = content.toString();
-            String dateTime = json.split("\"datetime\":\"")[1].split("\"")[0];
-            return dateTime;
-        } catch (Exception e) {
-            return "Error (HTTP Fallback): " + e.getMessage();
-        }
+    public static void main(String[] args) throws Exception {
+        String pdfPath = "/Users/francoprieto/Downloads/PGN.pdf";
+        validatePdfSignature(pdfPath);
     }
 
-        // Example usage
-        public static void main(String[] args) {
-            System.out.println(getCurrentDateTimeFromNTP());
+    public static void validatePdfSignature(String pdfPath) throws Exception {
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+
+        PdfDocument pdfDoc = new PdfDocument(new PdfReader(pdfPath));
+        SignatureUtil signUtil = new SignatureUtil(pdfDoc);
+
+        List<String> names = signUtil.getSignatureNames();
+        System.out.println("Found signatures: " + names);
+
+        for (String name : names) {
+            System.out.println("Checking signature: " + name);
+            PdfPKCS7 pkcs7 = signUtil.readSignatureData(name);
+
+            // Check if document has been modified after signing
+            boolean integrity = pkcs7.verifySignatureIntegrityAndAuthenticity();
+            System.out.println("Signature integrity OK? " + integrity);
+
+            // Get the signing certificate
+            X509Certificate signingCert = pkcs7.getSigningCertificate();
+            System.out.println("Signed by: " + signingCert.getSubjectDN());
+
+            // Validate certificate chain
+            Certificate[] certChain = pkcs7.getSignCertificateChain();
+            CertPath certPath = CertificateFactory.getInstance("X.509")
+                    .generateCertPath(Arrays.asList(certChain));
+            /*
+            // Build a trust anchor list (your trusted CA certs)
+            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+            ks.load(new FileInputStream("truststore.jks"), "password".toCharArray());
+
+            Set<TrustAnchor> trustAnchors = new HashSet<>();
+            Enumeration<String> aliases = ks.aliases();
+            while (aliases.hasMoreElements()) {
+                X509Certificate caCert = (X509Certificate) ks.getCertificate(aliases.nextElement());
+                trustAnchors.add(new TrustAnchor(caCert, null));
+            }
+
+            PKIXParameters params = new PKIXParameters(trustAnchors);
+            params.setRevocationEnabled(false); // we’ll handle revocation manually
+
+            CertPathValidator validator = CertPathValidator.getInstance("PKIX");
+            PKIXCertPathValidatorResult result =
+                    (PKIXCertPathValidatorResult) validator.validate(certPath, params);
+            System.out.println("Certificate chain OK: " + result.getTrustAnchor());
+*/
+            // Check OCSP revocation
+            //checkOcspRevocation(signingCert, (X509Certificate) certChain[0]); // issuer cert
+            OcspChecker.checkOcsp(signingCert, (X509Certificate) certChain[0]);
         }
+    }
 
 }
