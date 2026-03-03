@@ -36,7 +36,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderPdfList();
   });
 
-  resetBtn.addEventListener("click", ()=>{
+  resetBtn.addEventListener("click", () => {
     allPdfs = [];
     currentPage = 1;
     selectedPdfs.clear();
@@ -44,12 +44,16 @@ window.addEventListener("DOMContentLoaded", () => {
     resultDiv.innerHTML = "";
     progresoDiv.innerHTML = "";
     msgDiv.innerHTML = "";
-    if (signSpinner) signSpinner.style.display = "none";
+    
+    if (signSpinner) {
+      signSpinner.style.display = "none";
+    }
+    
     if (selectAllCheckbox) {
       selectAllCheckbox.checked = false;
       selectAllCheckbox.indeterminate = false;
     }
-    //enableFirmarButton();
+    
     updateSignBtnState();
     fileSelectBtn.classList.remove('hidden');
     window.electronAPI?.sendToMain("reset-app");   
@@ -68,7 +72,7 @@ window.addEventListener("DOMContentLoaded", () => {
     handleFirmaResultado(payload);
   });
 
-  window.electronAPI?.onFromMain("archivos-locales", (event, payload) =>{
+  window.electronAPI?.onFromMain("archivos-locales", (event, payload) => {
     if(payload){
       fileSelectBtn.classList.remove('hidden');
       resetBtn.classList.remove('hidden');
@@ -197,9 +201,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function updateSignBtnState() {
     const cantidad = selectedPdfs.size;
     signBtn.textContent = cantidad > 0 ? `Firmar (${cantidad})` : "Firmar";
-
-    if (cantidad > 0) enableFirmarButton();
-    else disableFirmarButton();
+    signBtn.disabled = cantidad === 0;
+    
+    if (cantidad > 0) {
+      enableFirmarButton();
+    } else {
+      disableFirmarButton();
+    }
   }
 
   function disableFirmarButton() {
@@ -222,11 +230,9 @@ window.addEventListener("DOMContentLoaded", () => {
     selectAllCheckbox.indeterminate = !allSelected && someSelected;
   }
   
-  fileSelectBtn.addEventListener("click", seleccionarArchivos);
-
-  function seleccionarArchivos() {    
+  fileSelectBtn.addEventListener("click", () => {    
     window.electronAPI?.seleccionarArchivos();
-  };
+  });
 
   // --- FORMULARIO DE FIRMA ---
   signForm.addEventListener("submit", (e) => {
@@ -255,8 +261,7 @@ window.addEventListener("DOMContentLoaded", () => {
     javaOutputBuffer += outputLine;
 
     if (!resultDiv.querySelector(".java-output")) {
-      resultDiv.innerHTML =
-        '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
+      resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
     }
 
     const outputDiv = resultDiv.querySelector(".java-output");
@@ -274,23 +279,25 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function handleFirmaResultado(payload) {
     const { success, output } = payload;
-    if (signSpinner) signSpinner.style.display = "none";
+    
+    if (signSpinner) {
+      signSpinner.style.display = "none";
+    }
+    
     enableFirmarButton();
 
     const msg = JSON.parse(output);
     const textMsg = msg.mensaje.replace("\n", "<br />");
-    const cerrar =
-      '<div class="absolute top-1 left-2 pl-1 pr-1 border border-white rounded-xl">&times;</div>';
+    const cerrar = '<div class="absolute top-1 left-2 pl-1 pr-1 border border-white rounded-xl">&times;</div>';
 
     updatePdfResults(payload);
 
+    const bgColor = success ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700";
     msgDiv.innerHTML = `
       <div id="msg-${success ? "info" : "error"}"
         title="Click para cerrar"
         onclick="this.style.display='none'"
-        class="text-sm cursor-pointer text-white ${
-          success ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
-        } rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">
+        class="text-sm cursor-pointer text-white ${bgColor} rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">
         ${textMsg} ${cerrar}
       </div>`;
 

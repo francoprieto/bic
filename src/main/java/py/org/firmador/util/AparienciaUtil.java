@@ -71,8 +71,9 @@ public class AparienciaUtil {
                         cropBox = pdf.getCropBox(ip);
                     }
                 }
-                if(cp.containsKey("lugar") && cp.get("lugar").trim().length() > 0)
+                if (cp.containsKey("lugar") && !cp.get("lugar").trim().isEmpty()) {
                     pos = cp.get("lugar").trim();
+                }
 
                 if(cp.containsKey("ancho") && cp.get("ancho") != null) {
                     w = Integer.valueOf(cp.get("ancho"));

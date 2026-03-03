@@ -86,8 +86,9 @@ public class FirmadorImpl implements Firmador{
             return true;
         }
         if(parametros.containsKey(PARAM_ARCHIVO_URI)
-                && parametros.get(PARAM_ARCHIVO_URI).trim().length() > 0)
+                && !parametros.get(PARAM_ARCHIVO_URI).trim().isEmpty()) {
             return true;
+        }
         if(parametros.containsKey(PARAM_DESTINO)){
             File destino = new File(parametros.get(PARAM_DESTINO));
             if(!destino.exists() || !destino.isDirectory()){
@@ -121,11 +122,9 @@ public class FirmadorImpl implements Firmador{
             return new Resultado("error", "Plataforma no soportada");
         }
         if(!this.validarParametrosArchivos(parametros)) return new Resultado("error", "Parametros inválidos");
-        List<File> archivos;
-        try{
-            archivos = this.cachearArchivos(parametros, configuracion.getDownloadTimeout(), configuracion.getReadTimeout());
-        }catch(IOException ex){
-            Log.error("Error al cacherar los archivos", ex);
+        List<File> archivos = this.cachearArchivos(parametros, configuracion.getDownloadTimeout(), configuracion.getReadTimeout());
+        if(archivos == null || archivos.isEmpty()){
+            Log.error("Error al cacherar los archivos");
             return new Resultado("error", "Error al cacherar los archivos");
         }
 
@@ -158,13 +157,17 @@ public class FirmadorImpl implements Firmador{
             }
             for(File file : firmados){
                 String res = WebUtil.upload(file, parametros.get(PARAM_CALLBACK_API), headers, params);
-                if(res != null && res.trim().length() > 0){
-                    if(resultados.trim().length() > 0) resultados += ",";
+                if(res != null && !res.trim().isEmpty()){
+                    if(!resultados.trim().isEmpty()) {
+                        resultados += ",";
+                    }
                     resultados += "[{\"archivo\":\"" + file.getName() + "\", \"resultado\":\"" + res + "\"}]";
                 }
             }
         }
-        if(resultados.trim().length() == 0) return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
+        if(resultados.trim().isEmpty()) {
+            return new Resultado("ok","(" + firmados.size() + ") Archivos firmados exitosamente");
+        }
         return new Resultado("ok",resultados);
     }
 
@@ -398,7 +401,7 @@ public class FirmadorImpl implements Firmador{
      * @return Lista de archivos en caché
      * @throws IOException Si ocurre un error de E/S
      */
-    private List<File> cachearArchivos(Map<String,String> parametros, Long downloadTimeout, Long readTimeout) throws IOException {
+    private List<File> cachearArchivos(Map<String,String> parametros, Long downloadTimeout, Long readTimeout) {
         String cache = ConfiguracionUtil.getDirCache();
         List<File> archivosCacheados = new ArrayList<>();
         // Archivos locales
@@ -407,13 +410,20 @@ public class FirmadorImpl implements Firmador{
             if(parametros.containsKey(PARAM_ARCHIVO)) files = new String[]{ parametros.get(PARAM_ARCHIVO) };
             else if(parametros.containsKey(PARAM_ARCHIVOS)) files = parametros.get(PARAM_ARCHIVOS).split(",");
             for(String file: files) {
-                File src = new File(file);
-                File des = new File(cache + ConfiguracionUtil.SLASH + src.getName());
-                if (!src.equals(des)){
-                    if (des.exists()) FileUtils.deleteQuietly(des);
-                    FileUtils.copyFile(src, des);
-                    archivosCacheados.add(des);
-                }else archivosCacheados.add(src);
+                try {
+                    File src = new File(file);
+                    File des = new File(cache + ConfiguracionUtil.SLASH + src.getName());
+                    if (!src.equals(des)){
+                        if (des.exists()) FileUtils.deleteQuietly(des);
+                        FileUtils.copyFile(src, des);
+                        archivosCacheados.add(des);
+                    }else {
+                        archivosCacheados.add(src);
+                    }
+                } catch (IOException e) {
+                    Log.error("Error al copiar archivo " + file, e);
+                    return new ArrayList<>();
+                }
             }
             return archivosCacheados;
         }

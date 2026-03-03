@@ -28,7 +28,9 @@ public class Log {
     public static void msg(String msg, int tipo, Exception ex){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date ahora = new Date();
-        if(msg == null || msg.length() < 0) return;
+        if(msg == null || msg.isEmpty()) {
+            return;
+        }
         switch(tipo){
             case INFO:
                 System.out.println("INFO: " + msg);

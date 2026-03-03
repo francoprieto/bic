@@ -55,7 +55,9 @@ function createWindow() {
 function decodeAndUnzip(base64Str) {
   try {
     let b64 = base64Str.replace(/-/g, "+").replace(/_/g, "/");
-    while (b64.length % 4) b64 += "=";
+    while (b64.length % 4) {
+      b64 += "=";
+    }
     const bytes = Buffer.from(b64, "base64");
     return pako.ungzip(bytes, { to: "string" });
   } catch (err) {
@@ -79,9 +81,10 @@ function leerArchivoRemotoEnVariable(jsonParams) {
     headers,
   };
 
-  getConfs().then((c)=>{ 
-    if (c?.proxy)
-      opt['proxy'] = c.proxy;    
+  getConfs().then((c) => { 
+    if (c?.proxy) {
+      opt['proxy'] = c.proxy;
+    }
   });
 
   console.log('conf ::::: ', opt);
@@ -119,23 +122,27 @@ function leerArchivoRemotoEnVariable(jsonParams) {
 /**
  * Procesa lista de archivos enviada en la URL
  */
-function leerArchivoSimple(filesParam) {
-  if(!filesParam || filesParam.trim() === '') return;
-  const lista = filesParam.split(",");
-  lista.forEach((element) => {
-    const cleanUrl = element.split(/[?#]/)[0];
-    const uid = uuidv4();
-    pdfUrls.push({
-      nombre: path.basename(cleanUrl),
-      url: element,
-      id: uid
+  function leerArchivoSimple(filesParam) {
+    if(!filesParam || filesParam.trim() === '') {
+      return;
+    }
+    
+    const lista = filesParam.split(",");
+    lista.forEach((element) => {
+      const cleanUrl = element.split(/[?#]/)[0];
+      const uid = uuidv4();
+      pdfUrls.push({
+        nombre: path.basename(cleanUrl),
+        url: element,
+        id: uid
+      });
     });
-  });
-  if (mainWindow) {
-    local = true;
-    mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+    
+    if (mainWindow) {
+      local = true;
+      mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+    }
   }
-}
 
 // --- MANEJAR PROTOCOLO PERSONALIZADO ---
 app.on("open-url", async (event, url) => {
@@ -225,16 +232,19 @@ function descargarArchivo(pdf, destino, ssl, proxy) {
     headers: pdf.headers || {},
   };
   
-  if(proxy)
+  if(proxy) {
     opt['proxy'] = proxy;
+  }
 
   return new Promise((resolve, reject) => {
     const protocolo = url.startsWith("https") ? https : http;
-    if (url.startsWith("https")) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+    
+    if (url.startsWith("https")) {
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+    }
 
     const file = fs.createWriteStream(destino);
-    protocolo
-      .get(opt, (response) => {
+    protocolo.get(opt, (response) => {
         if (response.statusCode !== 200) {
           dialog.showErrorBox("Error", "Error al descargar: " + response.statusCode);
           return reject(new Error("HTTP " + response.statusCode));

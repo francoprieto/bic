@@ -60,34 +60,43 @@ public class ConfiguracionUtil {
      * @param confs Mapa de configuración
      * @return Ruta del archivo de configuración generado, o null si ocurre un error
      */
+    /**
+     * Escribe un archivo de configuración temporal a partir de un mapa de parámetros.
+     * @param confs Mapa de configuración
+     * @return Ruta del archivo de configuración generado, o null si ocurre un error
+     */
     public static String toConfFile(Map<String,String> confs){
         String tmp = HOME + SLASH + ".bic" + SLASH + "bic.cfg";
         File cfg = new File(tmp);
-        if (confs != null)
+
+        if (confs != null) {
             FileUtils.deleteQuietly(cfg);
-        if (cfg.exists())
+        }
+
+        if (cfg.exists() || confs == null) {
+            return confs == null ? null : tmp;
+        }
+
+        try {
+            StringBuilder content = new StringBuilder();
+            for (Map.Entry<String, String> entrada : confs.entrySet()) {
+                content.append(entrada.toString()).append("\n");
+            }
+            FileUtils.writeStringToFile(cfg, content.toString(), "UTF-8");
             return tmp;
-        if (confs == null)
-            return null;
-        try (OutputStream output = new FileOutputStream(tmp)) {
-            for (Map.Entry<String, String> entrada : confs.entrySet())
-                FileUtils.writeByteArrayToFile(cfg, (entrada.toString() + "\n").getBytes(), true);
         } catch (IOException io) {
             Log.error("Error al escribir " + tmp, io);
             return null;
         }
-        return tmp;
     }
+
 
     /**
      * Obtiene el directorio de caché de la aplicación, creándolo si no existe.
      * @return Ruta del directorio de caché
      */
     public static String getDirCache(){
-        String path = HOME + SLASH + ".bic" + SLASH + "cache";
-        File file = new File(path);
-        if(!file.exists()) file.mkdir();
-        return path;
+        return ensureDirectoryExists(HOME + SLASH + ".bic" + SLASH + "cache");
     }
 
     /**
@@ -95,9 +104,19 @@ public class ConfiguracionUtil {
      * @return Ruta del directorio de firmados
      */
     public static String getDirFirmados(){
-        String path = HOME + SLASH + ".bic" + SLASH + "firmados";
+        return ensureDirectoryExists(HOME + SLASH + ".bic" + SLASH + "firmados");
+    }
+
+    /**
+     * Asegura que un directorio exista, creándolo si es necesario.
+     * @param path Ruta del directorio
+     * @return Ruta del directorio
+     */
+    private static String ensureDirectoryExists(String path){
         File file = new File(path);
-        if(!file.exists()) file.mkdir();
+        if(!file.exists()) {
+            file.mkdirs();
+        }
         return path;
     }
 
@@ -225,28 +244,25 @@ public class ConfiguracionUtil {
      * @param excluidos Lista de carpetas a excluir
      */
     private static void find(File raiz, String[] buscados, List<File> encontrados, List<String> excluidos){
-        if(raiz == null) return;
-        List<File> archivos = new ArrayList<>();
-        try{
-            for(File f : raiz.listFiles()){
-                if(f.isFile()){
-                    for(String buscado: buscados){
-                        if(f.getName().equals(buscado) && !f.getName().endsWith(".conf")){
-                            archivos.add(f);
-                            break;
-                        }
-                    }
-                }
-            }
-        }catch(Exception ex){
+        if(raiz == null || !raiz.exists()) {
             return;
         }
-        encontrados.addAll(archivos);
-        if(raiz.listFiles() != null) {
-            for (File dir : raiz.listFiles()) {
-                if (!dir.isFile() && !excluidos.contains(dir.getName().toLowerCase().trim())) {
-                    find(dir, buscados, encontrados, excluidos);
+        
+        File[] files = raiz.listFiles();
+        if(files == null) {
+            return;
+        }
+        
+        for(File f : files){
+            if(f.isFile()){
+                for(String buscado: buscados){
+                    if(f.getName().equals(buscado) && !f.getName().endsWith(".conf")){
+                        encontrados.add(f);
+                        break;
+                    }
                 }
+            } else if(!excluidos.contains(f.getName().toLowerCase().trim())) {
+                find(f, buscados, encontrados, excluidos);
             }
         }
     }
