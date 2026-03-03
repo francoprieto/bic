@@ -70,7 +70,7 @@
             margin-bottom: 20px;
             font-size: 14px;
         }
-h1 {
+        h1 {
             color: #333;
             text-align: center;
             margin-bottom: 30px;
@@ -132,7 +132,7 @@ h1 {
         .custom-test button {
             padding: 8px 15px;
             background-color: #6c757d;
-                   
+        }        
     </style>
 </head>
 <body>
@@ -157,12 +157,11 @@ h1 {
         </form>
 
         <div class="pdf-list">
-            <h3>Pruebas:</h3>
-            
+           
             <div class="pdf-item">
                 <div>
                     <strong>📄 Descarga y firma local de 3 documentos</strong>
-                    <br><small>A4-test-1.pdf, oficio-test-2.pdf, carta-test-3.pdf</small>
+                    <br><small id="local-link"></small>
                 </div>
                 <div>
                     <a href="#" id="sign-link" class="sign-btn">Firmar</a>
@@ -172,7 +171,11 @@ h1 {
             <div class="pdf-item">
                 <div>
                     <strong>📄 Descarga, firma y subida de 3 documentos</strong>
-                    <br><small>Lee y descarga los archivos detallados en <a href="http://127.0.0.1:3100/test/archivos.json" target="_blank">http://127.0.0.1:3100/test/archivos.json</a></small>
+                    <br>
+                    <small>Lee y descarga los archivos detallados en <a href="http://127.0.0.1:3100/test/archivos.json" target="_blank">http://127.0.0.1:3100/test/archivos.json</a>
+                        <br>El enlace se toma arma primero convirtiendo a base64 este json: <br/> {"uri": "http://127.0.0.1:3100/test/archivos.json", "headers":{"Authorization": "Bearer XXYYZZ"}}<br/>
+                        Quedando el valor en: <input type="text" id="base64-val"/>
+                    </small>
                 </div>
                 <div>
                     <a href="#" id="sign-json" class="sign-btn">Firmar</a>
@@ -211,6 +214,9 @@ h1 {
         const req = btoa(`{"uri":"${protocol}//${hostname}${port ? ':' + port : ''}/test/archivos.json", "headers":{"Content-Type":"application/json"}}`);
         // Asignar el enlace al botón
         document.getElementById('sign-link').href = bicUrl;
+        
+        document.getElementById('local-link').innerHTML = "Enlace para firmar: <br />" + bicUrl;
+        document.getElementById('base64-val').value = req;
         document.getElementById('sign-json').href = `bic://?paramsurl=${req}`;
         console.log('URLs generadas:', fullUrls);
         console.log('Enlace BIC:', bicUrl);
