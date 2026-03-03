@@ -555,12 +555,24 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       const form = new FormData();
       const url = pdf.callback;
       const method = pdf.callbackMethod || "POST";
-      const headers = JSON.parse(pdf.callbackHeaders || "{}");
+      
+      // callbackHeaders y callbackBody ya son objetos, no strings JSON
+      const headers = typeof pdf.callbackHeaders === 'string' 
+        ? JSON.parse(pdf.callbackHeaders) 
+        : (pdf.callbackHeaders || {});
+      
       const atributo = pdf.callbackAtributo || "file";
       const filePath = pdf.local || path.join(bicHome, "cache", pdf.nombre);
 
+      console.log('Subiendo archivo:', pdf.nombre);
+      console.log('URL:', url);
+      console.log('Método:', method);
+      console.log('Atributo:', atributo);
+      console.log('Ruta local:', filePath);
+
       if (!fs.existsSync(filePath)) {
         const msg = "Archivo no encontrado para subir: " + filePath;
+        console.error(msg);
         errores.push(msg);
         subidos.push({ id: pdf.id, subido: false, msg });
         completados++;
@@ -568,7 +580,12 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       }
 
       // Agregar campos extra del body
-      const body = JSON.parse(pdf.callbackBody || "{}");
+      const body = typeof pdf.callbackBody === 'string' 
+        ? JSON.parse(pdf.callbackBody) 
+        : (pdf.callbackBody || {});
+      
+      console.log('Body adicional:', body);
+      
       for (const key in body) {
         if (key !== atributo) {
           form.append(key, String(body[key]));
@@ -595,6 +612,8 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       if(proxy)
         opt['proxy'] = proxy;
 
+      console.log('Opciones de petición:', JSON.stringify(opt, null, 2));
+
       const protocolo = url.startsWith("https") ? https : http;
       if (url.startsWith("https")){ 
         process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1 
@@ -605,11 +624,16 @@ function uploadFiles(pdfs, ssl, proxy, event) {
         res.on("data", (chunk) => (responseData += chunk));
         res.on("end", () => {
           completados++;
+          console.log('Respuesta del servidor:', res.statusCode);
+          console.log('Datos de respuesta:', responseData);
+          
           if (res.statusCode !== 200) {
             const msg = `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`;
+            console.error(msg);
             errores.push(msg);
             subidos.push({ id: pdf.id, subido: false, msg });
           } else {
+            console.log('Archivo subido exitosamente:', pdf.nombre);
             subidos.push({ id: pdf.id, subido: true, msg: "" });
           }
           finalizar();
@@ -620,14 +644,17 @@ function uploadFiles(pdfs, ssl, proxy, event) {
 
       req.on("error", (err) => {
         completados++;
-        const msg = "No se pudo subir: " + err.toString();
+        const msg = "No se pudo subir: " + (err.message || err.toString());
+        console.error(msg, err);
         errores.push(msg);
         subidos.push({ id: pdf.id, subido: false, msg });
         finalizar();
       });
     } catch (err) {
       completados++;
-      errores.push("Error inesperado: " + err.message);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error("Error inesperado en upload:", errorMsg, err);
+      errores.push("Error inesperado: " + errorMsg);
       finalizar();
     }
   });
