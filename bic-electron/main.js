@@ -1,5 +1,5 @@
 /**
- * Main process for Electron app
+ * Proceso principal de la aplicación Electron
  * Encargado de:
  *  - Crear ventana principal
  *  - Manejar protocolo personalizado bic://
@@ -455,9 +455,12 @@ async function getConfs() {
 }
 
 // --- FIRMAR PDFs ---
-ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
-  // Recuperar configuraciones del localStorage
-  let confs = await getConfs();
+ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, config }) => {
+  // Usar configuración del perfil seleccionado o recuperar del localStorage
+  let confs = config;
+  if (!confs) {
+    confs = await getConfs();
+  }
   if (!confs) return;
 
   // Construir objeto posición
@@ -528,6 +531,11 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       `--destino=${dir}`,
       `--posicion=${JSON.stringify(posicion)}`,
     ];
+    
+    // Agregar parámetro de certificado de Windows si está marcado
+    if (useWindowsStore) {
+      args.push(`--use-windows-store=true`);
+    }
    
     const javaProcess = spawn(javaPath, args, { stdio: ["pipe", "pipe", "pipe"] });
 

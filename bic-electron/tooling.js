@@ -19,7 +19,7 @@ const jdkWin64 = new URL('https://download.java.net/java/GA/jdk11/9/GPL/openjdk-
 
 console.log('Procesando', args[2], args[3]);
 
-// Build JAR with Maven before proceeding
+// Construir JAR con Maven antes de proceder
 console.log('Building JAR with Maven...');
 buildMavenJar().then(() => {
     console.log('Maven build completed successfully');
@@ -52,11 +52,15 @@ buildMavenJar().then(() => {
     process.exit(1);
 });
 
+/**
+ * Construye el JAR con Maven antes de proceder
+ * @returns {Promise} Promesa que se resuelve cuando el build termina
+ */
 function buildMavenJar() {
     return new Promise((resolve, reject) => {
         const projectRoot = path.resolve('..');
         
-        // Detect Maven command based on platform
+        // Detectar comando Maven según la plataforma
         const mvnCmd = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
         const cmd = `${mvnCmd} clean package -DskipTests`;
         
@@ -70,7 +74,7 @@ function buildMavenJar() {
             
             console.log(stdout);
             
-            // Verify JAR was created
+            // Verificar que el JAR fue creado
             if (!fs.existsSync(source)) {
                 return reject(new Error(`JAR file not found at ${source}`));
             }
@@ -115,10 +119,10 @@ function unzip(zipPath, outputDir) {
         zipPath = path.resolve(zipPath);
         outputDir = path.resolve(outputDir);
 
-        // Detect platform and choose command
+        // Detectar plataforma y elegir comando
         let cmd;
         if (process.platform === "win32") {
-            // Windows: use tar (available in Win10+ PowerShell)
+            // Windows: usar tar (disponible en Win10+ PowerShell)
             cmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${outputDir}' -Force"`;
         } else {
             // Linux / macOS

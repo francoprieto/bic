@@ -35,7 +35,9 @@ import java.io.File;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -55,7 +57,7 @@ public class FirmadorImpl implements Firmador{
     private static final String PARAM_ARCHIVO_NOMBRE = "archivo-nombre";
     private static final String PARAM_ARCHIVO_HEADERS = "archivo-headers";
     public static final String PARAM_POSICION = "posicion";
-
+    private static final String PARAM_USE_WINDOWS_STORE = "use-windows-store";
 
     public static final String PIN_ERROR="PIN o password incorrecto";
 
@@ -130,7 +132,15 @@ public class FirmadorImpl implements Firmador{
 
         List<File> firmados = null;
         try {
-            firmados = firmarArchivos(configuracion, parametros, archivos);
+            // Verificar si se debe usar el almacén de Windows
+            boolean useWindowsStore = parametros.containsKey(PARAM_USE_WINDOWS_STORE) 
+                && "true".equalsIgnoreCase(parametros.get(PARAM_USE_WINDOWS_STORE));
+            
+            if (useWindowsStore) {
+                firmados = firmarArchivosWindowsStore(parametros, archivos);
+            } else {
+                firmados = firmarArchivos(configuracion, parametros, archivos);
+            }
         } catch (FailedLoginException e) {
             return new Resultado("error", PIN_ERROR);
         }
@@ -260,7 +270,7 @@ public class FirmadorImpl implements Firmador{
                         cert = keyStore.getCertificate(alias);
                         x509Certificate = (X509Certificate) cert;
                         if (x509Certificate.getKeyUsage()[0]) {
-                            Key key = keyStore.getKey(alias, null); // Accedemos al private key del hardware
+                            Key key = keyStore.getKey(alias, null); // Acceder a la clave privada del hardware
                             privateKey = (PrivateKey) key;
                             break;
                         }
@@ -292,6 +302,161 @@ public class FirmadorImpl implements Firmador{
         }
 
         return archivosFirmados;
+    }
+
+    /**
+     * Firma una lista de archivos utilizando certificados del almacén de Windows.
+     * @param parametros Parámetros de la firma
+     * @param archivos Archivos a firmar
+     * @return Lista de archivos firmados
+     * @throws FailedLoginException Si falla la autenticación
+     */
+    private List<File> firmarArchivosWindowsStore(Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
+        List<File> archivosFirmados = new ArrayList<>();
+        
+        try {
+            // Cargar almacén de certificados Windows-MY
+            KeyStore keyStore = KeyStore.getInstance("Windows-MY");
+            keyStore.load(null, null);
+            
+            // Obtener todos los alias
+            java.util.Enumeration<String> aliases = keyStore.aliases();
+            List<String> aliasList = new ArrayList<>();
+            Map<String, Certificate> certMap = new HashMap<>();
+            
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                Certificate cert = keyStore.getCertificate(alias);
+                if (cert instanceof X509Certificate) {
+                    X509Certificate x509 = (X509Certificate) cert;
+                    // Verificar si el certificado tiene capacidad de firma digital
+                    boolean[] keyUsage = x509.getKeyUsage();
+                    if (keyUsage != null && keyUsage[0]) {
+                        aliasList.add(alias);
+                        certMap.put(alias, cert);
+                    }
+                }
+            }
+            
+            if (aliasList.isEmpty()) {
+                Log.error("No se encontraron certificados válidos en el almacén de Windows");
+                return new ArrayList<>();
+            }
+            
+            // Si hay múltiples certificados, permitir al usuario elegir
+            String selectedAlias;
+            if (aliasList.size() == 1) {
+                selectedAlias = aliasList.get(0);
+            } else {
+                selectedAlias = mostrarDialogoSeleccionCertificado(aliasList, certMap);
+                if (selectedAlias == null) {
+                    Log.error("No se seleccionó ningún certificado");
+                    return new ArrayList<>();
+                }
+            }
+            
+            // Obtener certificado y clave privada
+            Certificate cert = keyStore.getCertificate(selectedAlias);
+            Key key = keyStore.getKey(selectedAlias, null);
+            
+            if (!(key instanceof PrivateKey)) {
+                Log.error("No se pudo obtener la clave privada del certificado");
+                return new ArrayList<>();
+            }
+            
+            PrivateKey privateKey = (PrivateKey) key;
+            
+            // Firmar todos los archivos
+            for(File archivo : archivos) {
+                if(archivo.exists() && archivo.isFile()) {
+                    File firmado = this.procesarFirma(archivo, privateKey, null, cert, parametros);
+                    if(firmado != null && firmado.exists() && firmado.isFile()) {
+                        archivosFirmados.add(firmado);
+                    }
+                }
+            }
+            
+        } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | 
+                 IOException | UnrecoverableKeyException e) {
+            Log.error("Error al acceder al almacén de certificados de Windows", e);
+            String error = MensajeUtil.getStackTraceAsString(e);
+            if (error != null && error.contains("javax.security.auth.login.FailedLoginException")){
+                throw new FailedLoginException();
+            }
+            return new ArrayList<>();
+        }
+        
+        return archivosFirmados;
+    }
+    
+    /**
+     * Muestra un diálogo para que el usuario seleccione un certificado.
+     * @param aliases Lista de alias de certificados
+     * @param certMap Mapa de certificados
+     * @return Alias seleccionado o null si se cancela
+     */
+    private String mostrarDialogoSeleccionCertificado(List<String> aliases, Map<String, Certificate> certMap) {
+        String[] opciones = new String[aliases.size()];
+        
+        for (int i = 0; i < aliases.size(); i++) {
+            String alias = aliases.get(i);
+            Certificate cert = certMap.get(alias);
+            if (cert instanceof X509Certificate) {
+                X509Certificate x509 = (X509Certificate) cert;
+                Principal subject = x509.getSubjectDN();
+                String subjectStr = subject.getName();
+                
+                // Extraer CN (Common Name) para mostrar
+                String cn = alias;
+                String[] parts = subjectStr.split(",");
+                for (String part : parts) {
+                    if (part.trim().startsWith("CN=")) {
+                        cn = part.trim().substring(3);
+                        break;
+                    }
+                }
+                
+                // Formato: CN - Emisor - Vencimiento
+                String issuer = x509.getIssuerDN().getName();
+                String issuerCN = issuer;
+                for (String part : issuer.split(",")) {
+                    if (part.trim().startsWith("CN=")) {
+                        issuerCN = part.trim().substring(3);
+                        break;
+                    }
+                }
+                
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                String expiry = sdf.format(x509.getNotAfter());
+                
+                opciones[i] = cn + " (Emitido por: " + issuerCN + ", Caduca: " + expiry + ")";
+            } else {
+                opciones[i] = alias;
+            }
+        }
+        
+        String seleccion = (String) JOptionPane.showInputDialog(
+            null,
+            "Selecciona el ID digital que desees usar para la firma:",
+            "Firmar con un ID digital",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            opciones,
+            opciones[0]
+        );
+        
+        if (seleccion == null) {
+            return null;
+        }
+        
+        // Encontrar el alias correspondiente a la selección
+        for (int i = 0; i < opciones.length; i++) {
+            if (opciones[i].equals(seleccion)) {
+                return aliases.get(i);
+            }
+        }
+        
+        return null;
     }
 
 
@@ -347,7 +512,7 @@ public class FirmadorImpl implements Firmador{
                         (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
                         (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             }
-            ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider.getName());
+            ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider != null ? provider.getName() : "SunMSCAPI");
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;

@@ -1,5 +1,5 @@
 /**
- * Renderer process
+ * Proceso de renderizado
  * Encargado de la UI:
  *  - Renderizar lista de PDFs con paginación
  *  - Manejar selección (individual/todos)
@@ -26,6 +26,25 @@ window.addEventListener("DOMContentLoaded", () => {
   const pageSize = 5;
   let selectedPdfs = new Set();
   let javaOutputBuffer = "";
+  
+  // --- MANEJADOR DEL CHECKBOX DE CERTIFICADO DE WINDOWS ---
+  const useWindowsStoreCheckbox = document.getElementById("useWindowsStore");
+  const passwordField = document.getElementById("password");
+  
+  if (useWindowsStoreCheckbox && passwordField) {
+    useWindowsStoreCheckbox.addEventListener("change", () => {
+      if (useWindowsStoreCheckbox.checked) {
+        passwordField.disabled = true;
+        passwordField.required = false;
+        passwordField.value = "";
+        passwordField.classList.add("bg-gray-200", "dark:bg-gray-700", "cursor-not-allowed");
+      } else {
+        passwordField.disabled = false;
+        passwordField.required = true;
+        passwordField.classList.remove("bg-gray-200", "dark:bg-gray-700", "cursor-not-allowed");
+      }
+    });
+  }
 
   // --- EVENTOS IPC DESDE MAIN ---
   window.electronAPI?.onSetPdfUrls?.((pdfs) => {
@@ -239,6 +258,7 @@ window.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
 
     const password = document.getElementById("password").value;
+    const useWindowsStore = document.getElementById("useWindowsStore").checked;
     const pdfs = Array.from(selectedPdfs);
 
     if (!pdfs.length) {
@@ -247,11 +267,39 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Obtener el perfil seleccionado del selector global
+    const perfilSeleccionado = document.getElementById("perfil-global").value;
+    
+    // Obtener la configuración del perfil seleccionado
+    let config = null;
+    if (window.ProfileManager) {
+      const pm = new window.ProfileManager();
+      pm.initCurrentProfile();
+      
+      // Cambiar temporalmente al perfil seleccionado para obtener su configuración
+      const currentProfile = pm.getCurrentProfileId();
+      pm.switchProfile(perfilSeleccionado);
+      config = pm.getCurrentConfig();
+      
+      // Restaurar el perfil actual
+      pm.switchProfile(currentProfile);
+    } else {
+      // Fallback: usar configuración de localStorage
+      const configGuardada = localStorage.getItem('conf');
+      if (configGuardada) {
+        try {
+          config = JSON.parse(configGuardada);
+        } catch (error) {
+          console.error('Error al cargar la configuración:', error);
+        }
+      }
+    }
+
     resultDiv.innerHTML = "";
     if (signSpinner) signSpinner.style.display = "flex";
     disableFirmarButton();
 
-    window.electronAPI?.sendToMain("firmar-pdfs", { pdfs, password });
+    window.electronAPI?.sendToMain("firmar-pdfs", { pdfs, password, useWindowsStore, config });
   });
 
   // --- JAVA OUTPUT Y RESULTADOS ---

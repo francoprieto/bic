@@ -17,15 +17,30 @@
 <body
   class="bg-gray-300 min-h-screen flex flex-col items-center justify-start transition-colors duration-300 dark:bg-gray-700">
 
-  <div class="flex flex-row">
+  <div class="w-full max-w-3xl flex justify-between items-center mb-2">
+
+    <!-- Selector de perfil global -->
+    <div class="flex items-center gap-2 p-2">
+      <select id="perfil-global"
+        class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm">
+        <option value="default">Por defecto</option>
+      </select>
+    </div> 
+
+    <!-- Logo -->
+    <div class="flex items-center gap-4">  
+      <h1
+        class="text-2xl text-blue-700 dark:text-blue-400 bg-white dark:bg-gray-900 font-semibold font-serif italic p-1 border border-blue-700 dark:border-blue-400 pl-2 pr-2 rounded-lg shadow-lg">
+        BiC
+      </h1>
+     
+    </div>
+    
+    <!-- Botón de modo oscuro en la derecha -->
     <button id="toggleDark" type="button"
-      class="fixed top-1 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow-xl">
+      class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-gray-800 text-lg transition-colors shadow-xl">
       <span id="darkIcon" title="Cambiar de modo a claro u oscuro">🌙</span>
     </button>
-    <h1
-      class="text-2xl text-blue-700 dark:text-blue-400 bg-white dark:bg-gray-900 font-semibold font-serif italic mb-2 mt-2 p-1 border border-blue-700 dark:border-blue-400 pl-2 pr-2 rounded-lg shadow-lg">
-      BiC
-    </h1>
   </div>
 
   <div class="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-xl p-0">
@@ -53,6 +68,15 @@
             class="block text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap">Password:</label>
           <input type="password" id="password" required
             class="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-800 dark:text-gray-100 text-sm w-40" />
+          
+          <div class="flex items-center ml-2">
+            <input type="checkbox" id="useWindowsStore"
+              class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+            <label for="useWindowsStore" class="ml-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Usar certificado
+            </label>
+          </div>
+          
           <button id="signBtn" type="submit"
             class="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-1 px-4 rounded transition-colors"
             disabled>
@@ -121,6 +145,29 @@
     <div id="tabpanel-config" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-config">
       <div id="confForm"
         class="bg-white dark:bg-gray-900 rounded-b-lg p-3 w-full max-h-[460px] overflow-y-auto max-w-3xl">
+
+        <!-- Gestión de Perfiles -->
+        <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mb-3 rounded-lg shadow-md">
+          <div class="flex flex-row justify-between items-center">
+            <div class="block text-blue-700 dark:text-blue-400 font-semibold text-sm whitespace-nowrap">
+              Gestión de Perfiles
+            </div>
+            <div class="flex gap-2">
+              <button id="btn-nuevo-perfil" type="button"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold text-xs py-1 px-3 rounded transition-colors">
+                + Nuevo
+              </button>
+              <button id="btn-guardar-perfil" type="button"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-1 px-3 rounded transition-colors">
+                💾 Guardar
+              </button>
+              <button id="btn-eliminar-perfil" type="button"
+                class="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs py-1 px-3 rounded transition-colors">
+                🗑️ Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 rounded-lg shadow-md">
           <div class="block  text-blue-700 dark:text-blue-400 font-semibold text-sm mb-0 whitespace-nowrap pb-1">
@@ -289,6 +336,56 @@
     </div>
   </div>
 
+  <!-- Modal para crear nuevo perfil -->
+  <div id="modal-nuevo-perfil" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Nuevo Perfil</h3>
+      <input type="text" id="input-nombre-perfil" placeholder="Nombre del perfil"
+        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 mb-4" />
+      <div class="flex justify-end gap-2">
+        <button id="btn-cancelar-perfil" type="button"
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 rounded">
+          Cancelar
+        </button>
+        <button id="btn-confirmar-perfil" type="button"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+          Crear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para mensajes -->
+  <div id="modal-mensaje" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96">
+      <h3 id="modal-mensaje-titulo" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"></h3>
+      <p id="modal-mensaje-texto" class="text-gray-700 dark:text-gray-300 mb-4"></p>
+      <div class="flex justify-end">
+        <button id="btn-cerrar-mensaje" type="button"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para confirmación -->
+  <div id="modal-confirmar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Confirmar</h3>
+      <p id="modal-confirmar-texto" class="text-gray-700 dark:text-gray-300 mb-4"></p>
+      <div class="flex justify-end gap-2">
+        <button id="btn-cancelar-confirmar" type="button"
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 rounded">
+          Cancelar
+        </button>
+        <button id="btn-aceptar-confirmar" type="button"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded">
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Alternancia de modo oscuro
@@ -549,7 +646,267 @@
 
     // Cargar configuración al iniciar
     cargarConfiguracion();
+
+    // ========== GESTIÓN DE PERFILES ==========
+    let profileManager = null;
+
+    // Funciones auxiliares para modales
+    function mostrarMensaje(titulo, texto) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('modal-mensaje');
+        const tituloElem = document.getElementById('modal-mensaje-titulo');
+        const textoElem = document.getElementById('modal-mensaje-texto');
+        const btnCerrar = document.getElementById('btn-cerrar-mensaje');
+        
+        tituloElem.textContent = titulo;
+        textoElem.textContent = texto;
+        modal.classList.remove('hidden');
+        
+        const cerrar = () => {
+          modal.classList.add('hidden');
+          btnCerrar.removeEventListener('click', cerrar);
+          resolve();
+        };
+        
+        btnCerrar.addEventListener('click', cerrar);
+      });
+    }
+
+    function solicitarNombre() {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('modal-nuevo-perfil');
+        const input = document.getElementById('input-nombre-perfil');
+        const btnConfirmar = document.getElementById('btn-confirmar-perfil');
+        const btnCancelar = document.getElementById('btn-cancelar-perfil');
+        
+        input.value = '';
+        modal.classList.remove('hidden');
+        input.focus();
+        
+        const confirmar = () => {
+          const nombre = input.value.trim();
+          modal.classList.add('hidden');
+          btnConfirmar.removeEventListener('click', confirmar);
+          btnCancelar.removeEventListener('click', cancelar);
+          input.removeEventListener('keypress', handleEnter);
+          resolve(nombre || null);
+        };
+        
+        const cancelar = () => {
+          modal.classList.add('hidden');
+          btnConfirmar.removeEventListener('click', confirmar);
+          btnCancelar.removeEventListener('click', cancelar);
+          input.removeEventListener('keypress', handleEnter);
+          resolve(null);
+        };
+        
+        const handleEnter = (e) => {
+          if (e.key === 'Enter') confirmar();
+        };
+        
+        btnConfirmar.addEventListener('click', confirmar);
+        btnCancelar.addEventListener('click', cancelar);
+        input.addEventListener('keypress', handleEnter);
+      });
+    }
+
+    function confirmarAccion(texto) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('modal-confirmar');
+        const textoElem = document.getElementById('modal-confirmar-texto');
+        const btnAceptar = document.getElementById('btn-aceptar-confirmar');
+        const btnCancelar = document.getElementById('btn-cancelar-confirmar');
+        
+        textoElem.textContent = texto;
+        modal.classList.remove('hidden');
+        
+        const aceptar = () => {
+          modal.classList.add('hidden');
+          btnAceptar.removeEventListener('click', aceptar);
+          btnCancelar.removeEventListener('click', cancelar);
+          resolve(true);
+        };
+        
+        const cancelar = () => {
+          modal.classList.add('hidden');
+          btnAceptar.removeEventListener('click', aceptar);
+          btnCancelar.removeEventListener('click', cancelar);
+          resolve(false);
+        };
+        
+        btnAceptar.addEventListener('click', aceptar);
+        btnCancelar.addEventListener('click', cancelar);
+      });
+    }
+
+    // Inicializar ProfileManager
+    function initProfileManager() {
+      profileManager = new ProfileManager();
+      profileManager.initCurrentProfile();
+      actualizarSelectorPerfil();
+      cargarPerfilActual();
+    }
+
+    // Actualizar selector de perfil global
+    function actualizarSelectorPerfil() {
+      const perfilGlobal = document.getElementById('perfil-global');
+      
+      if (!profileManager) return;
+      
+      const profiles = profileManager.getAllProfiles();
+      const currentProfileId = profileManager.getCurrentProfileId();
+      
+      // Actualizar selector global
+      perfilGlobal.innerHTML = profiles.map(p => 
+        `<option value="${p.id}" ${p.id === currentProfileId ? 'selected' : ''}>${p.name}</option>`
+      ).join('');
+    }
+
+    // Cargar perfil actual en el formulario
+    function cargarPerfilActual() {
+      if (!profileManager) return;
+      
+      const config = profileManager.getCurrentConfig();
+      
+      // Restaurar posición
+      if (config.posicion) {
+        const radioPosicion = document.querySelector(`input[name="posicion"][value="${config.posicion}"]`);
+        if (radioPosicion) radioPosicion.checked = true;
+      }
+      
+      // Restaurar página
+      if (config.pagina) {
+        const radioPagina = document.querySelector(`input[name="pagina"][value="${config.pagina}"]`);
+        if (radioPagina) radioPagina.checked = true;
+      }
+      
+      // Restaurar número de página
+      if (config.numeroPagina) {
+        const inputNumero = document.querySelector('input[name="numeroPagina"]');
+        if (inputNumero) inputNumero.value = config.numeroPagina;
+      }
+      
+      // Restaurar directorio
+      if (config.directorio) {
+        const inputDirectorio = document.querySelector('input[placeholder="Directorio"]');
+        if (inputDirectorio) inputDirectorio.value = config.directorio;
+      }
+      
+      // Restaurar dimensiones
+      if (config.alto) document.getElementById('alto').value = config.alto;
+      if (config.largo) document.getElementById('largo').value = config.largo;
+      
+      // Restaurar márgenes
+      if (config.ms) document.getElementById('ms').value = config.ms;
+      if (config.mi) document.getElementById('mi').value = config.mi;
+      if (config.ml) document.getElementById('ml').value = config.ml;
+      if (config.mr) document.getElementById('mr').value = config.mr;
+      
+      // Restaurar proxy
+      if (config.proxy) document.getElementById('proxy').value = config.proxy;
+      
+      // Restaurar checkboxes
+      document.getElementById('inseguro').checked = config.inseguro || false;
+      document.getElementById('manual').checked = config.manual || false;
+      
+      ajustarApariencia();
+    }
+
+    // Guardar configuración actual en el perfil
+    function guardarPerfilActual() {
+      if (!profileManager) return;
+      
+      const config = {
+        posicion: document.querySelector('input[name="posicion"]:checked')?.value || 'ci',
+        pagina: document.querySelector('input[name="pagina"]:checked')?.value || 'pp',
+        numeroPagina: document.querySelector('input[name="numeroPagina"]')?.value || '',
+        directorio: document.querySelector('input[placeholder="Directorio"]')?.value || '',
+        alto: document.getElementById('alto')?.value || '40',
+        largo: document.getElementById('largo')?.value || '160',
+        ms: document.getElementById('ms')?.value || '50',
+        mi: document.getElementById('mi')?.value || '50',
+        ml: document.getElementById('ml')?.value || '50',
+        mr: document.getElementById('mr')?.value || '50',
+        inseguro: document.getElementById('inseguro').checked || false,
+        manual: document.getElementById('manual').checked || false,
+        proxy: document.getElementById('proxy')?.value || ''
+      };
+      
+      profileManager.saveCurrentConfig(config);
+    }
+
+    // Botón Nuevo Perfil
+    document.getElementById('btn-nuevo-perfil').addEventListener('click', async () => {
+      const nombre = await solicitarNombre();
+      if (!nombre) return;
+      
+      const result = profileManager.createProfile(nombre);
+      if (result.success) {
+        actualizarSelectorPerfil();
+        await mostrarMensaje('Éxito', `Perfil "${nombre}" creado exitosamente`);
+      } else {
+        await mostrarMensaje('Error', result.message);
+      }
+    });
+
+    // Botón Guardar Perfil
+    document.getElementById('btn-guardar-perfil').addEventListener('click', async () => {
+      guardarPerfilActual();
+      await mostrarMensaje('Éxito', 'Configuración guardada en el perfil actual');
+    });
+
+    // Botón Eliminar Perfil
+    document.getElementById('btn-eliminar-perfil').addEventListener('click', async () => {
+      const currentProfileId = profileManager.getCurrentProfileId();
+      const profiles = profileManager.getAllProfiles();
+      const currentProfile = profiles.find(p => p.id === currentProfileId);
+      
+      if (currentProfile.isDefault) {
+        await mostrarMensaje('Error', 'No se puede eliminar el perfil por defecto');
+        return;
+      }
+      
+      const confirmado = await confirmarAccion(`¿Está seguro de eliminar el perfil "${currentProfile.name}"?`);
+      if (!confirmado) return;
+      
+      const result = profileManager.deleteProfile(currentProfileId);
+      if (result.success) {
+        actualizarSelectorPerfil();
+        cargarPerfilActual();
+        await mostrarMensaje('Éxito', 'Perfil eliminado exitosamente');
+      } else {
+        await mostrarMensaje('Error', result.message);
+      }
+    });
+
+    // Cambio de perfil en selector global
+    document.getElementById('perfil-global').addEventListener('change', (e) => {
+      const profileId = e.target.value;
+      const result = profileManager.switchProfile(profileId);
+      
+      if (result.success) {
+        cargarPerfilActual();
+      } else {
+        mostrarMensaje('Error', result.message);
+      }
+    });
+
+    // Modificar guardarConfiguracion para usar perfiles
+    const guardarConfiguracionOriginal = guardarConfiguracion;
+    guardarConfiguracion = function() {
+      if (profileManager) {
+        guardarPerfilActual();
+      } else {
+        guardarConfiguracionOriginal();
+      }
+    };
+
+    // Inicializar perfiles después de cargar configuración
+    window.addEventListener('load', () => {
+      initProfileManager();
+    });
   </script>
+  <script src="profiles.js"></script>
   <script src="renderer.js"></script>
 </body>
 

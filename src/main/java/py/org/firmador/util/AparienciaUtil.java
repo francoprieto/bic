@@ -103,51 +103,72 @@ public class AparienciaUtil {
         }
 
         if(cropBox != null){
-
             Float mitadFirmaFloat = width / 2f;
             Float mitadPaginaFloat = cropBox.getWidth() / 2f;
 
             retorno.put("hqr", Float.valueOf(h < w ? h : w));
 
-            // centro-inferior (default)
-            retorno.put("eix", cropBox.getLeft(mitadPaginaFloat - mitadFirmaFloat));
-            retorno.put("eiy", cropBox.getBottom(marginBottom));
-            retorno.put("esx", cropBox.getLeft(mitadPaginaFloat + mitadFirmaFloat));
-            retorno.put("esy", cropBox.getBottom(height + marginBottom));
+            // En PDF, (0,0) está en la esquina inferior izquierda
+            // Rectangle(llx, lly, urx, ury) donde:
+            // llx, lly = esquina inferior izquierda
+            // urx, ury = esquina superior derecha
+            
+            float llx, lly, urx, ury;
+            
+            // Obtener dimensiones de la página
+            float pageWidth = cropBox.getWidth();
+            float pageHeight = cropBox.getHeight();
+            float pageLeft = cropBox.getLeft();
+            float pageBottom = cropBox.getBottom();
 
             switch (pos) {
                 case "centro-superior":
-                    retorno.put("eiy", cropBox.getTop(height + marginTop));
-                    retorno.put("esy", cropBox.getTop(marginTop));
+                    llx = pageLeft + (pageWidth - width) / 2f;
+                    lly = pageBottom + pageHeight - marginTop - height;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
+                    
                 case "esquina-superior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(marginLeft));
-                    retorno.put("eiy", cropBox.getTop(height + marginTop));
-                    retorno.put("esx", cropBox.getLeft(marginLeft + width));
-                    retorno.put("esy", cropBox.getTop(marginTop));
+                    llx = pageLeft + marginLeft;
+                    lly = pageBottom + pageHeight - marginTop - height;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
+                    
                 case "esquina-superior-derecha":
-                    retorno.put("eix", cropBox.getRight(marginRight + width));
-                    retorno.put("eiy", cropBox.getTop(marginTop + height));
-                    retorno.put("esx", cropBox.getRight(marginRight));
-                    retorno.put("esy", cropBox.getTop(marginTop));
+                    llx = pageLeft + pageWidth - marginRight - width;
+                    lly = pageBottom + pageHeight - marginTop - height;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
+                    
                 case "esquina-inferior-izquierda":
-                    retorno.put("eix", cropBox.getLeft(marginLeft));
-                    retorno.put("eiy", cropBox.getBottom(marginBottom));
-                    retorno.put("esx", cropBox.getLeft(width + marginLeft));
-                    retorno.put("esy", cropBox.getBottom(height + marginBottom));
+                    llx = pageLeft + marginLeft;
+                    lly = pageBottom + marginBottom;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
+                    
                 case "esquina-inferior-derecha":
-                    retorno.put("eix", cropBox.getRight(width + marginRight));
-                    retorno.put("eiy", cropBox.getBottom(marginBottom + height));
-                    retorno.put("esx", cropBox.getRight(marginRight));
-                    retorno.put("esy", cropBox.getBottom(height + marginBottom));
+                    llx = pageLeft + pageWidth - marginRight - width;
+                    lly = pageBottom + marginBottom;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
-                default:
-                    // Ya está el default
+                    
+                default: // centro-inferior
+                    llx = pageLeft + (pageWidth - width) / 2f;
+                    lly = pageBottom + marginBottom;
+                    urx = llx + width;
+                    ury = lly + height;
                     break;
             }
+            
+            retorno.put("eix", llx);
+            retorno.put("eiy", lly);
+            retorno.put("esx", urx);
+            retorno.put("esy", ury);
         }
         return retorno;
     }

@@ -19,7 +19,8 @@ public interface Firmador {
             , "destino"             // 9 Directorio destino donde se guardan el o los archivos firmados
             , "posicion"            // 10 JSON que tiene parametros esquina inferior izquierda x,y, y esquina superior derecha x,y, ademas el número de pagina
             , "init"                // 11 init=true ejecuta el proceso de autoconfiguracion
-            , "quiet"           // 12 quiet=true hace que el proceso no emita popups
+            , "quiet"               // 12 quiet=true hace que el proceso no emita popups
+            , "use-windows-store"   // 13 use-windows-store=true usa el almacén de certificados de Windows
     };
 
     public Resultado firmar(Map<String,String> parametros);
