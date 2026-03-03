@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "build-fat-win64": "node ./tooling.js fat win64 && electron-builder --win --x64"
+    "build-fat-win64": "node ./tooling.js fat win64 && electron-builder --win --x64",
+    "build-slim-win64": "node ./tooling.js slim win64 && electron-builder --win --x64"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +24,7 @@
     "appId": "py.org.firmador.bic",
     "productName": "Bic",
     "icon": "assets/icon.png",
-    "asar": false,
+    
     "directories": {
       "output": "dist"
     },

@@ -19,6 +19,9 @@ const jdkWin64 = new URL('https://download.java.net/java/GA/jdk11/9/GPL/openjdk-
 
 console.log('Procesando', args[2], args[3]);
 
+fs.rmSync(extraResources, { recursive: true, force: true });
+fs.mkdirSync(extraResources);
+
 if(plataforma === 'win64') {
     
     fs.mkdir(path.join(extraResources,'target'), { recursive: true }, (err)=> {
@@ -34,6 +37,7 @@ if(plataforma === 'win64') {
     });
 
     if (tipo === 'fat'){
+        console.log('Inicio de descarga de JDK')
         if(!fs.existsSync(path.join(extraResources,'jdk')))
             descargarJDK(jdkWin64, extraResources);
     }  
@@ -77,11 +81,11 @@ function unzip(zipPath, outputDir) {
         // Detect platform and choose command
         let cmd;
         if (process.platform === "win32") {
-        // Windows: use tar (available in Win10+ PowerShell)
-        cmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${outputDir}' -Force"`;
+            // Windows: use tar (available in Win10+ PowerShell)
+            cmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${outputDir}' -Force"`;
         } else {
-        // Linux / macOS
-        cmd = `unzip -o "${zipPath}" -d "${outputDir}"`;
+            // Linux / macOS
+            cmd = `unzip -o "${zipPath}" -d "${outputDir}"`;
         }
 
         exec(cmd, (err, stdout, stderr) => {
