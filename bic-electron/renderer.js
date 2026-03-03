@@ -48,6 +48,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // --- EVENTOS IPC DESDE MAIN ---
   window.electronAPI?.onSetPdfUrls?.((pdfs) => {
+    console.log('Evento set-pdf-urls recibido en renderer');
+    console.log('PDFs recibidos:', pdfs);
+    console.log('Cantidad:', pdfs?.length);
+    
     allPdfs = pdfs || [];
     currentPage = 1;
     selectedPdfs.clear();

@@ -1,0 +1,31 @@
+
+    [{
+        "id":"archivo01", "nombre": "A4-test-1.pdf"
+        , "url": "http://127.0.0.1:3000/test/A4-test-1.pdf"
+        , "urlHeaders": { "Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+        , "callback": "http://127.0.0.1:3000/test/upload/archivo01"
+        , "callbackMethod": "POST"
+        , "callbackAtributo": "uploadedFile"
+        , "callbackBody": {"id": 1}
+        , "callbackHeaders": {"Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+    },
+    {
+        "id":"archivo02", "nombre": "oficio-test-2.pdf"
+        , "url": "http://127.0.0.1:3000/test/oficio-test-2.pdf"
+        , "urlHeaders": { "Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+        , "callback": "http://127.0.0.1:3000/test/upload/oficio-test-2"
+        , "callbackMethod": "POST"
+        , "callbackBody": {"id": 2}
+        , "callbackAtributo": "uploadedFile"
+        , "callbackHeaders": {"Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+    },    
+    {
+        "id":"archivo02", "nombre": "carta-test-3.pdf"
+        , "url": "http://127.0.0.1:3000/test/carta-test-3.pdf"
+        , "urlHeaders": { "Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+        , "callback": "http://127.0.0.1:3000/test/upload/carta-test-3"
+        , "callbackBody": {"id": 3}
+        , "callbackMethod": "POST"
+        , "callbackAtributo": "uploadedFile"
+        , "callbackHeaders": {"Content-Type": "application/json", "Authorization": "Bearer XXYYZZ" }
+    }]
