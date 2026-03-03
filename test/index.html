@@ -70,6 +70,69 @@
             margin-bottom: 20px;
             font-size: 14px;
         }
+h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .test-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .test-link:hover {
+            background-color: #0056b3;
+        }
+        .test-link.danger {
+            background-color: #dc3545;
+        }
+        .test-link.danger:hover {
+            background-color: #c82333;
+        }
+        .test-link.success {
+            background-color: #28a745;
+        }
+        .test-link.success:hover {
+            background-color: #218838;
+        }
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .custom-test {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .custom-test input {
+            width: 70%;
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .custom-test button {
+            padding: 8px 15px;
+            background-color: #6c757d;
+                   
     </style>
 </head>
 <body>
@@ -80,8 +143,18 @@
         </div>
 
         <div class="info">
-            <strong>Servidor detectado:</strong> <span id="server-info"></span>
+            <strong>Servidor de prueba detectado:</strong> <span id="server-info"></span>
         </div>
+
+        <form id="frm1" enctype='multipart/form-data'>
+            <div class="test-section">
+                <h3>Firma de archivos locales</h3>
+                <input type="file" id="archivosLocales" name="files" dirname="~/Downloads" accept="application/pdf" multiple/>
+                <br /><br />
+                <button class="test-link success" id="pruebaLocales">Firmar Documento</button>
+                <div id="bic1"></div>
+            </div>
+        </form>
 
         <div class="pdf-list">
             <h3>Pruebas:</h3>
@@ -99,7 +172,7 @@
             <div class="pdf-item">
                 <div>
                     <strong>📄 Descarga, firma y subida de 3 documentos</strong>
-                    <br><small>A4-test-1.pdf, oficio-test-2.pdf, carta-test-3.pdf</small>
+                    <br><small>Lee y descarga los archivos detallados en <a href="http://127.0.0.1:3100/test/archivos.json" target="_blank">http://127.0.0.1:3100/test/archivos.json</a></small>
                 </div>
                 <div>
                     <a href="#" id="sign-json" class="sign-btn">Firmar</a>
@@ -141,6 +214,35 @@
         document.getElementById('sign-json').href = `bic://?paramsurl=${req}`;
         console.log('URLs generadas:', fullUrls);
         console.log('Enlace BIC:', bicUrl);
+
+        const fileInput = document.getElementById('archivosLocales');
+        const btnLocales = document.getElementById('pruebaLocales');
+        const url1 = document.getElementById('bic1');
+        
+        let files;
+
+        const baseUrl='bic://firmar?'
+
+        fileInput.addEventListener('change', (event) => {
+            event.preventDefault();
+            files = event.target.files; 
+        });
+        
+        btnLocales.addEventListener('click', (event) => {
+            event.preventDefault();
+            if(files && files.length > 0){
+                var url = baseUrl + 'files=';
+                for(let i=0;files.length>i; i++){
+                    if(i > 0) url = url + ',';
+                    url = url + '~/Downloads/' + files[i].name;
+                }
+                url = encodeURI(url);
+                url1.innerHTML = url;
+                window.document.location=url;
+            }else{
+                alert('Sin archivos a firmar');
+            }
+        });        
     </script>
 
 </body>
