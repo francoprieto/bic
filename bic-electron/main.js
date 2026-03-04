@@ -800,7 +800,7 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, confi
     for (const pdf of pdfs) {
       console.log('Procesando archivo:', pdf.nombre, 'URL:', pdf.url);
       
-      if(pdf.url?.startsWith('file://')){ // Cuando los archivos a firmar son locales
+      if(!pdf.url?.startsWith('http')){ // Cuando los archivos a firmar son locales
         const localFile = url.fileURLToPath(pdf.url);
         if(localFile.startsWith('\\\\c\\'))
           rutasLocales.push(localFile.replace('\\\\c\\','C:\\'));  

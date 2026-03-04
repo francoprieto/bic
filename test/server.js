@@ -90,7 +90,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && pathname.startsWith('/test/')) {
     const filePath = path.join(TEST_DIR, pathname.replace('/test/', ''));
     
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    if ((fs.existsSync(filePath) && fs.statSync(filePath).isFile())) {
       const ext = path.extname(filePath).toLowerCase();
       const contentTypes = {
         '.pdf': 'application/pdf',
@@ -108,7 +108,6 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': contentType });
       const fileStream = fs.createReadStream(filePath);
       fileStream.pipe(res);
-      
       console.log(`  → Sirviendo archivo: ${filePath}`);
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });

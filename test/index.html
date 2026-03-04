@@ -146,18 +146,25 @@
             <strong>Servidor de prueba detectado:</strong> <span id="server-info"></span>
         </div>
 
-        <form id="frm1" enctype='multipart/form-data'>
-            <div class="test-section">
-                <h3>Firma de archivos locales</h3>
-                <input type="file" id="archivosLocales" name="files" dirname="~/Downloads" accept="application/pdf" multiple/>
-                <br /><br />
-                <button class="test-link success" id="pruebaLocales">Firmar Documento</button>
-                <div id="bic1"></div>
-            </div>
-        </form>
-
         <div class="pdf-list">
            
+            <div class="pdf-item">
+                <div>
+                    <strong>📄 Firma de documentos locales</strong>
+                    <br><small>
+                        En la aplicación, haga click en el icono 
+                        <svg class="w-6 h-6 ml-2 text-gray-800 dark:text-white cursor-pointer" 
+                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19V6a1 1 0 0 1 1-1h4.032a1 1 0 0 1 .768.36l1.9 2.28a1 1 0 0 0 .768.36H16a1 1 0 0 1 1 1v1M3 19l3-8h15l-3 8H3Z"/>
+                        </svg> para seleccionar los archivos locales a firmar.
+                    </small>
+                </div>
+                <div>
+                    <a href="bic://firmar" class="sign-btn">Firmar</a>
+                </div>
+            </div>
+
+
             <div class="pdf-item">
                 <div>
                     <strong>📄 Descarga y firma local de 3 documentos</strong>
@@ -190,7 +197,7 @@
         const protocol = window.location.protocol; // http: o https:
         const hostname = window.location.hostname; // localhost, 127.0.0.1, etc.
         const port = window.location.port; // 8080, 3000, etc.
-        
+        let current = null;
         // Construir la URL base del servidor
         const serverBase = `${protocol}//${hostname}${port ? ':' + port : ''}/test/`;
         
@@ -220,35 +227,7 @@
         document.getElementById('sign-json').href = `bic://?paramsurl=${req}`;
         console.log('URLs generadas:', fullUrls);
         console.log('Enlace BIC:', bicUrl);
-
-        const fileInput = document.getElementById('archivosLocales');
-        const btnLocales = document.getElementById('pruebaLocales');
-        const url1 = document.getElementById('bic1');
-        
-        let files;
-
-        const baseUrl='bic://firmar?'
-
-        fileInput.addEventListener('change', (event) => {
-            event.preventDefault();
-            files = event.target.files; 
-        });
-        
-        btnLocales.addEventListener('click', (event) => {
-            event.preventDefault();
-            if(files && files.length > 0){
-                var url = baseUrl + 'files=';
-                for(let i=0;files.length>i; i++){
-                    if(i > 0) url = url + ',';
-                    url = url + '~/Downloads/' + files[i].name;
-                }
-                url = encodeURI(url);
-                url1.innerHTML = url;
-                window.document.location=url;
-            }else{
-                alert('Sin archivos a firmar');
-            }
-        });        
+              
     </script>
 
 </body>
