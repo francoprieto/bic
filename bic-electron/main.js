@@ -503,17 +503,87 @@ ipcMain.handle("get-confs", async () => {
   }
 });
 
-ipcMain.handle("save-signature-image", async (event, buffer, ext) => {
-  const targetPath = path.join(__dirname, `firma.${ext}`);
+ipcMain.handle("save-signature-image", async (event, buffer, ext, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  const fileName = `firma-${profile}.${ext}`;
+  
+  // Guardar en el directorio .bic del usuario (persistente entre instalaciones)
+  const targetPath = path.join(bicHome, fileName);
+  
+  console.log('Guardando imagen de firma para perfil:', profile);
+  console.log('Ruta:', targetPath);
+  
+  // Asegurar que el directorio .bic existe
+  if (!fs.existsSync(bicHome)) {
+    fs.mkdirSync(bicHome, { recursive: true });
+  }
+  
   fs.writeFileSync(targetPath, Buffer.from(buffer));
-  return `firma.${ext}`;
+  return fileName;
 });
 
-ipcMain.handle("save-default-image", async () => {
-  const targetPath = firmaPath;
+ipcMain.handle("save-default-image", async (event, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  const fileName = `firma-${profile}.png`;
+  
+  // Guardar en el directorio .bic del usuario
+  const targetPath = path.join(bicHome, fileName);
   const sourcePath = path.join(__dirname, "default.png");
+  
+  console.log('Restaurando imagen por defecto para perfil:', profile);
+  console.log('Ruta:', targetPath);
+  
+  // Asegurar que el directorio .bic existe
+  if (!fs.existsSync(bicHome)) {
+    fs.mkdirSync(bicHome, { recursive: true });
+  }
+  
   fs.copyFileSync(sourcePath, targetPath);
-  return targetPath;
+  return fileName;
+});
+
+ipcMain.handle("get-signature-image", async (event, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  
+  // Buscar imagen del perfil en .bic (puede ser .png, .jpg, .jpeg)
+  const extensions = ['png', 'jpg', 'jpeg'];
+  for (const ext of extensions) {
+    const fileName = `firma-${profile}.${ext}`;
+    const filePath = path.join(bicHome, fileName);
+    if (fs.existsSync(filePath)) {
+      console.log('Imagen de firma encontrada para perfil:', profile, '->', fileName);
+      return fileName;
+    }
+  }
+  
+  // Si no existe imagen para el perfil, usar default.png
+  console.log('No se encontró imagen para perfil:', profile, '- usando default.png');
+  return 'default.png';
+});
+
+ipcMain.handle("get-signature-image-path", async (event, fileName) => {
+  // Si es default.png, retornar desde el directorio de la app
+  if (fileName === 'default.png') {
+    return path.join(__dirname, fileName);
+  }
+  
+  // Para imágenes personalizadas, buscar en .bic
+  const bicPath = path.join(bicHome, fileName);
+  if (fs.existsSync(bicPath)) {
+    return bicPath;
+  }
+  
+  // Fallback a directorio de la app (legacy)
+  const appPath = path.join(__dirname, fileName);
+  if (fs.existsSync(appPath)) {
+    return appPath;
+  }
+  
+  // Si no existe, retornar default.png
+  return path.join(__dirname, 'default.png');
 });
 
 ipcMain.handle("select-files", async () => {
@@ -720,6 +790,8 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, confi
   }
   if (!confs) return;
 
+  console.log('Configuración recibida:', JSON.stringify(confs, null, 2));
+
   // Construir objeto posición
   let posicion = {
     pagina: confs.pagina === "pp" ? "primera" : confs.pagina === "up" ? "ultima" : confs.numeroPagina,
@@ -736,15 +808,86 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, confi
   if (confs.posicion && posiciones[confs.posicion]) posicion.lugar = posiciones[confs.posicion];
 
   if (confs.ms) posicion.mt = confs.ms;
-  if (confs.mi) posicion.mb = confs.mb;
+  if (confs.mi) posicion.mb = confs.mi;
   if (confs.ml) posicion.ml = confs.ml;
   if (confs.mr) posicion.mr = confs.mr;
   if (confs.largo) posicion.ancho = confs.largo;
   if (confs.alto) posicion.alto = confs.alto;
 
-  // Si la firma personalizada es distinta de default, la usamos
-  if (fs.statSync(firmaPath).size !== fs.statSync(path.join(__dirname, "default.png")).size) {
-    posicion.imagen = firmaPath;
+  console.log('Campo firmaImagen en config:', confs.firmaImagen);
+
+  // Determinar qué imagen de firma usar
+  let firmaImagenPath = null;
+  
+  if (confs.firmaImagen) {
+    if (confs.firmaImagen === 'default') {
+      // Usar imagen por defecto del sistema
+      const defaultPath = path.join(__dirname, "default.png");
+      if (fs.existsSync(defaultPath)) {
+        firmaImagenPath = defaultPath;
+        console.log('✓ Usando imagen de firma por defecto del sistema: default.png');
+      } else {
+        console.warn('✗ default.png no encontrado');
+      }
+    } else {
+      // Buscar imagen personalizada primero en .bic (persistente)
+      const customPathBic = path.join(bicHome, confs.firmaImagen);
+      console.log('Buscando imagen personalizada en .bic:', customPathBic);
+      
+      if (fs.existsSync(customPathBic)) {
+        firmaImagenPath = customPathBic;
+        console.log('✓ Usando imagen de firma personalizada desde .bic:', confs.firmaImagen);
+      } else {
+        // Fallback: buscar en directorio de la app (legacy)
+        const customPathApp = path.join(__dirname, confs.firmaImagen);
+        console.log('No encontrado en .bic, buscando en app:', customPathApp);
+        
+        if (fs.existsSync(customPathApp)) {
+          firmaImagenPath = customPathApp;
+          console.log('✓ Usando imagen de firma personalizada desde app (legacy):', confs.firmaImagen);
+        } else {
+          console.warn('✗ Imagen de firma no encontrada:', confs.firmaImagen);
+          // Fallback a default.png
+          const defaultPath = path.join(__dirname, "default.png");
+          if (fs.existsSync(defaultPath)) {
+            firmaImagenPath = defaultPath;
+            console.log('✓ Fallback a imagen por defecto: default.png');
+          }
+        }
+      }
+    }
+  } else {
+    console.log('firmaImagen no está definido, verificando legacy firma.png');
+    
+    // Si no hay firmaImagen definido, verificar firma.png (legacy)
+    if (fs.existsSync(firmaPath)) {
+      const defaultSize = fs.statSync(path.join(__dirname, "default.png")).size;
+      const currentSize = fs.statSync(firmaPath).size;
+      
+      if (currentSize !== defaultSize) {
+        firmaImagenPath = firmaPath;
+        console.log('✓ Usando imagen de firma legacy: firma.png');
+      } else {
+        // firma.png es igual a default.png, usar default.png
+        firmaImagenPath = path.join(__dirname, "default.png");
+        console.log('✓ firma.png es igual a default.png, usando default.png');
+      }
+    } else {
+      // No existe firma.png, usar default.png
+      const defaultPath = path.join(__dirname, "default.png");
+      if (fs.existsSync(defaultPath)) {
+        firmaImagenPath = defaultPath;
+        console.log('✓ No existe firma.png, usando default.png');
+      }
+    }
+  }
+  
+  // Asignar imagen si existe
+  if (firmaImagenPath) {
+    posicion.imagen = firmaImagenPath;
+    console.log('✓ Imagen de firma final:', firmaImagenPath);
+  } else {
+    console.log('○ No se encontró ninguna imagen de firma');
   }
 
   const dir = confs.directorio;

@@ -624,23 +624,53 @@
     document.getElementById('file-chooser').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      
+      if (!profileManager) {
+        alert('El gestor de perfiles no está inicializado');
+        return;
+      }
+      
+      const currentProfileId = profileManager.getCurrentProfileId();
+      
       const reader = new FileReader();
       reader.onload = async function (event) {
         const arrayBuffer = event.target.result;
         const ext = file.name.split('.').pop().toLowerCase();
-        // Save image via Electron IPC
-        if (window.electronAPI && window.electronAPI.saveSignatureImage) {
-          const savedName = await window.electronAPI.saveSignatureImage(arrayBuffer, ext);
-          document.getElementById('img-apariencia').src = `./${savedName}?${Date.now()}`;
+        
+        // Guardar imagen para el perfil actual
+        if (window.electronAPI && window.electronAPI.saveSignatureImage && window.electronAPI.getSignatureImagePath) {
+          const savedName = await window.electronAPI.saveSignatureImage(arrayBuffer, ext, currentProfileId);
+          const imagePath = await window.electronAPI.getSignatureImagePath(savedName);
+          
+          document.getElementById('img-apariencia').src = `file://${imagePath}?${Date.now()}`;
+          
+          // Actualizar configuración del perfil
+          const config = profileManager.getCurrentConfig();
+          config.firmaImagen = savedName;
+          profileManager.saveCurrentConfig(config);
         }
       };
       reader.readAsArrayBuffer(file);
     });
 
-    function defaultFirma() {
-      if (window.electronAPI && window.electronAPI.saveDefaultImage) {
-        window.electronAPI.saveDefaultImage();
-        document.getElementById('img-apariencia').src = './firma.png';
+    async function defaultFirma() {
+      if (!profileManager) {
+        alert('El gestor de perfiles no está inicializado');
+        return;
+      }
+      
+      const currentProfileId = profileManager.getCurrentProfileId();
+      
+      if (window.electronAPI && window.electronAPI.saveDefaultImage && window.electronAPI.getSignatureImagePath) {
+        const savedName = await window.electronAPI.saveDefaultImage(currentProfileId);
+        const imagePath = await window.electronAPI.getSignatureImagePath(savedName);
+        
+        document.getElementById('img-apariencia').src = `file://${imagePath}?${Date.now()}`;
+        
+        // Actualizar configuración del perfil
+        const config = profileManager.getCurrentConfig();
+        config.firmaImagen = 'default';
+        profileManager.saveCurrentConfig(config);
       }
     };
 
@@ -763,10 +793,11 @@
     }
 
     // Cargar perfil actual en el formulario
-    function cargarPerfilActual() {
+    async function cargarPerfilActual() {
       if (!profileManager) return;
       
       const config = profileManager.getCurrentConfig();
+      const currentProfileId = profileManager.getCurrentProfileId();
       
       // Restaurar posición
       if (config.posicion) {
@@ -809,12 +840,24 @@
       document.getElementById('inseguro').checked = config.inseguro || false;
       document.getElementById('manual').checked = config.manual || false;
       
+      // Cargar imagen de firma del perfil
+      if (window.electronAPI && window.electronAPI.getSignatureImage && window.electronAPI.getSignatureImagePath) {
+        const imageName = await window.electronAPI.getSignatureImage(currentProfileId);
+        const imagePath = await window.electronAPI.getSignatureImagePath(imageName);
+        
+        // Usar file:// protocol para cargar la imagen desde el sistema de archivos
+        document.getElementById('img-apariencia').src = `file://${imagePath}?${Date.now()}`;
+      }
+      
       ajustarApariencia();
     }
 
     // Guardar configuración actual en el perfil
     function guardarPerfilActual() {
       if (!profileManager) return;
+      
+      // Obtener la configuración actual para preservar firmaImagen
+      const currentConfig = profileManager.getCurrentConfig();
       
       const config = {
         posicion: document.querySelector('input[name="posicion"]:checked')?.value || 'ci',
@@ -829,7 +872,8 @@
         mr: document.getElementById('mr')?.value || '50',
         inseguro: document.getElementById('inseguro').checked || false,
         manual: document.getElementById('manual').checked || false,
-        proxy: document.getElementById('proxy')?.value || ''
+        proxy: document.getElementById('proxy')?.value || '',
+        firmaImagen: currentConfig.firmaImagen || 'default' // Preservar la imagen actual
       };
       
       profileManager.saveCurrentConfig(config);

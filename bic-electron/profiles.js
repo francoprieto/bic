@@ -56,7 +56,8 @@ class ProfileManager {
       manual: false,
       inseguro: false,
       directorio: '',
-      proxy: ''
+      proxy: '',
+      firmaImagen: 'default' // 'default' o nombre de archivo personalizado
     };
   }
 
