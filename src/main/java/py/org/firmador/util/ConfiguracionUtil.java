@@ -13,6 +13,10 @@ import py.org.firmador.exceptions.UnsupportedPlatformException;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -28,6 +32,13 @@ public class ConfiguracionUtil {
     public static final String SLASH = File.separator;
 
     public static final String HOME = System.getProperty("user.home");
+    
+    // Rutas comunes precalculadas
+    private static final Path BIC_HOME_PATH = Paths.get(HOME, ".bic");
+    private static final Path BIC_CONFIG_PATH = BIC_HOME_PATH.resolve("bic.json");
+    private static final Path BIC_CACHE_PATH = BIC_HOME_PATH.resolve("cache");
+    private static final Path BIC_FIRMADOS_PATH = BIC_HOME_PATH.resolve("firmados");
+    private static final Path BIC_CFG_PATH = BIC_HOME_PATH.resolve("bic.cfg");
 
     /**
      * Inicializa la configuración desde archivo o recursos.
@@ -45,14 +56,12 @@ public class ConfiguracionUtil {
      */
     private static Conf leerPropiedades(String file){
         ObjectMapper mapper = new ObjectMapper();
-        Conf conf = null;
         try {
-            conf = mapper.readValue(new File(file), Conf.class);
-        }catch(IOException ioe){
+            return mapper.readValue(new File(file), Conf.class);
+        } catch(IOException ioe){
             Log.error("Error al leer la configuracion", ioe);
-            // Se evita System.exit, se retorna null
+            return null;
         }
-        return conf;
     }
 
     /**
@@ -61,33 +70,39 @@ public class ConfiguracionUtil {
      * @return Ruta del archivo de configuración generado, o null si ocurre un error
      */
     public static String toConfFile(Map<String,String> confs){
-        String tmp = HOME + SLASH + ".bic" + SLASH + "bic.cfg";
-        File cfg = new File(tmp);
-        if (confs != null)
-            FileUtils.deleteQuietly(cfg);
-        if (cfg.exists())
-            return tmp;
-        if (confs == null)
-            return null;
-        try (OutputStream output = new FileOutputStream(tmp)) {
-            for (Map.Entry<String, String> entrada : confs.entrySet())
-                FileUtils.writeByteArrayToFile(cfg, (entrada.toString() + "\n").getBytes(), true);
-        } catch (IOException io) {
-            Log.error("Error al escribir " + tmp, io);
+        if (confs == null) {
             return null;
         }
-        return tmp;
+
+        try {
+            // Asegurar que el directorio .bic existe
+            Files.createDirectories(BIC_HOME_PATH);
+            
+            // Eliminar archivo existente si hay uno
+            Files.deleteIfExists(BIC_CFG_PATH);
+            
+            // Construir contenido
+            StringBuilder content = new StringBuilder();
+            for (Map.Entry<String, String> entrada : confs.entrySet()) {
+                content.append(entrada.toString()).append("\n");
+            }
+            
+            // Escribir archivo
+            Files.write(BIC_CFG_PATH, content.toString().getBytes(StandardCharsets.UTF_8));
+            return BIC_CFG_PATH.toString();
+        } catch (IOException io) {
+            Log.error("Error al escribir " + BIC_CFG_PATH, io);
+            return null;
+        }
     }
+
 
     /**
      * Obtiene el directorio de caché de la aplicación, creándolo si no existe.
      * @return Ruta del directorio de caché
      */
     public static String getDirCache(){
-        String path = HOME + SLASH + ".bic" + SLASH + "cache";
-        File file = new File(path);
-        if(!file.exists()) file.mkdir();
-        return path;
+        return ensureDirectoryExists(BIC_CACHE_PATH);
     }
 
     /**
@@ -95,10 +110,31 @@ public class ConfiguracionUtil {
      * @return Ruta del directorio de firmados
      */
     public static String getDirFirmados(){
-        String path = HOME + SLASH + ".bic" + SLASH + "firmados";
-        File file = new File(path);
-        if(!file.exists()) file.mkdir();
-        return path;
+        return ensureDirectoryExists(BIC_FIRMADOS_PATH);
+    }
+
+    /**
+     * Asegura que un directorio exista, creándolo si es necesario.
+     * @param path Path del directorio
+     * @return Ruta del directorio como String
+     */
+    private static String ensureDirectoryExists(Path path){
+        try {
+            Files.createDirectories(path);
+            return path.toString();
+        } catch (IOException e) {
+            Log.error("Error al crear directorio: " + path, e);
+            return path.toString();
+        }
+    }
+
+    /**
+     * Asegura que un directorio exista, creándolo si es necesario.
+     * @param pathStr Ruta del directorio como String
+     * @return Ruta del directorio
+     */
+    private static String ensureDirectoryExists(String pathStr){
+        return ensureDirectoryExists(Paths.get(pathStr));
     }
 
     /**
@@ -108,38 +144,65 @@ public class ConfiguracionUtil {
      * @throws UnsupportedPlatformException Si el sistema operativo no es soportado
      */
     public static Conf init(boolean reload) throws UnsupportedPlatformException {
-        ResourceBundle bicConf = ResourceBundle.getBundle("bic");
-        File conf = new File(HOME + SLASH + ".bic" + SLASH + "bic.json");
-        Conf configuracion = null;
-        Map<String,List<String>> drivers = null;
-        if(conf.exists() && !reload) {
-            configuracion = leerPropiedades(conf.getAbsolutePath());
-            return configuracion;
-        }else{
-            File bicHome = new File(HOME + SLASH + ".bic");
-            bicHome.mkdir();
-            drivers = getLibraries(bicConf);
+        // Si existe configuración y no se fuerza recarga, retornarla
+        if (!reload && Files.exists(BIC_CONFIG_PATH)) {
+            Conf configuracion = leerPropiedades(BIC_CONFIG_PATH.toString());
+            if (configuracion != null) {
+                return configuracion;
+            }
         }
-        String retorno = null;
+
+        // Asegurar que el directorio .bic existe
+        try {
+            Files.createDirectories(BIC_HOME_PATH);
+        } catch (IOException e) {
+            Log.error("No se pudo crear el directorio .bic", e);
+            return null;
+        }
+
+        // Cargar configuración desde recursos
+        ResourceBundle bicConf;
+        try {
+            bicConf = ResourceBundle.getBundle("bic");
+        } catch (MissingResourceException e) {
+            Log.error("No se pudo cargar el archivo de recursos bic.properties", e);
+            return null;
+        }
+
+        // Obtener librerías del sistema
+        Map<String, List<String>> drivers;
+        try {
+            drivers = getLibraries(bicConf);
+        } catch (UnsupportedPlatformException e) {
+            Log.error("Sistema operativo no soportado", e);
+            throw e;
+        }
+
+        // Construir configuración JSON
         try {
             Map<String, Object> params = new HashMap<>();
             String downloadTimeout = bicConf.getString("download.timeout");
             String uploadTimeout = bicConf.getString("read.timeout");
             params.put("download.timeout", Long.valueOf(downloadTimeout));
             params.put("read.timeout", Long.valueOf(uploadTimeout));
-            retorno = getJsonConf(drivers, params);
-            if(retorno == null){
+            
+            String jsonConf = getJsonConf(drivers, params);
+            if (jsonConf == null) {
                 Log.error("La configuración no es válida, debe inicializar la aplicación");
                 return null;
             }
-            FileUtils.writeByteArrayToFile(conf, retorno.getBytes());
-            configuracion = leerPropiedades(conf.getAbsolutePath());
-        }catch(IOException e){
-            Log.error("No se pudo detectar librerias", e);
+
+            // Escribir configuración a archivo
+            Files.write(BIC_CONFIG_PATH, jsonConf.getBytes(StandardCharsets.UTF_8));
+            
+            Log.info("conf en json: " + jsonConf);
+            
+            // Leer y retornar configuración
+            return leerPropiedades(BIC_CONFIG_PATH.toString());
+        } catch (IOException e) {
+            Log.error("No se pudo detectar librerías o escribir configuración", e);
             return null;
         }
-        Log.info("conf en json: " + retorno);
-        return configuracion;
     }
 
     /**
@@ -225,28 +288,25 @@ public class ConfiguracionUtil {
      * @param excluidos Lista de carpetas a excluir
      */
     private static void find(File raiz, String[] buscados, List<File> encontrados, List<String> excluidos){
-        if(raiz == null) return;
-        List<File> archivos = new ArrayList<>();
-        try{
-            for(File f : raiz.listFiles()){
-                if(f.isFile()){
-                    for(String buscado: buscados){
-                        if(f.getName().equals(buscado) && !f.getName().endsWith(".conf")){
-                            archivos.add(f);
-                            break;
-                        }
-                    }
-                }
-            }
-        }catch(Exception ex){
+        if(raiz == null || !raiz.exists()) {
             return;
         }
-        encontrados.addAll(archivos);
-        if(raiz.listFiles() != null) {
-            for (File dir : raiz.listFiles()) {
-                if (!dir.isFile() && !excluidos.contains(dir.getName().toLowerCase().trim())) {
-                    find(dir, buscados, encontrados, excluidos);
+        
+        File[] files = raiz.listFiles();
+        if(files == null) {
+            return;
+        }
+        
+        for(File f : files){
+            if(f.isFile()){
+                for(String buscado: buscados){
+                    if(f.getName().equals(buscado) && !f.getName().endsWith(".conf")){
+                        encontrados.add(f);
+                        break;
+                    }
                 }
+            } else if(!excluidos.contains(f.getName().toLowerCase().trim())) {
+                find(f, buscados, encontrados, excluidos);
             }
         }
     }

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enlace de Prueba BIC - Firma de PDFs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .pdf-list {
+            margin: 20px 0;
+        }
+        .pdf-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .sign-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .sign-btn:hover {
+            background: #218838;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .signed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .test-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .test-link:hover {
+            background-color: #0056b3;
+        }
+        .test-link.danger {
+            background-color: #dc3545;
+        }
+        .test-link.danger:hover {
+            background-color: #c82333;
+        }
+        .test-link.success {
+            background-color: #28a745;
+        }
+        .test-link.success:hover {
+            background-color: #218838;
+        }
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .custom-test {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .custom-test input {
+            width: 70%;
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .custom-test button {
+            padding: 8px 15px;
+            background-color: #6c757d;
+        }        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Firma Digital BIC</h1>
+            <p>Enlace de prueba para firmar documentos PDF</p>
+        </div>
+
+        <div class="info">
+            <strong>Servidor de prueba detectado:</strong> <span id="server-info"></span>
+        </div>
+
+        <div class="pdf-list">
+           
+            <div class="pdf-item">
+                <div>
+                    <strong>📄 Firma de documentos locales</strong>
+                    <br><small>
+                        En la aplicación, haga click en el icono 
+                        <svg class="w-6 h-6 ml-2 text-gray-800 dark:text-white cursor-pointer" 
+                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19V6a1 1 0 0 1 1-1h4.032a1 1 0 0 1 .768.36l1.9 2.28a1 1 0 0 0 .768.36H16a1 1 0 0 1 1 1v1M3 19l3-8h15l-3 8H3Z"/>
+                        </svg> para seleccionar los archivos locales a firmar.
+                    </small>
+                </div>
+                <div>
+                    <a href="bic://firmar" class="sign-btn">Firmar</a>
+                </div>
+            </div>
+
+
+            <div class="pdf-item">
+                <div>
+                    <strong>📄 Descarga y firma local de 3 documentos</strong>
+                    <br><small id="local-link"></small>
+                </div>
+                <div>
+                    <a href="#" id="sign-link" class="sign-btn">Firmar</a>
+                </div>
+            </div>
+
+            <div class="pdf-item">
+                <div>
+                    <strong>📄 Descarga, firma y subida de 3 documentos</strong>
+                    <br>
+                    <small>Lee y descarga los archivos detallados en <a href="http://127.0.0.1:3100/test/archivos.json" target="_blank">http://127.0.0.1:3100/test/archivos.json</a>
+                        <br>El enlace se toma arma primero convirtiendo a base64 este json: <br/> {"uri": "http://127.0.0.1:3100/test/archivos.json", "headers":{"Authorization": "Bearer XXYYZZ"}}<br/>
+                        Quedando el valor en: <input type="text" id="base64-val"/>
+                    </small>
+                </div>
+                <div>
+                    <a href="#" id="sign-json" class="sign-btn">Firmar</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Detectar el servidor y puerto actual
+        const protocol = window.location.protocol; // http: o https:
+        const hostname = window.location.hostname; // localhost, 127.0.0.1, etc.
+        const port = window.location.port; // 8080, 3000, etc.
+        let current = null;
+        // Construir la URL base del servidor
+        const serverBase = `${protocol}//${hostname}${port ? ':' + port : ''}/test/`;
+        
+        // Mostrar información del servidor
+        document.getElementById('server-info').textContent = serverBase;
+        
+        // Lista de archivos PDF a firmar (rutas relativas desde el servidor)
+        const pdfFiles = [
+            'A4-test-1.pdf',
+            'oficio-test-2.pdf',
+            'carta-test-3.pdf'
+        ];
+        
+        // Construir URLs completas para cada archivo
+        const fullUrls = pdfFiles.map(file => `${serverBase}/${file}`);
+        
+        const bicBase = "bic://firmar?";
+
+        // Construir el enlace bic:// con las URLs completas
+        const bicUrl = `${bicBase}files=${fullUrls.join(',')}`;
+        const req = btoa(`{"uri":"${protocol}//${hostname}${port ? ':' + port : ''}/test/archivos.json", "headers":{"Content-Type":"application/json"}}`);
+        // Asignar el enlace al botón
+        document.getElementById('sign-link').href = bicUrl;
+        
+        document.getElementById('local-link').innerHTML = "Enlace para firmar: <br />" + bicUrl;
+        document.getElementById('base64-val').value = req;
+        document.getElementById('sign-json').href = `bic://?paramsurl=${req}`;
+        console.log('URLs generadas:', fullUrls);
+        console.log('Enlace BIC:', bicUrl);
+              
+    </script>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 /**
- * Renderer process
+ * Proceso de renderizado
  * Encargado de la UI:
  *  - Renderizar lista de PDFs con paginación
  *  - Manejar selección (individual/todos)
@@ -26,9 +26,32 @@ window.addEventListener("DOMContentLoaded", () => {
   const pageSize = 5;
   let selectedPdfs = new Set();
   let javaOutputBuffer = "";
+  
+  // --- MANEJADOR DEL CHECKBOX DE CERTIFICADO DE WINDOWS ---
+  const useWindowsStoreCheckbox = document.getElementById("useWindowsStore");
+  const passwordField = document.getElementById("password");
+  
+  if (useWindowsStoreCheckbox && passwordField) {
+    useWindowsStoreCheckbox.addEventListener("change", () => {
+      if (useWindowsStoreCheckbox.checked) {
+        passwordField.disabled = true;
+        passwordField.required = false;
+        passwordField.value = "";
+        passwordField.classList.add("bg-gray-200", "dark:bg-gray-700", "cursor-not-allowed");
+      } else {
+        passwordField.disabled = false;
+        passwordField.required = true;
+        passwordField.classList.remove("bg-gray-200", "dark:bg-gray-700", "cursor-not-allowed");
+      }
+    });
+  }
 
   // --- EVENTOS IPC DESDE MAIN ---
   window.electronAPI?.onSetPdfUrls?.((pdfs) => {
+    console.log('Evento set-pdf-urls recibido en renderer');
+    console.log('PDFs recibidos:', pdfs);
+    console.log('Cantidad:', pdfs?.length);
+    
     allPdfs = pdfs || [];
     currentPage = 1;
     selectedPdfs.clear();
@@ -36,7 +59,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderPdfList();
   });
 
-  resetBtn.addEventListener("click", ()=>{
+  resetBtn.addEventListener("click", () => {
     allPdfs = [];
     currentPage = 1;
     selectedPdfs.clear();
@@ -44,12 +67,16 @@ window.addEventListener("DOMContentLoaded", () => {
     resultDiv.innerHTML = "";
     progresoDiv.innerHTML = "";
     msgDiv.innerHTML = "";
-    if (signSpinner) signSpinner.style.display = "none";
+    
+    if (signSpinner) {
+      signSpinner.style.display = "none";
+    }
+    
     if (selectAllCheckbox) {
       selectAllCheckbox.checked = false;
       selectAllCheckbox.indeterminate = false;
     }
-    //enableFirmarButton();
+    
     updateSignBtnState();
     fileSelectBtn.classList.remove('hidden');
     window.electronAPI?.sendToMain("reset-app");   
@@ -68,7 +95,7 @@ window.addEventListener("DOMContentLoaded", () => {
     handleFirmaResultado(payload);
   });
 
-  window.electronAPI?.onFromMain("archivos-locales", (event, payload) =>{
+  window.electronAPI?.onFromMain("archivos-locales", (event, payload) => {
     if(payload){
       fileSelectBtn.classList.remove('hidden');
       resetBtn.classList.remove('hidden');
@@ -197,9 +224,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function updateSignBtnState() {
     const cantidad = selectedPdfs.size;
     signBtn.textContent = cantidad > 0 ? `Firmar (${cantidad})` : "Firmar";
-
-    if (cantidad > 0) enableFirmarButton();
-    else disableFirmarButton();
+    signBtn.disabled = cantidad === 0;
+    
+    if (cantidad > 0) {
+      enableFirmarButton();
+    } else {
+      disableFirmarButton();
+    }
   }
 
   function disableFirmarButton() {
@@ -222,17 +253,16 @@ window.addEventListener("DOMContentLoaded", () => {
     selectAllCheckbox.indeterminate = !allSelected && someSelected;
   }
   
-  fileSelectBtn.addEventListener("click", seleccionarArchivos);
-
-  function seleccionarArchivos() {    
+  fileSelectBtn.addEventListener("click", () => {    
     window.electronAPI?.seleccionarArchivos();
-  };
+  });
 
   // --- FORMULARIO DE FIRMA ---
   signForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const password = document.getElementById("password").value;
+    const useWindowsStore = document.getElementById("useWindowsStore").checked;
     const pdfs = Array.from(selectedPdfs);
 
     if (!pdfs.length) {
@@ -241,11 +271,39 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Obtener el perfil seleccionado del selector global
+    const perfilSeleccionado = document.getElementById("perfil-global").value;
+    
+    // Obtener la configuración del perfil seleccionado
+    let config = null;
+    if (window.ProfileManager) {
+      const pm = new window.ProfileManager();
+      pm.initCurrentProfile();
+      
+      // Cambiar temporalmente al perfil seleccionado para obtener su configuración
+      const currentProfile = pm.getCurrentProfileId();
+      pm.switchProfile(perfilSeleccionado);
+      config = pm.getCurrentConfig();
+      
+      // Restaurar el perfil actual
+      pm.switchProfile(currentProfile);
+    } else {
+      // Fallback: usar configuración de localStorage
+      const configGuardada = localStorage.getItem('conf');
+      if (configGuardada) {
+        try {
+          config = JSON.parse(configGuardada);
+        } catch (error) {
+          console.error('Error al cargar la configuración:', error);
+        }
+      }
+    }
+
     resultDiv.innerHTML = "";
     if (signSpinner) signSpinner.style.display = "flex";
     disableFirmarButton();
 
-    window.electronAPI?.sendToMain("firmar-pdfs", { pdfs, password });
+    window.electronAPI?.sendToMain("firmar-pdfs", { pdfs, password, useWindowsStore, config });
   });
 
   // --- JAVA OUTPUT Y RESULTADOS ---
@@ -255,8 +313,7 @@ window.addEventListener("DOMContentLoaded", () => {
     javaOutputBuffer += outputLine;
 
     if (!resultDiv.querySelector(".java-output")) {
-      resultDiv.innerHTML =
-        '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
+      resultDiv.innerHTML = '<div class="java-output bg-gray-100 dark:text-gray-300 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"></div>';
     }
 
     const outputDiv = resultDiv.querySelector(".java-output");
@@ -274,23 +331,25 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function handleFirmaResultado(payload) {
     const { success, output } = payload;
-    if (signSpinner) signSpinner.style.display = "none";
+    
+    if (signSpinner) {
+      signSpinner.style.display = "none";
+    }
+    
     enableFirmarButton();
 
     const msg = JSON.parse(output);
     const textMsg = msg.mensaje.replace("\n", "<br />");
-    const cerrar =
-      '<div class="absolute top-1 left-2 pl-1 pr-1 border border-white rounded-xl">&times;</div>';
+    const cerrar = '<div class="absolute top-1 left-2 pl-1 pr-1 border border-white rounded-xl">&times;</div>';
 
     updatePdfResults(payload);
 
+    const bgColor = success ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700";
     msgDiv.innerHTML = `
       <div id="msg-${success ? "info" : "error"}"
         title="Click para cerrar"
         onclick="this.style.display='none'"
-        class="text-sm cursor-pointer text-white ${
-          success ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
-        } rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">
+        class="text-sm cursor-pointer text-white ${bgColor} rounded-md shadow-xl absolute top-1 left-1 pl-9 p-3">
         ${textMsg} ${cerrar}
       </div>`;
 

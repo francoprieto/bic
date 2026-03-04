@@ -60,11 +60,53 @@ Esto abrirá la app Electron y mostrará la lista de archivos para firmar.
 
 ---
 
-## 4. Notas
+## 4. Sistema de Logging
+
+La aplicación registra automáticamente todos los mensajes de consola en archivos de log ubicados en:
+
+**Ubicación de logs:**
+- Windows: `C:\Users\[usuario]\.bic\logs\`
+- macOS/Linux: `~/.bic/logs/`
+
+**Formato de archivos:**
+- Nombre: `bic-YYYY-MM-DD.log` (un archivo por día)
+- Ejemplo: `bic-2026-03-03.log`
+
+**Niveles de log:**
+- `INFO`: Información general (console.log, console.info)
+- `WARN`: Advertencias (console.warn)
+- `ERROR`: Errores (console.error)
+- `DEBUG`: Información de depuración (console.debug)
+
+**Formato de entrada:**
+```
+[2026-03-03T10:30:45.123Z] [INFO] Mensaje de log
+[2026-03-03T10:30:46.456Z] [ERROR] Error detectado: descripción del error
+```
+
+**Características:**
+- Los logs se escriben tanto en archivo como en consola
+- Se capturan errores no manejados (uncaughtException, unhandledRejection)
+- Los objetos se serializan automáticamente a JSON
+- Cada inicio de aplicación registra información del sistema
+
+**Ver logs:**
+```bash
+# Windows
+type %USERPROFILE%\.bic\logs\bic-2026-03-03.log
+
+# macOS/Linux
+cat ~/.bic/logs/bic-2026-03-03.log
+```
+
+---
+
+## 5. Notas
 
 - La app descarga los PDFs seleccionados a una carpeta temporal antes de firmar.
 - El password y las rutas locales se pasan como argumentos a la app Java.
 - El resultado de la firma se muestra en la interfaz.
+- Los logs se mantienen indefinidamente, considera limpiarlos periódicamente.
 
 ---
 

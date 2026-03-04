@@ -69,7 +69,7 @@ public class App {
             Log.error("Parametro " + param + " no es válido, debe contar con el siguiente formato: --parametro=valor");
             return null;
         }
-        param = param.replaceFirst("--", "");
+        param = param.substring(2);
         String[] claveValor = param.split("=", 2);
         if(claveValor.length != 2) {
             Log.error("Parametro " + param + " no es válido, debe contar con el siguiente formato: --parametro=valor");

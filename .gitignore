@@ -7,7 +7,7 @@ logs/
 bic-electron/firma.png
 bic-electron/extraResources/
 bic-electron/dist/
-
+test/uploads/
 ### STS ###
 .apt_generated
 .classpath

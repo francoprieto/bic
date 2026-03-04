@@ -1,5 +1,5 @@
 /**
- * Main process for Electron app
+ * Proceso principal de la aplicación Electron
  * Encargado de:
  *  - Crear ventana principal
  *  - Manejar protocolo personalizado bic://
@@ -18,6 +18,78 @@ const path = require("path");
 const pako = require("pako");
 const { v4: uuidv4 } = require("uuid");
 const { spawn } = require("child_process");
+
+// --- SISTEMA DE LOGGING ---
+const logDir = path.join(os.homedir(), ".bic", "logs");
+const logFile = path.join(logDir, `bic-${new Date().toISOString().split('T')[0]}.log`);
+
+// Crear directorio de logs si no existe
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+// Función para escribir en el log
+function writeLog(level, ...args) {
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg, null, 2);
+      } catch (e) {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+  
+  const logEntry = `[${timestamp}] [${level}] ${message}\n`;
+  
+  // Escribir al archivo de log
+  fs.appendFileSync(logFile, logEntry, 'utf8');
+}
+
+// Sobrescribir console.log, console.error, console.warn, console.info
+const originalConsole = {
+  log: console.log,
+  error: console.error,
+  warn: console.warn,
+  info: console.info,
+  debug: console.debug
+};
+
+console.log = function(...args) {
+  writeLog('INFO', ...args);
+  originalConsole.log.apply(console, args);
+};
+
+console.error = function(...args) {
+  writeLog('ERROR', ...args);
+  originalConsole.error.apply(console, args);
+};
+
+console.warn = function(...args) {
+  writeLog('WARN', ...args);
+  originalConsole.warn.apply(console, args);
+};
+
+console.info = function(...args) {
+  writeLog('INFO', ...args);
+  originalConsole.info.apply(console, args);
+};
+
+console.debug = function(...args) {
+  writeLog('DEBUG', ...args);
+  originalConsole.debug.apply(console, args);
+};
+
+// Log de inicio de aplicación
+console.log('='.repeat(80));
+console.log('Aplicación BIC iniciada');
+console.log('Versión de Electron:', process.versions.electron);
+console.log('Versión de Node:', process.versions.node);
+console.log('Sistema Operativo:', os.platform(), os.release());
+console.log('Archivo de log:', logFile);
+console.log('='.repeat(80));
 
 // --- VARIABLES GLOBALES ---
 let mainWindow;
@@ -53,9 +125,17 @@ function createWindow() {
  * Decodifica un string Base64 y lo descomprime con gzip
  */
 function decodeAndUnzip(base64Str) {
+  try{
+    const val = atob(base64Str);
+    if(val) return val;
+  } catch (err) {
+    console.error("Esta comprimido..");  
+  }
   try {
     let b64 = base64Str.replace(/-/g, "+").replace(/_/g, "/");
-    while (b64.length % 4) b64 += "=";
+    while (b64.length % 4) {
+      b64 += "=";
+    }
     const bytes = Buffer.from(b64, "base64");
     return pako.ungzip(bytes, { to: "string" });
   } catch (err) {
@@ -67,78 +147,110 @@ function decodeAndUnzip(base64Str) {
 /**
  * Descarga archivo remoto y lo agrega a pdfUrls
  */
-function leerArchivoRemotoEnVariable(jsonParams) {
-  
-  const url = jsonParams.uri;
-  const headers = jsonParams.headers || {};
-  let opt = {
-    method: "GET",
-    hostname: new URL(url).hostname,
-    port: new URL(url).port,
-    path: new URL(url).pathname + new URL(url).search,
-    headers,
-  };
+async function leerArchivoRemotoEnVariable(jsonParams) {
+  try {
+    const url = jsonParams.uri;
+    const headers = jsonParams.headers || {};
+    
+    let opt = {
+      method: "GET",
+      hostname: new URL(url).hostname,
+      port: new URL(url).port,
+      path: new URL(url).pathname + new URL(url).search,
+      headers,
+    };
 
-  getConfs().then((c)=>{ 
-    if (c?.proxy)
-      opt['proxy'] = c.proxy;    
-  });
+    // Esperar la configuración antes de continuar
+    try {
+      const c = await getConfs();
+      if (c?.proxy) {
+        opt['proxy'] = c.proxy;
+      }
+    } catch (confError) {
+      console.warn('No se pudo cargar configuración de proxy:', confError);
+    }
 
-  console.log('conf ::::: ', opt);
-  return new Promise((resolve, reject) => {
-    const protocolo = url.startsWith("https") ? https : http;
-    if (url.startsWith("https")) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+    console.log('conf ::::: ', JSON.stringify(opt, null, 2));
+    
+    return new Promise((resolve, reject) => {
+      const protocolo = url.startsWith("https") ? https : http;
+      if (url.startsWith("https")) {
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+      }
 
-    let data = [];
-    protocolo
-      .get(opt, (response) => {
+      let data = [];
+      const request = protocolo.get(opt, (response) => {
         if (response.statusCode !== 200) {
-          dialog.showErrorBox("Error", "Error al leer parámetros: " + response.statusCode);
-          return reject(new Error("HTTP " + response.statusCode));
+          const errorMsg = `Error al leer parámetros: HTTP ${response.statusCode}`;
+          console.error(errorMsg);
+          dialog.showErrorBox("Error", errorMsg);
+          return reject(new Error(errorMsg));
         }
 
         response.on("data", (chunk) => data.push(chunk));
         response.on("end", () => {
           try {
             const rawData = Buffer.concat(data).toString();
+            console.log('Datos recibidos:', rawData);
             const params = JSON.parse(rawData);
+            
+            if (!Array.isArray(params)) {
+              throw new Error('El archivo JSON debe contener un array de objetos');
+            }
+            
             pdfUrls.push(...params);
+            console.log(`${params.length} archivos agregados a la lista`);
             resolve();
           } catch (err) {
+            console.error('Error al procesar respuesta:', err);
+            dialog.showErrorBox("Error", "Error al procesar datos: " + err.message);
             reject(err);
           }
         });
-      })
-      .on("error", (err) => {
-        dialog.showErrorBox("Error", "Error al leer los parametros: " + err.message);
+      });
+
+      request.on("error", (err) => {
+        console.error('Error en petición HTTP:', err);
+        dialog.showErrorBox("Error", "Error al leer los parámetros: " + err.message);
         reject(err);
       });
-  });
+
+      request.end();
+    });
+  } catch (error) {
+    console.error('Error en leerArchivoRemotoEnVariable:', error);
+    throw error;
+  }
 }
 
 /**
  * Procesa lista de archivos enviada en la URL
  */
-function leerArchivoSimple(filesParam) {
-  if(!filesParam || filesParam.trim() === '') return;
-  const lista = filesParam.split(",");
-  lista.forEach((element) => {
-    const cleanUrl = element.split(/[?#]/)[0];
-    const uid = uuidv4();
-    pdfUrls.push({
-      nombre: path.basename(cleanUrl),
-      url: element,
-      id: uid
+  function leerArchivoSimple(filesParam) {
+    if(!filesParam || filesParam.trim() === '') {
+      return;
+    }
+    
+    const lista = filesParam.split(",");
+    lista.forEach((element) => {
+      const cleanUrl = element.split(/[?#]/)[0];
+      const uid = uuidv4();
+      pdfUrls.push({
+        nombre: path.basename(cleanUrl),
+        url: element,
+        id: uid
+      });
     });
-  });
-  if (mainWindow) {
-    local = true;
-    mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+    
+    if (mainWindow) {
+      local = true;
+      mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+    }
   }
-}
 
 // --- MANEJAR PROTOCOLO PERSONALIZADO ---
 app.on("open-url", async (event, url) => {
+  console.log('Protocolo personalizado recibido:', url);
   event.preventDefault();
   const urlObj = new URL(url);
 
@@ -148,29 +260,76 @@ app.on("open-url", async (event, url) => {
     const filesParam = urlObj.searchParams.get("files");
     if (filesParam) {
       leerArchivoSimple(filesParam);
+      if (mainWindow) {
+        console.log('Enviando', pdfUrls.length, 'archivos a la ventana (files)');
+        
+        // Si la ventana ya está cargada, enviar inmediatamente
+        if (mainWindow.webContents.isLoading()) {
+          console.log('Ventana cargando, esperando...');
+          mainWindow.webContents.once('did-finish-load', () => {
+            console.log('Ventana cargada, enviando archivos');
+            mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+          });
+        } else {
+          console.log('Ventana ya cargada, enviando archivos inmediatamente');
+          mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+        }
+      }
       return;
     }
 
     let paramsurl = urlObj.searchParams.get("gzipurl") || urlObj.searchParams.get("paramsurl");
-    if (!paramsurl) return;
-
+    if (!paramsurl) {
+      console.log('No se encontró paramsurl o gzipurl');
+      return;
+    }
+    
     const val = decodeAndUnzip(paramsurl) || paramsurl;
+    
     if (val) {
       const jsonParams = JSON.parse(val);
+      console.log('Parámetros JSON parseados:', jsonParams);
       await leerArchivoRemotoEnVariable(jsonParams);
+      
+      // Enviar la lista de PDFs a la ventana después de cargarlos
+      if (pdfUrls.length > 0 && mainWindow) {
+        console.log('Enviando', pdfUrls.length, 'archivos a la ventana (paramsurl)');
+        console.log('Lista de PDFs:', JSON.stringify(pdfUrls, null, 2));
+        
+        // Si la ventana ya está cargada, enviar inmediatamente
+        if (mainWindow.webContents.isLoading()) {
+          console.log('Ventana cargando, esperando...');
+          mainWindow.webContents.once('did-finish-load', () => {
+            console.log('Ventana cargada, enviando archivos');
+            mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+          });
+        } else {
+          console.log('Ventana ya cargada, enviando archivos inmediatamente');
+          mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+        }
+      } else {
+        console.log('No hay PDFs para enviar o mainWindow no existe');
+        console.log('pdfUrls.length:', pdfUrls.length);
+        console.log('mainWindow:', !!mainWindow);
+      }
     }
   } catch (err) {
     console.error("Error procesando open-url:", err);
+    console.error("Stack:", err.stack);
   }
 });
 
 // --- CUANDO APP ESTÁ LISTA ---
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
+
+  // Esperar un momento para que la ventana se inicialice
+  await new Promise(resolve => setTimeout(resolve, 100));
 
   // Manejo de parámetros iniciales (cuando app abre con bic://)
   const arg = process.argv.find((a) => a.startsWith("bic://"));
   if (!arg){
+    console.log('No se encontró argumento bic://, modo local');
     local = true;
     mainWindow.webContents.on("did-finish-load", () => {
       mainWindow.webContents.send("archivos-locales", local);
@@ -178,27 +337,66 @@ app.whenReady().then(() => {
     return;
   } 
 
+  console.log('Argumento bic:// encontrado:', arg);
   const urlObj = new URL(arg);
   const filesParam = urlObj.searchParams.get("files");
 
   if (filesParam) {
+    console.log('Parámetro files encontrado');
     leerArchivoSimple(filesParam);
-    mainWindow.webContents.on("did-finish-load", () => {
-      mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+    
+    // Esperar a que la ventana cargue
+    await new Promise((resolve) => {
+      if (mainWindow.webContents.isLoading()) {
+        console.log('Ventana está cargando, esperando...');
+        mainWindow.webContents.once("did-finish-load", resolve);
+      } else {
+        console.log('Ventana ya cargada');
+        resolve();
+      }
     });
+    
+    console.log('Enviando', pdfUrls.length, 'archivos a la ventana');
+    mainWindow.webContents.send("set-pdf-urls", pdfUrls);
   } else {
     let paramsurl = urlObj.searchParams.get("gzipurl") || urlObj.searchParams.get("paramsurl");
-    if (!paramsurl) return;
+    if (!paramsurl) {
+      console.log('No se encontró paramsurl o gzipurl');
+      return;
+    }
 
+    console.log('Parámetro paramsurl/gzipurl encontrado');
     const val = decodeAndUnzip(paramsurl) || paramsurl;
     if (val) {
-      leerArchivoRemotoEnVariable(JSON.parse(val)).then(() => {
+      try {
+        const jsonParams = JSON.parse(val);
+        console.log('JSON parseado, llamando a leerArchivoRemotoEnVariable');
+        await leerArchivoRemotoEnVariable(jsonParams);
+        
+        console.log('Archivos cargados, pdfUrls.length:', pdfUrls.length);
+        
         if (pdfUrls.length > 0 && mainWindow) {
-          mainWindow.webContents.on("did-finish-load", () => {
-            mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+          // Esperar a que la ventana cargue
+          await new Promise((resolve) => {
+            if (mainWindow.webContents.isLoading()) {
+              console.log('Ventana está cargando, esperando...');
+              mainWindow.webContents.once("did-finish-load", resolve);
+            } else {
+              console.log('Ventana ya cargada');
+              resolve();
+            }
           });
+          
+          console.log('Enviando', pdfUrls.length, 'archivos a la ventana');
+          console.log('Lista de PDFs:', JSON.stringify(pdfUrls, null, 2));
+          mainWindow.webContents.send("set-pdf-urls", pdfUrls);
+        } else {
+          console.log('No hay archivos para enviar o mainWindow no existe');
         }
-      });
+      } catch (error) {
+        console.error('Error procesando paramsurl:', error);
+        console.error('Stack:', error.stack);
+      }
     }
   }
 });
@@ -211,38 +409,77 @@ ipcMain.on("reset-app", () => {
 
 // --- SALIR CUANDO TODAS LAS VENTANAS SE CIERREN ---
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  console.log('Todas las ventanas cerradas');
+  if (process.platform !== "darwin") {
+    console.log('Cerrando aplicación');
+    app.quit();
+  }
+});
+
+// --- MANEJADORES DE ERRORES GLOBALES ---
+process.on('uncaughtException', (error) => {
+  console.error('Error no capturado:', error);
+  console.error('Stack:', error.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promesa rechazada no manejada:', reason);
+  console.error('Promesa:', promise);
+});
+
+app.on('before-quit', () => {
+  console.log('Aplicación cerrándose...');
+  console.log('='.repeat(80));
 });
 
 // --- DESCARGAR ARCHIVO ---
 function descargarArchivo(pdf, destino, ssl, proxy) {
   const url = pdf.url;
+  
+  // Usar urlHeaders si existe, sino headers
+  const headers = pdf.urlHeaders || pdf.headers || {};
+  
   let opt = {
     method: "GET",
     hostname: new URL(url).hostname,
     port: new URL(url).port,
     path: new URL(url).pathname + new URL(url).search,
-    headers: pdf.headers || {},
+    headers: headers,
   };
   
-  if(proxy)
+  console.log('Opciones de descarga:', JSON.stringify(opt, null, 2));
+  
+  if(proxy) {
     opt['proxy'] = proxy;
+  }
 
   return new Promise((resolve, reject) => {
     const protocolo = url.startsWith("https") ? https : http;
-    if (url.startsWith("https")) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+    
+    if (url.startsWith("https")) {
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1;
+    }
 
     const file = fs.createWriteStream(destino);
-    protocolo
-      .get(opt, (response) => {
+    protocolo.get(opt, (response) => {
+        console.log('Respuesta HTTP:', response.statusCode, 'para', url);
+        
         if (response.statusCode !== 200) {
-          dialog.showErrorBox("Error", "Error al descargar: " + response.statusCode);
-          return reject(new Error("HTTP " + response.statusCode));
+          const errorMsg = `Error al descargar ${pdf.nombre}: HTTP ${response.statusCode}`;
+          console.error(errorMsg);
+          dialog.showErrorBox("Error", errorMsg);
+          return reject(new Error(errorMsg));
         }
         response.pipe(file);
-        file.on("finish", () => file.close(() => resolve(destino)));
+        file.on("finish", () => {
+          file.close(() => {
+            console.log('Archivo descargado exitosamente:', destino);
+            resolve(destino);
+          });
+        });
       })
       .on("error", (err) => {
+        console.error('Error al descargar:', url, err);
         dialog.showErrorBox("Error", `Error al descargar: ${url}\n${err}`);
         fs.unlink(destino, () => reject(err));
       });
@@ -266,17 +503,87 @@ ipcMain.handle("get-confs", async () => {
   }
 });
 
-ipcMain.handle("save-signature-image", async (event, buffer, ext) => {
-  const targetPath = path.join(__dirname, `firma.${ext}`);
+ipcMain.handle("save-signature-image", async (event, buffer, ext, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  const fileName = `firma-${profile}.${ext}`;
+  
+  // Guardar en el directorio .bic del usuario (persistente entre instalaciones)
+  const targetPath = path.join(bicHome, fileName);
+  
+  console.log('Guardando imagen de firma para perfil:', profile);
+  console.log('Ruta:', targetPath);
+  
+  // Asegurar que el directorio .bic existe
+  if (!fs.existsSync(bicHome)) {
+    fs.mkdirSync(bicHome, { recursive: true });
+  }
+  
   fs.writeFileSync(targetPath, Buffer.from(buffer));
-  return `firma.${ext}`;
+  return fileName;
 });
 
-ipcMain.handle("save-default-image", async () => {
-  const targetPath = firmaPath;
+ipcMain.handle("save-default-image", async (event, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  const fileName = `firma-${profile}.png`;
+  
+  // Guardar en el directorio .bic del usuario
+  const targetPath = path.join(bicHome, fileName);
   const sourcePath = path.join(__dirname, "default.png");
+  
+  console.log('Restaurando imagen por defecto para perfil:', profile);
+  console.log('Ruta:', targetPath);
+  
+  // Asegurar que el directorio .bic existe
+  if (!fs.existsSync(bicHome)) {
+    fs.mkdirSync(bicHome, { recursive: true });
+  }
+  
   fs.copyFileSync(sourcePath, targetPath);
-  return targetPath;
+  return fileName;
+});
+
+ipcMain.handle("get-signature-image", async (event, profileId) => {
+  // Si no se especifica profileId, usar 'default'
+  const profile = profileId || 'default';
+  
+  // Buscar imagen del perfil en .bic (puede ser .png, .jpg, .jpeg)
+  const extensions = ['png', 'jpg', 'jpeg'];
+  for (const ext of extensions) {
+    const fileName = `firma-${profile}.${ext}`;
+    const filePath = path.join(bicHome, fileName);
+    if (fs.existsSync(filePath)) {
+      console.log('Imagen de firma encontrada para perfil:', profile, '->', fileName);
+      return fileName;
+    }
+  }
+  
+  // Si no existe imagen para el perfil, usar default.png
+  console.log('No se encontró imagen para perfil:', profile, '- usando default.png');
+  return 'default.png';
+});
+
+ipcMain.handle("get-signature-image-path", async (event, fileName) => {
+  // Si es default.png, retornar desde el directorio de la app
+  if (fileName === 'default.png') {
+    return path.join(__dirname, fileName);
+  }
+  
+  // Para imágenes personalizadas, buscar en .bic
+  const bicPath = path.join(bicHome, fileName);
+  if (fs.existsSync(bicPath)) {
+    return bicPath;
+  }
+  
+  // Fallback a directorio de la app (legacy)
+  const appPath = path.join(__dirname, fileName);
+  if (fs.existsSync(appPath)) {
+    return appPath;
+  }
+  
+  // Si no existe, retornar default.png
+  return path.join(__dirname, 'default.png');
 });
 
 ipcMain.handle("select-files", async () => {
@@ -318,12 +625,24 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       const form = new FormData();
       const url = pdf.callback;
       const method = pdf.callbackMethod || "POST";
-      const headers = JSON.parse(pdf.callbackHeaders || "{}");
+      
+      // callbackHeaders y callbackBody ya son objetos, no strings JSON
+      const headers = typeof pdf.callbackHeaders === 'string' 
+        ? JSON.parse(pdf.callbackHeaders) 
+        : (pdf.callbackHeaders || {});
+      
       const atributo = pdf.callbackAtributo || "file";
       const filePath = pdf.local || path.join(bicHome, "cache", pdf.nombre);
 
+      console.log('Subiendo archivo:', pdf.nombre);
+      console.log('URL:', url);
+      console.log('Método:', method);
+      console.log('Atributo:', atributo);
+      console.log('Ruta local:', filePath);
+
       if (!fs.existsSync(filePath)) {
         const msg = "Archivo no encontrado para subir: " + filePath;
+        console.error(msg);
         errores.push(msg);
         subidos.push({ id: pdf.id, subido: false, msg });
         completados++;
@@ -331,7 +650,12 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       }
 
       // Agregar campos extra del body
-      const body = JSON.parse(pdf.callbackBody || "{}");
+      const body = typeof pdf.callbackBody === 'string' 
+        ? JSON.parse(pdf.callbackBody) 
+        : (pdf.callbackBody || {});
+      
+      console.log('Body adicional:', body);
+      
       for (const key in body) {
         if (key !== atributo) {
           form.append(key, String(body[key]));
@@ -358,6 +682,8 @@ function uploadFiles(pdfs, ssl, proxy, event) {
       if(proxy)
         opt['proxy'] = proxy;
 
+      console.log('Opciones de petición:', JSON.stringify(opt, null, 2));
+
       const protocolo = url.startsWith("https") ? https : http;
       if (url.startsWith("https")){ 
         process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = ssl ? 0 : 1 
@@ -368,11 +694,16 @@ function uploadFiles(pdfs, ssl, proxy, event) {
         res.on("data", (chunk) => (responseData += chunk));
         res.on("end", () => {
           completados++;
+          console.log('Respuesta del servidor:', res.statusCode);
+          console.log('Datos de respuesta:', responseData);
+          
           if (res.statusCode !== 200) {
             const msg = `No se pudo subir ${pdf.nombre}: (HTTP ${res.statusCode}) ${responseData}`;
+            console.error(msg);
             errores.push(msg);
             subidos.push({ id: pdf.id, subido: false, msg });
           } else {
+            console.log('Archivo subido exitosamente:', pdf.nombre);
             subidos.push({ id: pdf.id, subido: true, msg: "" });
           }
           finalizar();
@@ -383,14 +714,17 @@ function uploadFiles(pdfs, ssl, proxy, event) {
 
       req.on("error", (err) => {
         completados++;
-        const msg = "No se pudo subir: " + err.toString();
+        const msg = "No se pudo subir: " + (err.message || err.toString());
+        console.error(msg, err);
         errores.push(msg);
         subidos.push({ id: pdf.id, subido: false, msg });
         finalizar();
       });
     } catch (err) {
       completados++;
-      errores.push("Error inesperado: " + err.message);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error("Error inesperado en upload:", errorMsg, err);
+      errores.push("Error inesperado: " + errorMsg);
       finalizar();
     }
   });
@@ -445,10 +779,18 @@ async function getConfs() {
 }
 
 // --- FIRMAR PDFs ---
-ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
-  // Recuperar configuraciones del localStorage
-  let confs = await getConfs();
+ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, config }) => {
+  
+  console.log("Entrando para la firma: " + JSON.stringify(pdfs));
+  
+  // Usar configuración del perfil seleccionado o recuperar del localStorage
+  let confs = config;
+  if (!confs) {
+    confs = await getConfs();
+  }
   if (!confs) return;
+
+  console.log('Configuración recibida:', JSON.stringify(confs, null, 2));
 
   // Construir objeto posición
   let posicion = {
@@ -466,18 +808,123 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
   if (confs.posicion && posiciones[confs.posicion]) posicion.lugar = posiciones[confs.posicion];
 
   if (confs.ms) posicion.mt = confs.ms;
-  if (confs.mi) posicion.mb = confs.mb;
+  if (confs.mi) posicion.mb = confs.mi;
   if (confs.ml) posicion.ml = confs.ml;
   if (confs.mr) posicion.mr = confs.mr;
   if (confs.largo) posicion.ancho = confs.largo;
   if (confs.alto) posicion.alto = confs.alto;
 
-  // Si la firma personalizada es distinta de default, la usamos
-  if (fs.statSync(firmaPath).size !== fs.statSync(path.join(__dirname, "default.png")).size) {
-    posicion.imagen = firmaPath;
+  console.log('Campo firmaImagen en config:', confs.firmaImagen);
+
+  // Determinar qué imagen de firma usar
+  let firmaImagenPath = null;
+  
+  if (confs.firmaImagen) {
+    if (confs.firmaImagen === 'default') {
+      // Usar imagen por defecto del sistema
+      const defaultPath = path.join(__dirname, "default.png");
+      if (fs.existsSync(defaultPath)) {
+        firmaImagenPath = defaultPath;
+        console.log('✓ Usando imagen de firma por defecto del sistema: default.png');
+      } else {
+        console.warn('✗ default.png no encontrado');
+      }
+    } else {
+      // Buscar imagen personalizada primero en .bic (persistente)
+      const customPathBic = path.join(bicHome, confs.firmaImagen);
+      console.log('Buscando imagen personalizada en .bic:', customPathBic);
+      
+      if (fs.existsSync(customPathBic)) {
+        firmaImagenPath = customPathBic;
+        console.log('✓ Usando imagen de firma personalizada desde .bic:', confs.firmaImagen);
+      } else {
+        // Fallback: buscar en directorio de la app (legacy)
+        const customPathApp = path.join(__dirname, confs.firmaImagen);
+        console.log('No encontrado en .bic, buscando en app:', customPathApp);
+        
+        if (fs.existsSync(customPathApp)) {
+          firmaImagenPath = customPathApp;
+          console.log('✓ Usando imagen de firma personalizada desde app (legacy):', confs.firmaImagen);
+        } else {
+          console.warn('✗ Imagen de firma no encontrada:', confs.firmaImagen);
+          // Fallback a default.png
+          const defaultPath = path.join(__dirname, "default.png");
+          if (fs.existsSync(defaultPath)) {
+            firmaImagenPath = defaultPath;
+            console.log('✓ Fallback a imagen por defecto: default.png');
+          }
+        }
+      }
+    }
+  } else {
+    console.log('firmaImagen no está definido, verificando legacy firma.png');
+    
+    // Si no hay firmaImagen definido, verificar firma.png (legacy)
+    if (fs.existsSync(firmaPath)) {
+      const defaultSize = fs.statSync(path.join(__dirname, "default.png")).size;
+      const currentSize = fs.statSync(firmaPath).size;
+      
+      if (currentSize !== defaultSize) {
+        firmaImagenPath = firmaPath;
+        console.log('✓ Usando imagen de firma legacy: firma.png');
+      } else {
+        // firma.png es igual a default.png, usar default.png
+        firmaImagenPath = path.join(__dirname, "default.png");
+        console.log('✓ firma.png es igual a default.png, usando default.png');
+      }
+    } else {
+      // No existe firma.png, usar default.png
+      const defaultPath = path.join(__dirname, "default.png");
+      if (fs.existsSync(defaultPath)) {
+        firmaImagenPath = defaultPath;
+        console.log('✓ No existe firma.png, usando default.png');
+      }
+    }
+  }
+  
+  // Asignar imagen si existe
+  if (firmaImagenPath) {
+    posicion.imagen = firmaImagenPath;
+    console.log('✓ Imagen de firma final:', firmaImagenPath);
+  } else {
+    console.log('○ No se encontró ninguna imagen de firma');
   }
 
   const dir = confs.directorio;
+  
+  // Validar que el directorio existe
+  if (!dir || dir.trim() === '') {
+    console.error('Error: El directorio de destino está vacío');
+    event.sender.send("firma-resultado", {
+      success: false,
+      output: JSON.stringify({
+        tipo: "ERROR",
+        mensaje: "El directorio de destino no está configurado. Por favor, configúrelo en la pestaña Configuración."
+      })
+    });
+    return;
+  }
+  
+  console.log('Directorio de destino:', dir);
+  
+  // Asegurar que el directorio existe
+  if (!fs.existsSync(dir)) {
+    console.log('Creando directorio de destino:', dir);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      console.error('Error al crear directorio de destino:', error);
+      event.sender.send("firma-resultado", {
+        success: false,
+        output: JSON.stringify({
+          tipo: "ERROR",
+          mensaje: `No se pudo crear el directorio de destino: ${error.message}`
+        })
+      });
+      return;
+    }
+  }
+  
   const ssl = confs.inseguro || false;
   const manual = confs.manual || false;
   const proxy = confs.proxy || null;
@@ -491,21 +938,31 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
     const cacheDir = path.join(bicHome, "cache");
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
+    console.log('Procesando', pdfs.length, 'archivos');
+    
     for (const pdf of pdfs) {
-      if(pdf.url?.startsWith('file://')){ // Cuando los archivos a firmar son locales
+      console.log('Procesando archivo:', pdf.nombre, 'URL:', pdf.url);
+      
+      if(!pdf.url?.startsWith('http')){ // Cuando los archivos a firmar son locales
         const localFile = url.fileURLToPath(pdf.url);
         if(localFile.startsWith('\\\\c\\'))
           rutasLocales.push(localFile.replace('\\\\c\\','C:\\'));  
         else 
           rutasLocales.push(localFile);
+        console.log('Archivo local:', rutasLocales[rutasLocales.length - 1]);
       }else{ // Cuando hay que descargar los archivos a firmar
         const destino = path.join(cacheDir, pdf.nombre);
         pdf.local = path.join(dir, pdf.nombre);
-        event.sender.send("firma-progreso", "Descargando...");
+        console.log('Descargando a:', destino);
+        event.sender.send("firma-progreso", `Descargando ${pdf.nombre}...`);
         await descargarArchivo(pdf, destino, ssl, proxy);
         rutasLocales.push(destino);
+        console.log('Descarga completada:', destino);
       }
     }
+
+    console.log('Rutas locales para firmar:', rutasLocales);
+    console.log('Directorio de destino:', dir);
 
     // Ejecutar proceso Java
     event.sender.send("firma-progreso", "Firmando...");
@@ -518,6 +975,13 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password }) => {
       `--destino=${dir}`,
       `--posicion=${JSON.stringify(posicion)}`,
     ];
+    
+    console.log('Argumentos de Java:', args);
+    
+    // Agregar parámetro de certificado de Windows si está marcado
+    if (useWindowsStore) {
+      args.push(`--use-windows-store=true`);
+    }
    
     const javaProcess = spawn(javaPath, args, { stdio: ["pipe", "pipe", "pipe"] });
 
