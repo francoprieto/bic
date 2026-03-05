@@ -29,9 +29,11 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.FailedLoginException;
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
@@ -118,11 +120,25 @@ public class FirmadorImpl implements Firmador{
                 return new Resultado("ok","Configuración inicial exitosa");
             } else {
                 configuracion = ConfiguracionUtil.init();
+                
+                // Si la configuración es null, intentar inicializar automáticamente
+                if (configuracion == null) {
+                    Log.warn("No se encontró configuración, inicializando automáticamente...");
+                    configuracion = ConfiguracionUtil.init(true);
+                    
+                    if (configuracion == null) {
+                        Log.error("No se pudo inicializar la configuración automáticamente");
+                        return new Resultado("error", "La configuración no es válida, debe inicializar la aplicación");
+                    }
+                    
+                    Log.info("Configuración inicializada automáticamente");
+                }
             }
         } catch(UnsupportedPlatformException exception){
             Log.error("Plataforma no soportada");
             return new Resultado("error", "Plataforma no soportada");
         }
+        
         if(!this.validarParametrosArchivos(parametros)) return new Resultado("error", "Parametros inválidos");
         List<File> archivos = this.cachearArchivos(parametros, configuracion.getDownloadTimeout(), configuracion.getReadTimeout());
         if(archivos == null || archivos.isEmpty()){
@@ -132,17 +148,28 @@ public class FirmadorImpl implements Firmador{
 
         List<File> firmados = null;
         try {
-            // Verificar si se debe usar el almacén de Windows
-            boolean useWindowsStore = parametros.containsKey(PARAM_USE_WINDOWS_STORE) 
+            // Verificar si se debe usar el almacén del sistema
+            boolean useSystemStore = parametros.containsKey(PARAM_USE_WINDOWS_STORE) 
                 && "true".equalsIgnoreCase(parametros.get(PARAM_USE_WINDOWS_STORE));
             
-            if (useWindowsStore) {
-                firmados = firmarArchivosWindowsStore(parametros, archivos);
+            if (useSystemStore) {
+                // Detectar sistema operativo y usar el almacén apropiado
+                String os = ConfiguracionUtil.getOS();
+                if (ConfiguracionUtil.WIN.equals(os)) {
+                    firmados = firmarArchivosWindowsStore(parametros, archivos);
+                } else if (ConfiguracionUtil.LINUX.equals(os) || ConfiguracionUtil.MAC.equals(os)) {
+                    firmados = firmarArchivosLinuxStore(parametros, archivos);
+                } else {
+                    Log.error("Almacén del sistema no soportado para este sistema operativo");
+                    return new Resultado("error", "Almacén del sistema no soportado para este sistema operativo");
+                }
             } else {
                 firmados = firmarArchivos(configuracion, parametros, archivos);
             }
         } catch (FailedLoginException e) {
             return new Resultado("error", PIN_ERROR);
+        } catch (UnsupportedPlatformException e) {
+            return new Resultado("error", "Plataforma no soportada");
         }
 
         if(firmados == null || firmados.isEmpty())
@@ -459,6 +486,531 @@ public class FirmadorImpl implements Firmador{
         return null;
     }
 
+    /**
+     * Firma una lista de archivos utilizando certificados del almacén de Linux/Mac.
+     * Soporta almacenes NSS (Firefox) y PKCS12.
+     * @param parametros Parámetros de la firma
+     * @param archivos Archivos a firmar
+     * @return Lista de archivos firmados
+     * @throws FailedLoginException Si falla la autenticación
+     */
+    private List<File> firmarArchivosLinuxStore(Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
+        List<File> archivosFirmados = new ArrayList<>();
+        
+        // Intentar primero con PKCS12 (archivos .p12 o .pfx)
+        String pin = parametros.containsKey(PARAM_PIN) ? parametros.get(PARAM_PIN) : null;
+        
+        // Buscar archivos PKCS12 en ubicaciones comunes
+        List<File> pkcs12Files = buscarArchivosPKCS12();
+        
+        if (!pkcs12Files.isEmpty()) {
+            Log.info("Se encontraron " + pkcs12Files.size() + " archivo(s) PKCS12");
+            // Permitir al usuario seleccionar un archivo PKCS12
+            File selectedP12 = seleccionarArchivoPKCS12(pkcs12Files);
+            
+            if (selectedP12 != null) {
+                try {
+                    archivosFirmados = firmarConPKCS12(selectedP12, pin, parametros, archivos);
+                    if (!archivosFirmados.isEmpty()) {
+                        return archivosFirmados;
+                    }
+                } catch (FailedLoginException e) {
+                    throw e; // Re-lanzar error de autenticación
+                } catch (Exception e) {
+                    Log.warn("No se pudo firmar con PKCS12: " + e.getMessage());
+                }
+            }
+        } else {
+            Log.info("No se encontraron archivos PKCS12 en ubicaciones comunes");
+        }
+        
+        // Si no hay PKCS12 o falló, intentar con NSS (Firefox) - solo si está disponible
+        Log.info("Intentando con almacén NSS (Firefox)...");
+        try {
+            archivosFirmados = firmarConNSS(pin, parametros, archivos);
+            if (!archivosFirmados.isEmpty()) {
+                return archivosFirmados;
+            }
+        } catch (FailedLoginException e) {
+            throw e; // Re-lanzar error de autenticación
+        } catch (Exception e) {
+            Log.info("NSS no disponible o sin certificados: " + e.getMessage());
+        }
+        
+        // Si todo falla, mostrar mensaje informativo
+        Log.error("No se encontraron certificados válidos en el sistema");
+        Log.info("Opciones disponibles:");
+        Log.info("1. Coloque un archivo PKCS12 (.p12 o .pfx) en su directorio home");
+        Log.info("2. Importe un certificado en Firefox");
+        Log.info("3. Use un token USB con las librerías PKCS11 instaladas (desmarque 'Usar certificado del sistema')");
+        
+        return new ArrayList<>();
+    }
+    
+    /**
+     * Busca archivos PKCS12 en ubicaciones comunes del sistema.
+     * @return Lista de archivos PKCS12 encontrados
+     */
+    private List<File> buscarArchivosPKCS12() {
+        List<File> pkcs12Files = new ArrayList<>();
+        String home = System.getProperty("user.home");
+        
+        // Ubicaciones comunes para buscar
+        String[] searchPaths = {
+            home,
+            home + "/.pki",
+            home + "/.pki/nssdb",
+            home + "/.mozilla/certificates",
+            home + "/Documents",
+            home + "/Documentos",
+            home + "/Downloads",
+            home + "/Descargas",
+            home + "/Desktop",
+            home + "/Escritorio"
+        };
+        
+        Log.info("Buscando archivos PKCS12 (.p12, .pfx) en ubicaciones comunes...");
+        
+        for (String searchPath : searchPaths) {
+            File dir = new File(searchPath);
+            if (dir.exists() && dir.isDirectory()) {
+                File[] files = dir.listFiles((d, name) -> {
+                    String lower = name.toLowerCase();
+                    return lower.endsWith(".p12") || lower.endsWith(".pfx");
+                });
+                
+                if (files != null && files.length > 0) {
+                    pkcs12Files.addAll(Arrays.asList(files));
+                    Log.info("Encontrado(s) " + files.length + " archivo(s) en: " + searchPath);
+                }
+            }
+        }
+        
+        if (pkcs12Files.isEmpty()) {
+            Log.info("No se encontraron archivos PKCS12 en las ubicaciones estándar");
+            Log.info("Puede colocar su archivo .p12 o .pfx en: " + home);
+        }
+        
+        return pkcs12Files;
+    }
+    
+    /**
+     * Permite al usuario seleccionar un archivo PKCS12.
+     * @param pkcs12Files Lista de archivos disponibles
+     * @return Archivo seleccionado o null si se cancela
+     */
+    private File seleccionarArchivoPKCS12(List<File> pkcs12Files) {
+        if (pkcs12Files.isEmpty()) {
+            // Permitir al usuario buscar manualmente
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Seleccionar archivo de certificado PKCS12");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+                @Override
+                public boolean accept(File f) {
+                    if (f.isDirectory()) return true;
+                    String name = f.getName().toLowerCase();
+                    return name.endsWith(".p12") || name.endsWith(".pfx");
+                }
+                
+                @Override
+                public String getDescription() {
+                    return "Archivos PKCS12 (*.p12, *.pfx)";
+                }
+            });
+            
+            int result = fileChooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                return fileChooser.getSelectedFile();
+            }
+            return null;
+        }
+        
+        if (pkcs12Files.size() == 1) {
+            return pkcs12Files.get(0);
+        }
+        
+        // Agregar opción para buscar otro archivo
+        String[] opciones = new String[pkcs12Files.size() + 1];
+        for (int i = 0; i < pkcs12Files.size(); i++) {
+            opciones[i] = pkcs12Files.get(i).getName() + " (" + pkcs12Files.get(i).getParent() + ")";
+        }
+        opciones[pkcs12Files.size()] = "Buscar otro archivo...";
+        
+        String seleccion = (String) JOptionPane.showInputDialog(
+            null,
+            "Selecciona el archivo de certificado PKCS12:",
+            "Seleccionar Certificado",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            opciones,
+            opciones[0]
+        );
+        
+        if (seleccion == null) {
+            return null;
+        }
+        
+        // Si seleccionó "Buscar otro archivo..."
+        if (seleccion.equals(opciones[pkcs12Files.size()])) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Seleccionar archivo de certificado PKCS12");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+                @Override
+                public boolean accept(File f) {
+                    if (f.isDirectory()) return true;
+                    String name = f.getName().toLowerCase();
+                    return name.endsWith(".p12") || name.endsWith(".pfx");
+                }
+                
+                @Override
+                public String getDescription() {
+                    return "Archivos PKCS12 (*.p12, *.pfx)";
+                }
+            });
+            
+            int result = fileChooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                return fileChooser.getSelectedFile();
+            }
+            return null;
+        }
+        
+        // Buscar el archivo seleccionado
+        for (int i = 0; i < opciones.length - 1; i++) {
+            if (opciones[i].equals(seleccion)) {
+                return pkcs12Files.get(i);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Firma archivos usando un certificado PKCS12.
+     * @param p12File Archivo PKCS12
+     * @param pin PIN del certificado (puede ser null para solicitar al usuario)
+     * @param parametros Parámetros de la firma
+     * @param archivos Archivos a firmar
+     * @return Lista de archivos firmados
+     * @throws FailedLoginException Si falla la autenticación
+     */
+    private List<File> firmarConPKCS12(File p12File, String pin, Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
+        List<File> archivosFirmados = new ArrayList<>();
+        
+        try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            
+            // Solicitar PIN si no se proporcionó
+            char[] password = null;
+            if (pin != null && !pin.isEmpty()) {
+                password = pin.toCharArray();
+            } else {
+                password = solicitarPIN("Ingrese la contraseña del certificado PKCS12:");
+                if (password == null) {
+                    Log.error("No se proporcionó contraseña");
+                    return new ArrayList<>();
+                }
+            }
+            
+            // Cargar el keystore
+            try (FileInputStream fis = new FileInputStream(p12File)) {
+                keyStore.load(fis, password);
+            }
+            
+            // Buscar certificado con capacidad de firma
+            java.util.Enumeration<String> aliases = keyStore.aliases();
+            List<String> aliasList = new ArrayList<>();
+            Map<String, Certificate> certMap = new HashMap<>();
+            
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                Certificate cert = keyStore.getCertificate(alias);
+                if (cert instanceof X509Certificate) {
+                    X509Certificate x509 = (X509Certificate) cert;
+                    boolean[] keyUsage = x509.getKeyUsage();
+                    if (keyUsage != null && keyUsage[0]) {
+                        aliasList.add(alias);
+                        certMap.put(alias, cert);
+                    }
+                }
+            }
+            
+            if (aliasList.isEmpty()) {
+                Log.error("No se encontraron certificados válidos en el archivo PKCS12");
+                return new ArrayList<>();
+            }
+            
+            // Seleccionar certificado
+            String selectedAlias;
+            if (aliasList.size() == 1) {
+                selectedAlias = aliasList.get(0);
+            } else {
+                selectedAlias = mostrarDialogoSeleccionCertificado(aliasList, certMap);
+                if (selectedAlias == null) {
+                    return new ArrayList<>();
+                }
+            }
+            
+            // Obtener certificado y clave privada
+            Certificate cert = keyStore.getCertificate(selectedAlias);
+            Key key = keyStore.getKey(selectedAlias, password);
+            
+            if (!(key instanceof PrivateKey)) {
+                Log.error("No se pudo obtener la clave privada del certificado");
+                return new ArrayList<>();
+            }
+            
+            PrivateKey privateKey = (PrivateKey) key;
+            
+            // Firmar archivos
+            for(File archivo : archivos) {
+                if(archivo.exists() && archivo.isFile()) {
+                    File firmado = this.procesarFirma(archivo, privateKey, null, cert, parametros);
+                    if(firmado != null && firmado.exists() && firmado.isFile()) {
+                        archivosFirmados.add(firmado);
+                    }
+                }
+            }
+            
+        } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | 
+                 IOException | UnrecoverableKeyException e) {
+            Log.error("Error al acceder al certificado PKCS12", e);
+            String error = MensajeUtil.getStackTraceAsString(e);
+            if (error != null && (error.contains("password") || error.contains("Keystore was tampered"))) {
+                throw new FailedLoginException();
+            }
+            return new ArrayList<>();
+        }
+        
+        return archivosFirmados;
+    }
+    
+    /**
+     * Firma archivos usando certificados del almacén NSS (Firefox).
+     * @param pin PIN del certificado (puede ser null)
+     * @param parametros Parámetros de la firma
+     * @param archivos Archivos a firmar
+     * @return Lista de archivos firmados
+     * @throws FailedLoginException Si falla la autenticación
+     */
+    private List<File> firmarConNSS(String pin, Map<String,String> parametros, List<File> archivos) throws FailedLoginException {
+        List<File> archivosFirmados = new ArrayList<>();
+        File configFile = null;
+        Provider nssProvider = null;
+        
+        try {
+            // Buscar base de datos NSS de Firefox
+            String home = System.getProperty("user.home");
+            String[] nssLocations = {
+                home + "/.mozilla/firefox",
+                home + "/.pki/nssdb",
+                home + "/snap/firefox/common/.mozilla/firefox"
+            };
+            
+            String nssPath = null;
+            for (String location : nssLocations) {
+                File dir = new File(location);
+                if (dir.exists()) {
+                    // Buscar perfil de Firefox
+                    if (location.contains("firefox")) {
+                        File[] profiles = dir.listFiles((d, name) -> 
+                            name.endsWith(".default") || 
+                            name.endsWith(".default-release") ||
+                            name.endsWith(".default-esr")
+                        );
+                        if (profiles != null && profiles.length > 0) {
+                            // Verificar que tenga archivos de base de datos NSS
+                            File certDb = new File(profiles[0], "cert9.db");
+                            File keyDb = new File(profiles[0], "key4.db");
+                            if (certDb.exists() && keyDb.exists()) {
+                                nssPath = profiles[0].getAbsolutePath();
+                                break;
+                            }
+                        }
+                    } else {
+                        // Verificar que tenga archivos de base de datos NSS
+                        File certDb = new File(dir, "cert9.db");
+                        File keyDb = new File(dir, "key4.db");
+                        if (certDb.exists() && keyDb.exists()) {
+                            nssPath = location;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (nssPath == null) {
+                Log.info("No se encontró base de datos NSS válida");
+                return new ArrayList<>();
+            }
+            
+            Log.info("Usando base de datos NSS en: " + nssPath);
+            
+            // Verificar que SunPKCS11 esté disponible
+            Provider basePKCS11 = Security.getProvider("SunPKCS11");
+            if (basePKCS11 == null) {
+                Log.info("Proveedor SunPKCS11 no disponible en este sistema");
+                return new ArrayList<>();
+            }
+            
+            // Crear archivo de configuración temporal para NSS
+            configFile = File.createTempFile("nss-pkcs11-", ".cfg");
+            configFile.deleteOnExit();
+            
+            String nssConfig = "name = NSS\n" +
+                              "nssSecmodDirectory = " + nssPath + "\n" +
+                              "nssDbMode = readOnly\n" +
+                              "attributes = compatibility";
+            
+            FileUtils.writeStringToFile(configFile, nssConfig, "UTF-8");
+            
+            Log.info("Archivo de configuración NSS creado: " + configFile.getAbsolutePath());
+            
+            // Configurar proveedor NSS
+            try {
+                nssProvider = basePKCS11.configure(configFile.getAbsolutePath());
+                Security.addProvider(nssProvider);
+            } catch (Exception e) {
+                Log.info("No se pudo configurar el proveedor NSS: " + e.getMessage());
+                return new ArrayList<>();
+            }
+            
+            // Cargar keystore
+            KeyStore keyStore = KeyStore.getInstance("PKCS11", nssProvider);
+            
+            char[] password = null;
+            if (pin != null && !pin.isEmpty()) {
+                password = pin.toCharArray();
+            } else {
+                password = solicitarPIN("Ingrese el PIN del almacén NSS (Firefox):");
+                if (password == null) {
+                    Log.info("No se proporcionó PIN para NSS");
+                    return new ArrayList<>();
+                }
+            }
+            
+            keyStore.load(null, password);
+            
+            // Buscar certificados
+            java.util.Enumeration<String> aliases = keyStore.aliases();
+            List<String> aliasList = new ArrayList<>();
+            Map<String, Certificate> certMap = new HashMap<>();
+            
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                Certificate cert = keyStore.getCertificate(alias);
+                if (cert instanceof X509Certificate) {
+                    X509Certificate x509 = (X509Certificate) cert;
+                    boolean[] keyUsage = x509.getKeyUsage();
+                    if (keyUsage != null && keyUsage[0]) {
+                        aliasList.add(alias);
+                        certMap.put(alias, cert);
+                    }
+                }
+            }
+            
+            if (aliasList.isEmpty()) {
+                Log.info("No se encontraron certificados de firma en NSS");
+                return new ArrayList<>();
+            }
+            
+            Log.info("Se encontraron " + aliasList.size() + " certificado(s) en NSS");
+            
+            // Seleccionar certificado
+            String selectedAlias;
+            if (aliasList.size() == 1) {
+                selectedAlias = aliasList.get(0);
+            } else {
+                selectedAlias = mostrarDialogoSeleccionCertificado(aliasList, certMap);
+                if (selectedAlias == null) {
+                    Log.info("No se seleccionó ningún certificado");
+                    return new ArrayList<>();
+                }
+            }
+            
+            // Obtener certificado y clave privada
+            Certificate cert = keyStore.getCertificate(selectedAlias);
+            Key key = keyStore.getKey(selectedAlias, password);
+            
+            if (!(key instanceof PrivateKey)) {
+                Log.error("No se pudo obtener la clave privada del certificado");
+                return new ArrayList<>();
+            }
+            
+            PrivateKey privateKey = (PrivateKey) key;
+            
+            // Firmar archivos
+            for(File archivo : archivos) {
+                if(archivo.exists() && archivo.isFile()) {
+                    File firmado = this.procesarFirma(archivo, privateKey, nssProvider, cert, parametros);
+                    if(firmado != null && firmado.exists() && firmado.isFile()) {
+                        archivosFirmados.add(firmado);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            // Verificar si es un error de autenticación
+            String error = MensajeUtil.getStackTraceAsString(e);
+            if (error != null && (error.contains("FailedLoginException") || 
+                                  error.contains("CKR_PIN_INCORRECT") ||
+                                  error.contains("password") ||
+                                  error.contains("authentication"))) {
+                Log.error("Error de autenticación en NSS");
+                throw new FailedLoginException("PIN incorrecto para NSS");
+            }
+            
+            Log.info("NSS no disponible: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            return new ArrayList<>();
+        } finally {
+            // Limpiar proveedor
+            if (nssProvider != null) {
+                try {
+                    Security.removeProvider(nssProvider.getName());
+                } catch (Exception e) {
+                    // Ignorar errores al limpiar
+                }
+            }
+            
+            // Limpiar archivo de configuración temporal
+            if (configFile != null && configFile.exists()) {
+                try {
+                    configFile.delete();
+                } catch (Exception e) {
+                    // Ignorar errores al limpiar
+                }
+            }
+        }
+        
+        return archivosFirmados;
+    }
+    
+    /**
+     * Solicita el PIN al usuario mediante un diálogo.
+     * @param mensaje Mensaje a mostrar
+     * @return PIN ingresado o null si se cancela
+     */
+    private char[] solicitarPIN(String mensaje) {
+        JPasswordField passwordField = new JPasswordField(20);
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(new JLabel(mensaje), BorderLayout.NORTH);
+        panel.add(passwordField, BorderLayout.CENTER);
+        
+        int option = JOptionPane.showConfirmDialog(
+            null, 
+            panel, 
+            "Autenticación", 
+            JOptionPane.OK_CANCEL_OPTION, 
+            JOptionPane.PLAIN_MESSAGE
+        );
+        
+        if (option == JOptionPane.OK_OPTION) {
+            return passwordField.getPassword();
+        }
+        
+        return null;
+    }
+
 
 
     /**
@@ -512,7 +1064,25 @@ public class FirmadorImpl implements Firmador{
                         (datos.get("SERIAL").length() > 0 ? "\n" + datos.get("SERIAL").trim() : "") +
                         (datos.get("FECHA").length() > 0 ? "\n" + datos.get("FECHA").trim() : ""));
             }
-            ExternalSignature es = new PrivateKeySignature(key, "SHA-1", provider != null ? provider.getName() : "SunMSCAPI");
+            
+            // Determinar el proveedor a usar
+            String providerName = null;
+            if (provider != null) {
+                providerName = provider.getName();
+            } else {
+                // Si no hay proveedor específico, usar el apropiado según el sistema operativo
+                try {
+                    String os = ConfiguracionUtil.getOS();
+                    if (ConfiguracionUtil.WIN.equals(os)) {
+                        providerName = "SunMSCAPI";
+                    }
+                    // Para Linux y Mac, usar null (proveedor por defecto de Java)
+                } catch (UnsupportedPlatformException e) {
+                    // Usar proveedor por defecto
+                }
+            }
+            
+            ExternalSignature es = new PrivateKeySignature(key, "SHA-256", providerName);
             ExternalDigest digest = new BouncyCastleDigest();
             Certificate[] certs = new Certificate[1];
             certs[0] = cert;

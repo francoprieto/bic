@@ -233,16 +233,28 @@ async function leerArchivoRemotoEnVariable(jsonParams) {
     
     const lista = filesParam.split(",");
     lista.forEach((element) => {
-      const cleanUrl = element.split(/[?#]/)[0];
-      const uid = uuidv4();
-      pdfUrls.push({
-        nombre: path.basename(cleanUrl),
-        url: element,
-        id: uid
-      });
+      try {
+        // Limpiar la URL de parámetros de consulta y fragmentos
+        const cleanUrl = element.split(/[?#]/)[0];
+        const uid = uuidv4();
+        
+        // Validar que sea una URL válida (http, https o file)
+        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('file://')) {
+          pdfUrls.push({
+            nombre: path.basename(cleanUrl),
+            url: element,
+            id: uid
+          });
+          console.log('Archivo agregado:', path.basename(cleanUrl), '- URL:', element);
+        } else {
+          console.warn('URL inválida ignorada:', element);
+        }
+      } catch (error) {
+        console.error('Error procesando URL:', element, error);
+      }
     });
     
-    if (mainWindow) {
+    if (mainWindow && pdfUrls.length > 0) {
       local = true;
       mainWindow.webContents.send("set-pdf-urls", pdfUrls);
     }
@@ -589,16 +601,36 @@ ipcMain.handle("get-signature-image-path", async (event, fileName) => {
 ipcMain.handle("select-files", async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile', 'multiSelections'],
-    filters: ['pdf']
+    filters: [{ name: 'PDF', extensions: ['pdf'] }]
   });
+  
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return;
+  }
+  
   const seleccion = result.filePaths;
   let lista = '';
-  for(let i=0; i<seleccion.length;i++){
+  
+  for(let i = 0; i < seleccion.length; i++){
     if(i > 0) lista += ',';
-    const path = seleccion[i].replace('C:','file://C').replaceAll('\\','/');
-    if(path.toLocaleLowerCase().endsWith('.pdf'))
-      lista += path;
+    
+    let filePath = seleccion[i];
+    
+    // Convertir a URL de archivo según el sistema operativo
+    if (process.platform === 'win32') {
+      // Windows: C:\path\to\file.pdf -> file://C:/path/to/file.pdf
+      filePath = filePath.replace('C:', 'file://C').replaceAll('\\', '/');
+    } else {
+      // Linux/Mac: /path/to/file.pdf -> file:///path/to/file.pdf
+      filePath = 'file://' + filePath;
+    }
+    
+    if(filePath.toLowerCase().endsWith('.pdf')) {
+      lista += filePath;
+    }
   }
+  
+  console.log('Archivos seleccionados (URLs):', lista);
   leerArchivoSimple(lista);
 });
 
@@ -944,12 +976,35 @@ ipcMain.on("firmar-pdfs", async (event, { pdfs, password, useWindowsStore, confi
       console.log('Procesando archivo:', pdf.nombre, 'URL:', pdf.url);
       
       if(!pdf.url?.startsWith('http')){ // Cuando los archivos a firmar son locales
-        const localFile = url.fileURLToPath(pdf.url);
-        if(localFile.startsWith('\\\\c\\'))
-          rutasLocales.push(localFile.replace('\\\\c\\','C:\\'));  
-        else 
+        try {
+          // Convertir URL de archivo a ruta del sistema
+          let localFile = url.fileURLToPath(pdf.url);
+          
+          // Normalizar la ruta según el sistema operativo
+          if (process.platform === 'win32') {
+            // En Windows, manejar casos especiales
+            if(localFile.startsWith('\\\\c\\')) {
+              localFile = localFile.replace('\\\\c\\','C:\\');
+            }
+          }
+          // En Linux/Mac, fileURLToPath ya devuelve la ruta correcta
+          
           rutasLocales.push(localFile);
-        console.log('Archivo local:', rutasLocales[rutasLocales.length - 1]);
+          console.log('Archivo local:', localFile);
+        } catch (error) {
+          console.error('Error al convertir URL a ruta:', pdf.url, error);
+          event.sender.send("firma-resultado", {
+            success: false,
+            output: JSON.stringify({
+              tipo: "ERROR",
+              mensaje: `URL inválida para archivo local: ${pdf.url}`
+            }),
+            exitCode: 1,
+            firmados: [],
+            subidos: [],
+          });
+          return;
+        }
       }else{ // Cuando hay que descargar los archivos a firmar
         const destino = path.join(cacheDir, pdf.nombre);
         pdf.local = path.join(dir, pdf.nombre);

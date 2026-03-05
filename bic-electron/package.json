@@ -6,12 +6,18 @@
     "build-fat-win64": "node ./tooling.js fat win64 && electron-builder --win --x64",
     "build-slim-win64": "node ./tooling.js slim win64 && electron-builder --win --x64",
     "build-fat-mac-arm64": "node ./tooling.js fat mac-arm64 && electron-builder --mac --arm64",
-    "build-slim-mac-arm64": "node ./tooling.js slim mac-arm64 && electron-builder --mac --arm64"
+    "build-slim-mac-arm64": "node ./tooling.js slim mac-arm64 && electron-builder --mac --arm64",
+    "build-fat-linux-x64": "node ./tooling.js fat linux-x64 && electron-builder --linux --x64",
+    "build-slim-linux-x64": "node ./tooling.js slim linux-x64 && electron-builder --linux --x64"
   },
   "keywords": [],
-  "author": "",
+  "author": {
+    "name": "Firmador BIC",
+    "email": "info@francoprieto.com"
+  },
   "license": "ISC",
-  "description": "",
+  "description": "Aplicación de firma digital BIC",
+  "homepage": "https://francoprieto.com",
   "dependencies": {
     "form-data": "^4.0.4",
     "npx": "^10.2.2",
@@ -61,6 +67,14 @@
           "arm64"
         ]
       }
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "maintainer": "Firmador BIC <info@firmador.org>"
     }
   }
 }

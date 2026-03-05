@@ -16,6 +16,7 @@ const source = path.join('..','target', bicFile);
 
 const jdkVrs = '11.0.2';
 const jdkWin64 = new URL('https://download.java.net/java/GA/jdk11/9/GPL/openjdk-' + jdkVrs + '_windows-x64_bin.zip');
+const jdkLinuxX64 = new URL('https://download.java.net/java/GA/jdk11/9/GPL/openjdk-' + jdkVrs + '_linux-x64_bin.tar.gz');
 
 console.log('Procesando', args[2], args[3]);
 
@@ -44,7 +45,7 @@ buildMavenJar().then(() => {
         if (tipo === 'fat'){
             console.log('Inicio de descarga de JDK')
             if(!fs.existsSync(path.join(extraResources,'jdk')))
-                descargarJDK(jdkWin64, extraResources);
+                descargarJDK(jdkWin64, extraResources, 'zip');
         }  
     } else if(plataforma === 'mac-arm64') {
         
@@ -67,6 +68,27 @@ buildMavenJar().then(() => {
         if (tipo === 'fat'){
             console.log('macOS fat build - JRE bundling not implemented yet');
             console.log('The app will require Java to be installed on the system');
+        }
+    } else if(plataforma === 'linux-x64') {
+        
+        fs.mkdir(path.join(extraResources,'target'), { recursive: true }, (err)=> {
+            if(err) {
+                console.error('Error creating directory:', err);
+                return;
+            }   
+            fs.copyFile(source, path.join(extraResources,'target',bicFile), (err) => {   
+                if(err) {
+                    console.error('Error copying file:', err);
+                } else {
+                    console.log('JAR copied successfully for Linux x64');
+                }           
+            });
+        });
+
+        if (tipo === 'fat'){
+            console.log('Inicio de descarga de JDK para Linux')
+            if(!fs.existsSync(path.join(extraResources,'jdk')))
+                descargarJDK(jdkLinuxX64, extraResources, 'tar.gz');
         }
     }
 }).catch((err) => {
@@ -113,7 +135,7 @@ function buildMavenJar() {
     });
 }
 
-function descargarJDK(url, resources){
+function descargarJDK(url, resources, format){
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 
     https.get(url, (response) => {
@@ -122,7 +144,8 @@ function descargarJDK(url, resources){
             return;
         }
         
-        const filePath = path.join(resources, 'jdk.zip');
+        const extension = format === 'tar.gz' ? 'tar.gz' : 'zip';
+        const filePath = path.join(resources, `jdk.${extension}`);
         const fileStream = fs.createWriteStream(filePath);
         
         response.pipe(fileStream);
@@ -131,11 +154,20 @@ function descargarJDK(url, resources){
         fileStream.on('finish', () => {
             fileStream.close();
             console.log('JDK downloaded successfully:', filePath);
-            unzip(filePath, resources).finally(()=>{
-                fs.unlinkSync(filePath);
-                fs.renameSync(path.join(resources,'jdk-' + jdkVrs), path.join(resources,'jdk'));
-                console.log("JDK descomprimido en ");                
-            });
+            
+            if (format === 'tar.gz') {
+                untar(filePath, resources).finally(()=>{
+                    fs.unlinkSync(filePath);
+                    fs.renameSync(path.join(resources,'jdk-' + jdkVrs), path.join(resources,'jdk'));
+                    console.log("JDK descomprimido en ", path.join(resources,'jdk'));                
+                });
+            } else {
+                unzip(filePath, resources).finally(()=>{
+                    fs.unlinkSync(filePath);
+                    fs.renameSync(path.join(resources,'jdk-' + jdkVrs), path.join(resources,'jdk'));
+                    console.log("JDK descomprimido en ", path.join(resources,'jdk'));                
+                });
+            }
         });
 
     }).on('error', (err) => {
@@ -160,6 +192,27 @@ function unzip(zipPath, outputDir) {
 
         exec(cmd, (err, _stdout, stderr) => {
             if (err) return reject(stderr || err.message);
+            resolve();
+        });
+    });
+}
+
+function untar(tarPath, outputDir) {
+    return new Promise((resolve, reject) => {
+        tarPath = path.resolve(tarPath);
+        outputDir = path.resolve(outputDir);
+
+        // Comando para descomprimir tar.gz
+        const cmd = `tar -xzf "${tarPath}" -C "${outputDir}"`;
+
+        console.log(`Extracting: ${cmd}`);
+        
+        exec(cmd, (err, _stdout, stderr) => {
+            if (err) {
+                console.error('Error extracting tar.gz:', stderr || err.message);
+                return reject(stderr || err.message);
+            }
+            console.log('Extraction completed successfully');
             resolve();
         });
     });

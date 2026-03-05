@@ -188,19 +188,24 @@ public class ConfiguracionUtil {
             
             String jsonConf = getJsonConf(drivers, params);
             if (jsonConf == null) {
-                Log.error("La configuración no es válida, debe inicializar la aplicación");
+                Log.error("Error al generar la configuración JSON");
                 return null;
             }
 
             // Escribir configuración a archivo
             Files.write(BIC_CONFIG_PATH, jsonConf.getBytes(StandardCharsets.UTF_8));
             
-            Log.info("conf en json: " + jsonConf);
+            Log.info("Configuración inicializada: " + jsonConf);
+            
+            if (drivers == null || drivers.isEmpty()) {
+                Log.warn("No se encontraron librerías PKCS11 en las rutas estándar del sistema");
+                Log.warn("Puede instalar las librerías de su token o usar certificados del sistema");
+            }
             
             // Leer y retornar configuración
             return leerPropiedades(BIC_CONFIG_PATH.toString());
         } catch (IOException e) {
-            Log.error("No se pudo detectar librerías o escribir configuración", e);
+            Log.error("No se pudo escribir configuración", e);
             return null;
         }
     }
@@ -319,18 +324,23 @@ public class ConfiguracionUtil {
      * @throws JsonProcessingException Si ocurre un error al serializar
      */
     public static String getJsonConf(Map<String,List<String>> confMap, Map<String, Object> params) throws JsonProcessingException {
-        if(confMap == null || confMap.isEmpty()) return null;
+        // Permitir configuración vacía si no se encuentran librerías
+        // El usuario puede tener las librerías en otras ubicaciones o usar otros métodos de firma
         Conf conf = new Conf();
         conf.setDownloadTimeout((Long)params.get("download.timeout"));
         conf.setReadTimeout((Long)params.get("read.timeout"));
+        
         List<Libs> libs = new ArrayList<>();
-        for(Map.Entry<String,List<String>> entrada : confMap.entrySet()){
-            Libs lib = new Libs();
-            lib.setName(entrada.getKey());
-            lib.setFiles(entrada.getValue());
-            libs.add(lib);
+        if(confMap != null && !confMap.isEmpty()) {
+            for(Map.Entry<String,List<String>> entrada : confMap.entrySet()){
+                Libs lib = new Libs();
+                lib.setName(entrada.getKey());
+                lib.setFiles(entrada.getValue());
+                libs.add(lib);
+            }
         }
         conf.setLibs(libs);
+        
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(conf);
     }
