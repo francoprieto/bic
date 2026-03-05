@@ -46,6 +46,28 @@ buildMavenJar().then(() => {
             if(!fs.existsSync(path.join(extraResources,'jdk')))
                 descargarJDK(jdkWin64, extraResources);
         }  
+    } else if(plataforma === 'mac-arm64') {
+        
+        fs.mkdir(path.join(extraResources,'target'), { recursive: true }, (err)=> {
+            if(err) {
+                console.error('Error creating directory:', err);
+                return;
+            }   
+            fs.copyFile(source, path.join(extraResources,'target',bicFile), (err) => {   
+                if(err) {
+                    console.error('Error copying file:', err);
+                } else {
+                    console.log('JAR copied successfully for macOS ARM64');
+                }           
+            });
+        });
+
+        // Para macOS, el JRE se puede empaquetar si es necesario (tipo 'fat')
+        // Por ahora, solo copiamos el JAR
+        if (tipo === 'fat'){
+            console.log('macOS fat build - JRE bundling not implemented yet');
+            console.log('The app will require Java to be installed on the system');
+        }
     }
 }).catch((err) => {
     console.error('Maven build failed:', err);
@@ -62,11 +84,18 @@ function buildMavenJar() {
         
         // Detectar comando Maven según la plataforma
         const mvnCmd = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
+        
+        // Configurar JAVA_HOME para usar Java 17 en macOS
+        const env = { ...process.env };
+        if (process.platform === 'darwin') {
+            env.JAVA_HOME = '/opt/homebrew/Cellar/openjdk@17/17.0.18/libexec/openjdk.jdk/Contents/Home';
+        }
+        
         const cmd = `${mvnCmd} clean package -DskipTests`;
         
         console.log(`Running: ${cmd} in ${projectRoot}`);
         
-        exec(cmd, { cwd: projectRoot }, (err, stdout, stderr) => {
+        exec(cmd, { cwd: projectRoot, env }, (err, stdout, stderr) => {
             if (err) {
                 console.error('Maven build error:', stderr || err.message);
                 return reject(err);

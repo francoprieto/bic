@@ -4,7 +4,9 @@
   "main": "main.js",
   "scripts": {
     "build-fat-win64": "node ./tooling.js fat win64 && electron-builder --win --x64",
-    "build-slim-win64": "node ./tooling.js slim win64 && electron-builder --win --x64"
+    "build-slim-win64": "node ./tooling.js slim win64 && electron-builder --win --x64",
+    "build-fat-mac-arm64": "node ./tooling.js fat mac-arm64 && electron-builder --mac --arm64",
+    "build-slim-mac-arm64": "node ./tooling.js slim mac-arm64 && electron-builder --mac --arm64"
   },
   "keywords": [],
   "author": "",
@@ -51,6 +53,14 @@
     },
     "win": {
       "target": "nsis"
+    },
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "arm64"
+        ]
+      }
     }
   }
 }
