@@ -74,7 +74,14 @@
         "deb"
       ],
       "category": "Office",
-      "maintainer": "Firmador BIC <info@firmador.org>"
+      "maintainer": "Firmador BIC <info@firmador.org>",
+      "mimeTypes": [
+        "x-scheme-handler/bic"
+      ],
+      "desktop": {
+        "MimeType": "x-scheme-handler/bic"
+      },
+      "afterInstall": "build/postinst"
     }
   }
 }
