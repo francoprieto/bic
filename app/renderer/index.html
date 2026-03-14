@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>BiC - Firmador Digital</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-gray-200 dark:bg-gray-800 min-h-screen flex flex-col items-center pt-4 transition-colors">
+
+  <!-- Header -->
+  <div class="w-full max-w-2xl flex justify-between items-center px-2 mb-3">
+    <select id="profileSelect"
+      class="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </select>
+
+    <h1 class="text-2xl font-serif italic font-semibold text-blue-700 dark:text-blue-400
+               bg-white dark:bg-gray-900 border border-blue-700 dark:border-blue-400
+               px-3 py-0.5 rounded-lg shadow">BiC</h1>
+
+    <button id="toggleDark" title="Modo oscuro"
+      class="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600
+             flex items-center justify-center text-lg shadow transition-colors">
+      <span id="darkIcon">🌙</span>
+    </button>
+  </div>
+
+  <!-- Card principal -->
+  <div class="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden">
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 dark:border-gray-700" role="tablist">
+      <button data-tab="sign"   class="tab-btn active flex-1 py-2 text-sm font-medium" role="tab">Firma</button>
+      <button data-tab="log"    class="tab-btn flex-1 py-2 text-sm font-medium" role="tab">Log</button>
+      <button data-tab="config" class="tab-btn flex-1 py-2 text-sm font-medium" role="tab">Configuración</button>
+    </div>
+
+    <!-- Panel: Firma -->
+    <div id="panel-sign" class="tab-panel p-4">
+
+      <!-- Controles de firma -->
+      <div class="flex flex-wrap items-center gap-2 p-3 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <label class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">Password:</label>
+        <input id="password" type="password"
+          class="w-36 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
+                 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+
+        <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input id="useCert" type="checkbox" class="rounded">
+          Usar certificado
+        </label>
+
+        <button id="signBtn" disabled
+          class="ml-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
+                 text-white text-sm font-semibold px-4 py-1 rounded transition-colors">
+          Firmar
+        </button>
+
+        <div id="spinner" class="hidden items-center gap-2 text-blue-600 text-sm">
+          <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <span id="progressText"></span>
+        </div>
+      </div>
+
+      <!-- Mensaje de resultado -->
+      <div id="signMsg" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
+
+      <!-- Barra de archivos -->
+      <div class="flex items-center justify-between bg-gray-400 dark:bg-blue-800 rounded-lg px-3 py-2 mb-2">
+        <label class="flex items-center gap-2 text-gray-900 dark:text-gray-100 text-sm cursor-pointer">
+          <input id="selectAll" type="checkbox" class="rounded">
+          Archivos
+        </label>
+        <div class="flex gap-3">
+          <button id="openFilesBtn" title="Abrir archivos locales">
+            <svg class="w-5 h-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 19V6a1 1 0 011-1h4.032a1 1 0 01.768.36l1.9 2.28a1 1 0 00.768.36H16a1 1 0 011 1v1M3 19l3-8h15l-3 8H3Z"/>
+            </svg>
+          </button>
+          <button id="resetBtn" title="Reiniciar">
+            <svg class="w-5 h-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.651 7.65a7.131 7.131 0 00-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0012.68-3.15M6 20v-4h4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de PDFs -->
+      <div id="fileList" class="space-y-1 max-h-72 overflow-y-auto"></div>
+
+    </div>
+
+    <!-- Panel: Log -->
+    <div id="panel-log" class="tab-panel hidden p-4">
+      <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Log de operaciones</p>
+      <div id="logContent" class="text-xs font-mono space-y-1 max-h-96 overflow-y-auto"></div>
+    </div>
+
+    <!-- Panel: Configuración -->
+    <div id="panel-config" class="tab-panel hidden p-4 max-h-[480px] overflow-y-auto">
+
+      <!-- Perfiles -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold text-blue-700 dark:text-blue-400">Perfiles</span>
+          <div class="flex gap-2">
+            <button id="newProfileBtn"
+              class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded">+ Nuevo</button>
+            <button id="delProfileBtn"
+              class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded disabled:opacity-40">Eliminar</button>
+          </div>
+        </div>
+        <input id="profileName" type="text" placeholder="Nombre del perfil"
+          class="w-full text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
+                 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+
+      <!-- Posición de firma -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Posición de la firma</p>
+        <div class="grid grid-cols-3 gap-1 mb-3" id="posGrid">
+          <button data-pos="esquina-superior-izquierda" class="pos-btn py-1 text-xs rounded border">↖ Sup. Izq.</button>
+          <button data-pos="centro-superior"            class="pos-btn py-1 text-xs rounded border">↑ Centro Sup.</button>
+          <button data-pos="esquina-superior-derecha"   class="pos-btn py-1 text-xs rounded border">↗ Sup. Der.</button>
+          <button data-pos="esquina-inferior-izquierda" class="pos-btn py-1 text-xs rounded border">↙ Inf. Izq.</button>
+          <button data-pos="centro-inferior"            class="pos-btn py-1 text-xs rounded border active-pos">↓ Centro Inf.</button>
+          <button data-pos="esquina-inferior-derecha"   class="pos-btn py-1 text-xs rounded border">↘ Inf. Der.</button>
+        </div>
+
+        <div class="flex gap-2 mb-2">
+          <label class="text-xs text-gray-600 dark:text-gray-400 w-16">Página:</label>
+          <select id="pagina" class="text-xs flex-1 px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <option value="primera">Primera</option>
+            <option value="up">Última</option>
+            <option value="np">Número específico</option>
+          </select>
+          <input id="numeroPagina" type="number" min="1" placeholder="Nº"
+            class="hidden w-16 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Alto:</label>
+            <input id="alto" type="number" value="40"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Ancho:</label>
+            <input id="ancho" type="number" value="160"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+        </div>
+      </div>
+
+      <!-- Márgenes -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Márgenes (px)</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Superior:</label>
+            <input id="mt" type="number" value="50"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Inferior:</label>
+            <input id="mb" type="number" value="50"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Izquierda:</label>
+            <input id="ml" type="number" value="50"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Derecha:</label>
+            <input id="mr" type="number" value="50"
+              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          </div>
+        </div>
+      </div>
+
+      <!-- Imagen de firma -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Imagen de firma</p>
+        <div class="flex items-center gap-3">
+          <img id="sigPreview" class="h-12 border rounded hidden" alt="Vista previa">
+          <div class="flex gap-2">
+            <button id="uploadSigBtn"
+              class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
+                     text-gray-800 dark:text-gray-100 px-2 py-1 rounded">Subir imagen</button>
+            <button id="clearSigBtn"
+              class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded">Quitar</button>
+          </div>
+        </div>
+        <input id="sigInput" type="file" accept="image/png" class="hidden">
+      </div>
+
+      <!-- Directorio destino -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Directorio de salida</p>
+        <input id="directorio" type="text" placeholder="Por defecto: ~/.bic/firmados"
+          class="w-full text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
+                 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+
+      <button id="saveConfigBtn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded transition-colors">
+        Guardar configuración
+      </button>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

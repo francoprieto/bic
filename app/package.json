@@ -1,0 +1,51 @@
+{
+  "name": "bic-app",
+  "version": "2.0.0",
+  "description": "Firmador digital de PDFs",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win":      "node ./scripts/build.js win64   && electron-builder --win --x64",
+    "build:mac-arm":  "node ./scripts/build.js mac-arm && electron-builder --mac --arm64",
+    "build:mac-x64":  "node ./scripts/build.js mac-x64 && electron-builder --mac --x64",
+    "build:linux":    "node ./scripts/build.js linux   && electron-builder --linux --x64"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "form-data": "^4.0.4",
+    "pako": "^2.1.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "py.org.firmador.bic",
+    "productName": "Bic",
+    "icon": "assets/icon.png",
+    "asar": false,
+    "directories": { "output": "dist" },
+    "files": ["**/*", "!extraResources/**"],
+    "extraResources": [{ "from": "./extraResources", "to": ".", "filter": ["**/*"] }],
+    "win": {
+      "target": { "target": "nsis", "arch": ["x64"] }
+    },
+    "mac": {
+      "target": { "target": "dmg", "arch": ["arm64"] }
+    },
+    "linux": {
+      "target": { "target": "AppImage", "arch": ["x64"] }
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
+    }
+  }
+}
