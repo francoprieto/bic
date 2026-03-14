@@ -366,9 +366,29 @@ function bindBicEvents() {
   window.bic.onModeLocal(() => {
     isLocalMode = true;
     document.getElementById('openFilesBtn').classList.remove('hidden');
+    // Mostrar botón de prueba en modo local (desarrollo)
+    const testBtn = document.getElementById('testBtn');
+    if (testBtn) {
+      testBtn.style.display = 'inline-block';
+      testBtn.addEventListener('click', () => {
+        const testFiles = [
+          { id: 'test-1', nombre: 'A4-test-1.pdf',      url: 'http://127.0.0.1:3100/test/A4-test-1.pdf' },
+          { id: 'test-2', nombre: 'oficio-test-2.pdf',  url: 'http://127.0.0.1:3100/test/oficio-test-2.pdf' },
+          { id: 'test-3', nombre: 'carta-test-3.pdf',   url: 'http://127.0.0.1:3100/test/carta-test-3.pdf' },
+        ];
+        // Simular recibir set-files
+        allFiles = testFiles;
+        selectedIds = new Set(testFiles.map(f => f.id));
+        renderFileList();
+        updateSignBtn();
+        updateSelectAll();
+        addLog('🧪 Archivos de prueba cargados (modo dev)');
+      });
+    }
   });
 
   window.bic.onSetFiles(files => {
+    console.log('[RENDERER] set-files recibido:', files.length, 'archivos');
     allFiles = files;
     selectedIds = new Set(files.map(f => f.id));
     renderFileList();
@@ -377,6 +397,8 @@ function bindBicEvents() {
     document.getElementById('openFilesBtn').classList.add('hidden');
     // Cambiar a tab de firma
     document.querySelector('[data-tab="sign"]').click();
+    // Log visible
+    addLog(`📥 ${files.length} archivo(s) recibidos via protocolo bic://`);
   });
 
   window.bic.onSignProgress(msg => {

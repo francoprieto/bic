@@ -22,9 +22,15 @@ function reset() {
 }
 
 async function handle(rawUrl, mainWindow) {
+  const isDev = !process.resourcesPath || process.resourcesPath.includes('node_modules');
+  if (isDev) process.stderr.write(`[PROTOCOL] handle() llamado con: ${rawUrl}\n`);
   try {
-    const urlObj = new URL(rawUrl);
-    if (urlObj.protocol !== 'bic:') return;
+    if (!rawUrl.startsWith('bic:')) return;
+
+    // new URL() no parsea bien protocolos custom como bic://firmar?files=...
+    // porque trata "firmar" como hostname. Usamos http:// como proxy para parsear.
+    const normalized = rawUrl.replace(/^bic:\/\//, 'http://bic/').replace(/^bic:\?/, 'http://bic/?');
+    const urlObj = new URL(normalized);
 
     const filesParam  = urlObj.searchParams.get('files');
     const paramsParam = urlObj.searchParams.get('paramsurl') || urlObj.searchParams.get('gzipurl');
@@ -39,9 +45,11 @@ async function handle(rawUrl, mainWindow) {
     }
 
     if (pendingFiles.length > 0) {
+      if (isDev) process.stderr.write(`[PROTOCOL] Enviando ${pendingFiles.length} archivos al renderer\n`);
       sendToRenderer(mainWindow, pendingFiles);
     }
   } catch (err) {
+    if (isDev) process.stderr.write(`[PROTOCOL] Error: ${err.message}\n`);
     console.error('Error procesando protocolo bic://', err.message);
   }
 }
@@ -90,17 +98,19 @@ async function fetchFileList({ uri, headers = {} }) {
 }
 
 function decodeParam(param) {
+  // Normalizar Base64: URL-safe (-_) → estándar (+/)
+  let b64 = param.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+
   // Intentar Base64 plano primero
   try {
-    const decoded = Buffer.from(param, 'base64').toString('utf8');
-    JSON.parse(decoded); // validar que sea JSON
+    const decoded = Buffer.from(b64, 'base64').toString('utf8');
+    JSON.parse(decoded); // validar que sea JSON válido
     return decoded;
   } catch (_) {}
 
   // Intentar Base64 + gzip
   try {
-    let b64 = param.replace(/-/g, '+').replace(/_/g, '/');
-    while (b64.length % 4) b64 += '=';
     const bytes = Buffer.from(b64, 'base64');
     return pako.ungzip(bytes, { to: 'string' });
   } catch (e) {

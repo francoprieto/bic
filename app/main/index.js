@@ -12,6 +12,9 @@ const logger   = require('./logger');
 
 let mainWindow = null;
 
+// Log inmediato para confirmar arranque
+process.stderr.write(`[STARTUP] BIC iniciando. argv: ${process.argv.join(' ')}\n`);
+
 // ─── Protocolo personalizado ─────────────────────────────────────────────────
 app.setAsDefaultProtocolClient('bic');
 
@@ -30,15 +33,14 @@ function createWindow() {
 }
 
 // ─── App ready ────────────────────────────────────────────────────────────────
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   logger.init();
   createWindow();
 
   // Argumento bic:// pasado al abrir la app (Windows / Linux)
   const bicArg = process.argv.find(a => a.startsWith('bic://'));
   if (bicArg) {
-    await mainWindow.webContents.once('did-finish-load', () => {});
-    await protocol.handle(bicArg, mainWindow);
+    mainWindow.webContents.once('did-finish-load', () => protocol.handle(bicArg, mainWindow));
   } else {
     mainWindow.webContents.once('did-finish-load', () => {
       mainWindow.webContents.send('mode-local');
