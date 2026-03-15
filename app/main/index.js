@@ -61,10 +61,15 @@ app.whenReady().then(() => {
   logger.init();
   createWindow();
 
-  // Argumento bic:// pasado al abrir la app (Windows / Linux)
   const bicArg = process.argv.find(a => a.startsWith('bic://'));
+  process.stderr.write(`[STARTUP] bicArg=${bicArg || 'ninguno'}\n`);
+
   if (bicArg) {
-    mainWindow.webContents.once('did-finish-load', () => protocol.handle(bicArg, mainWindow));
+    // Esperar que el renderer avise que está listo para recibir archivos
+    ipcMain.once('renderer-ready', () => {
+      process.stderr.write(`[STARTUP] renderer-ready recibido, procesando bic://\n`);
+      protocol.handle(bicArg, mainWindow);
+    });
   } else {
     mainWindow.webContents.once('did-finish-load', () => {
       mainWindow.webContents.send('mode-local');
@@ -72,15 +77,13 @@ app.whenReady().then(() => {
   }
 });
 
-// macOS: bic:// llega por open-url
+// macOS: bic:// llega por open-url (app ya abierta)
 app.on('open-url', async (event, url) => {
   event.preventDefault();
+  process.stderr.write(`[OPEN-URL] recibido: ${url}\n`);
   if (!mainWindow) return;
-  if (mainWindow.webContents.isLoading()) {
-    mainWindow.webContents.once('did-finish-load', () => protocol.handle(url, mainWindow));
-  } else {
-    await protocol.handle(url, mainWindow);
-  }
+  // El renderer ya está cargado cuando llega open-url (app estaba abierta)
+  await protocol.handle(url, mainWindow);
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

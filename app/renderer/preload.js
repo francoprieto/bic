@@ -3,6 +3,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('bic', {
+  // Renderer listo para recibir archivos
+  rendererReady: () => ipcRenderer.send('renderer-ready'),
+
   // Archivos desde protocolo bic://
   onSetFiles:    cb => ipcRenderer.on('set-files',    (_, d) => cb(d)),
   onModeLocal:   cb => ipcRenderer.on('mode-local',   ()     => cb()),

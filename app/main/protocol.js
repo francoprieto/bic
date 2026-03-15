@@ -22,18 +22,18 @@ function reset() {
 }
 
 async function handle(rawUrl, mainWindow) {
-  const isDev = !process.resourcesPath || process.resourcesPath.includes('node_modules');
-  if (isDev) process.stderr.write(`[PROTOCOL] handle() llamado con: ${rawUrl}\n`);
+  // Log siempre para diagnóstico
+  process.stderr.write(`[PROTOCOL] handle() rawUrl: ${rawUrl}\n`);
   try {
     if (!rawUrl.startsWith('bic:')) return;
 
-    // new URL() no parsea bien protocolos custom como bic://firmar?files=...
-    // porque trata "firmar" como hostname. Usamos http:// como proxy para parsear.
     const normalized = rawUrl.replace(/^bic:\/\//, 'http://bic/').replace(/^bic:\?/, 'http://bic/?');
+    process.stderr.write(`[PROTOCOL] normalized: ${normalized}\n`);
     const urlObj = new URL(normalized);
 
     const filesParam  = urlObj.searchParams.get('files');
     const paramsParam = urlObj.searchParams.get('paramsurl') || urlObj.searchParams.get('gzipurl');
+    process.stderr.write(`[PROTOCOL] filesParam=${filesParam} paramsParam=${paramsParam ? paramsParam.substring(0,20)+'...' : null}\n`);
 
     if (filesParam) {
       pendingFiles = parseSimpleFiles(filesParam);
@@ -44,12 +44,12 @@ async function handle(rawUrl, mainWindow) {
       pendingFiles = await fetchFileList(jsonParams);
     }
 
+    process.stderr.write(`[PROTOCOL] pendingFiles.length=${pendingFiles.length}\n`);
     if (pendingFiles.length > 0) {
-      if (isDev) process.stderr.write(`[PROTOCOL] Enviando ${pendingFiles.length} archivos al renderer\n`);
       sendToRenderer(mainWindow, pendingFiles);
     }
   } catch (err) {
-    if (isDev) process.stderr.write(`[PROTOCOL] Error: ${err.message}\n`);
+    process.stderr.write(`[PROTOCOL] Error: ${err.stack || err.message}\n`);
     console.error('Error procesando protocolo bic://', err.message);
   }
 }
@@ -120,12 +120,19 @@ function decodeParam(param) {
 }
 
 function sendToRenderer(mainWindow, files) {
-  if (!mainWindow) return;
-  if (mainWindow.webContents.isLoading()) {
+  if (!mainWindow) {
+    process.stderr.write(`[PROTOCOL] sendToRenderer: mainWindow es null\n`);
+    return;
+  }
+  const isLoading = mainWindow.webContents.isLoading();
+  process.stderr.write(`[PROTOCOL] sendToRenderer: isLoading=${isLoading} files=${files.length}\n`);
+  if (isLoading) {
     mainWindow.webContents.once('did-finish-load', () => {
+      process.stderr.write(`[PROTOCOL] sendToRenderer: enviando set-files tras did-finish-load\n`);
       mainWindow.webContents.send('set-files', files);
     });
   } else {
+    process.stderr.write(`[PROTOCOL] sendToRenderer: enviando set-files directo\n`);
     mainWindow.webContents.send('set-files', files);
   }
 }

@@ -363,6 +363,9 @@ function toggleNumeroPagina(show) {
 
 // ─── Eventos desde main process ───────────────────────────────────────────────
 function bindBicEvents() {
+  // Avisar al main que el renderer está listo para recibir archivos
+  window.bic.rendererReady();
+
   window.bic.onModeLocal(() => {
     isLocalMode = true;
     document.getElementById('openFilesBtn').classList.remove('hidden');
