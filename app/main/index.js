@@ -47,6 +47,7 @@ function createWindow() {
     const htmlPath = path.join(__dirname, '..', 'renderer', 'index.html');
     process.stderr.write(`[STARTUP] Cargando: ${htmlPath} (existe: ${fs.existsSync(htmlPath)})\n`);
     mainWindow.loadFile(htmlPath);
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
     mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
       process.stderr.write(`[ERROR] did-fail-load: ${code} ${desc}\n`);
     });
@@ -54,6 +55,8 @@ function createWindow() {
     process.stderr.write(`[FATAL] createWindow: ${err.stack || err.message}\n`);
   }
 }
+
+let pendingBicUrl = null; // URL bic:// pendiente de procesar
 
 // ─── App ready ────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
@@ -63,33 +66,39 @@ app.whenReady().then(() => {
 
   const bicArg = process.argv.find(a => a.startsWith('bic://'));
   process.stderr.write(`[STARTUP] bicArg=${bicArg || 'ninguno'}\n`);
-
-  if (bicArg) {
-    // Esperar que el renderer avise que está listo para recibir archivos
-    ipcMain.once('renderer-ready', () => {
-      process.stderr.write(`[STARTUP] renderer-ready recibido, procesando bic://\n`);
-      protocol.handle(bicArg, mainWindow);
-    });
-  } else {
-    mainWindow.webContents.once('did-finish-load', () => {
-      mainWindow.webContents.send('mode-local');
-    });
-  }
+  if (bicArg) pendingBicUrl = bicArg;
 });
 
-// macOS: bic:// llega por open-url (app ya abierta)
-app.on('open-url', async (event, url) => {
+// macOS: bic:// llega por open-url (app ya abierta o lanzada desde browser)
+app.on('open-url', (event, url) => {
   event.preventDefault();
   process.stderr.write(`[OPEN-URL] recibido: ${url}\n`);
-  if (!mainWindow) return;
-  // El renderer ya está cargado cuando llega open-url (app estaba abierta)
-  await protocol.handle(url, mainWindow);
+  pendingBicUrl = url;
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+    process.stderr.write(`[OPEN-URL] renderer ya listo, procesando\n`);
+    const url2 = pendingBicUrl;
+    pendingBicUrl = null;
+    protocol.handle(url2, () => mainWindow);
+  }
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
 // ─── IPC handlers ─────────────────────────────────────────────────────────────
+
+// Renderer listo: procesar URL pendiente o enviar mode-local
+ipcMain.on('renderer-ready', () => {
+  process.stderr.write(`[IPC] renderer-ready. pendingBicUrl=${pendingBicUrl || 'ninguno'}\n`);
+  if (pendingBicUrl) {
+    const url = pendingBicUrl;
+    pendingBicUrl = null;
+    // Pasar función que resuelve mainWindow en el momento de enviar
+    protocol.handle(url, () => mainWindow);
+  } else {
+    mainWindow.webContents.send('mode-local');
+  }
+});
 
 // Configuración
 ipcMain.handle('get-config',  () => store.getConfig());

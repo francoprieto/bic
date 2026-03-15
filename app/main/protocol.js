@@ -21,8 +21,9 @@ function reset() {
   pendingFiles = [];
 }
 
-async function handle(rawUrl, mainWindow) {
-  // Log siempre para diagnóstico
+async function handle(rawUrl, getWindow) {
+  // Aceptar tanto una ventana directa como una función que la resuelve
+  const resolveWindow = typeof getWindow === 'function' ? getWindow : () => getWindow;
   process.stderr.write(`[PROTOCOL] handle() rawUrl: ${rawUrl}\n`);
   try {
     if (!rawUrl.startsWith('bic:')) return;
@@ -46,7 +47,7 @@ async function handle(rawUrl, mainWindow) {
 
     process.stderr.write(`[PROTOCOL] pendingFiles.length=${pendingFiles.length}\n`);
     if (pendingFiles.length > 0) {
-      sendToRenderer(mainWindow, pendingFiles);
+      sendToRenderer(resolveWindow(), pendingFiles);
     }
   } catch (err) {
     process.stderr.write(`[PROTOCOL] Error: ${err.stack || err.message}\n`);
@@ -120,20 +121,27 @@ function decodeParam(param) {
 }
 
 function sendToRenderer(mainWindow, files) {
-  if (!mainWindow) {
-    process.stderr.write(`[PROTOCOL] sendToRenderer: mainWindow es null\n`);
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    process.stderr.write(`[PROTOCOL] sendToRenderer: mainWindow destruida o null\n`);
     return;
   }
-  const isLoading = mainWindow.webContents.isLoading();
+  const wc = mainWindow.webContents;
+  if (!wc || wc.isDestroyed()) {
+    process.stderr.write(`[PROTOCOL] sendToRenderer: webContents destruido\n`);
+    return;
+  }
+  const isLoading = wc.isLoading();
   process.stderr.write(`[PROTOCOL] sendToRenderer: isLoading=${isLoading} files=${files.length}\n`);
   if (isLoading) {
-    mainWindow.webContents.once('did-finish-load', () => {
-      process.stderr.write(`[PROTOCOL] sendToRenderer: enviando set-files tras did-finish-load\n`);
-      mainWindow.webContents.send('set-files', files);
+    wc.once('did-finish-load', () => {
+      if (!wc.isDestroyed()) {
+        process.stderr.write(`[PROTOCOL] sendToRenderer: enviando set-files tras did-finish-load\n`);
+        wc.send('set-files', files);
+      }
     });
   } else {
     process.stderr.write(`[PROTOCOL] sendToRenderer: enviando set-files directo\n`);
-    mainWindow.webContents.send('set-files', files);
+    wc.send('set-files', files);
   }
 }
 
