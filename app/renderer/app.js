@@ -1,24 +1,50 @@
 'use strict';
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
-let allFiles     = [];
-let selectedIds  = new Set();
-let profiles     = {};
+// ─── Estado global ────────────────────────────────────────────────────────────
+let allFiles       = [];
+let selectedIds    = new Set();
+let profiles       = {};          // { [id]: { name, isDefault, config } }
 let currentProfile = 'default';
-let appConfig    = {};
-let isLocalMode  = false;
+let isLocalMode    = false;
+
+const DEFAULT_CONFIG = {
+  posicion: 'centro-inferior', pagina: 'primera', numeroPagina: '',
+  alto: '40', ancho: '160', mt: '50', mb: '50', ml: '50', mr: '50',
+  directorio: '',
+};
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initDarkMode();
   initPosButtons();
-  await loadConfig();
+  await loadState();
   initProfileUI();
-  initSignPanel();
   initConfigPanel();
+  initSignPanel();
   bindBicEvents();
 });
+
+// ─── Cargar estado desde disco ────────────────────────────────────────────────
+async function loadState() {
+  const state    = await window.bic.getState();
+  profiles       = state.profiles || {};
+  currentProfile = state.currentProfile || 'default';
+
+  // Garantía: siempre debe existir el perfil default
+  if (!profiles.default) {
+    profiles.default = { name: 'Por defecto', isDefault: true, config: { ...DEFAULT_CONFIG } };
+  }
+  if (!profiles[currentProfile]) currentProfile = 'default';
+
+  applyConfigToUI(getEffectiveConfig());
+}
+
+// Devuelve la config del perfil activo (nunca null)
+function getEffectiveConfig() {
+  const p = profiles[currentProfile];
+  return (p && p.config) ? p.config : { ...DEFAULT_CONFIG };
+}
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 function initTabs() {
@@ -32,7 +58,6 @@ function initTabs() {
     });
   });
 
-  // Estilos de tabs
   const style = document.createElement('style');
   style.textContent = `
     .tab-btn { color: #6b7280; background: #f3f4f6; }
@@ -52,9 +77,10 @@ function initTabs() {
 function initDarkMode() {
   const btn  = document.getElementById('toggleDark');
   const icon = document.getElementById('darkIcon');
-  const dark = localStorage.getItem('darkMode') === 'true';
-  if (dark) { document.documentElement.classList.add('dark'); icon.textContent = '☀️'; }
-
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark');
+    icon.textContent = '☀️';
+  }
   btn.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
     icon.textContent = isDark ? '☀️' : '🌙';
@@ -62,7 +88,7 @@ function initDarkMode() {
   });
 }
 
-// ─── Posición de firma ────────────────────────────────────────────────────────
+// ─── Botones de posición ──────────────────────────────────────────────────────
 function initPosButtons() {
   document.querySelectorAll('.pos-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -72,38 +98,22 @@ function initPosButtons() {
   });
 }
 
-// ─── Cargar configuración ─────────────────────────────────────────────────────
-async function loadConfig() {
-  const data = await window.bic.getConfig();
-  appConfig  = data.config  || {};
-  profiles   = data.profiles || { default: { name: 'Por defecto', isDefault: true, config: null } };
-  currentProfile = data.currentProfile || 'default';
-  applyConfigToUI(getEffectiveConfig());
-}
-
-function getEffectiveConfig() {
-  const profile = profiles[currentProfile];
-  return (profile && profile.config) ? profile.config : appConfig;
-}
-
+// ─── Aplicar / leer config de la UI ──────────────────────────────────────────
 function applyConfigToUI(cfg) {
-  if (!cfg) return;
-  setVal('alto',  cfg.alto  || '40');
-  setVal('ancho', cfg.ancho || '160');
-  setVal('mt',    cfg.mt    || '50');
-  setVal('mb',    cfg.mb    || '50');
-  setVal('ml',    cfg.ml    || '50');
-  setVal('mr',    cfg.mr    || '50');
-  setVal('directorio', cfg.directorio || '');
-  setVal('pagina', cfg.pagina || 'primera');
+  if (!cfg) cfg = { ...DEFAULT_CONFIG };
+  setVal('alto',        cfg.alto        || '40');
+  setVal('ancho',       cfg.ancho       || '160');
+  setVal('mt',          cfg.mt          || '50');
+  setVal('mb',          cfg.mb          || '50');
+  setVal('ml',          cfg.ml          || '50');
+  setVal('mr',          cfg.mr          || '50');
+  setVal('directorio',  cfg.directorio  || '');
+  setVal('pagina',      cfg.pagina      || 'primera');
+  toggleNumeroPagina(cfg.pagina === 'np');
 
-  // Posición activa
   document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active-pos'));
   const posBtn = document.querySelector(`.pos-btn[data-pos="${cfg.posicion || 'centro-inferior'}"]`);
   if (posBtn) posBtn.classList.add('active-pos');
-
-  // Página específica
-  toggleNumeroPagina(cfg.pagina === 'np');
 }
 
 function readConfigFromUI() {
@@ -124,202 +134,144 @@ function readConfigFromUI() {
 
 // ─── Perfiles ─────────────────────────────────────────────────────────────────
 function initProfileUI() {
-  const select = document.getElementById('profileSelect');
-  renderProfileSelect(select);
+  const headerSelect = document.getElementById('profileSelect');
+  const cfgSelect    = document.getElementById('cfgProfileSelect');
+  const nameInput    = document.getElementById('profileName');
+  const delBtn       = document.getElementById('delProfileBtn');
 
-  select.addEventListener('change', () => {
-    currentProfile = select.value;
-    applyConfigToUI(getEffectiveConfig());
-    const profile = profiles[currentProfile];
-    setVal('profileName', profile ? profile.name : '');
-  });
+  renderProfileSelects();
+  syncProfileUI();
+
+  // Cambiar perfil desde el header o desde el panel config
+  headerSelect.addEventListener('change', () => switchProfile(headerSelect.value));
+  cfgSelect.addEventListener('change',    () => switchProfile(cfgSelect.value));
+
+  // Renombrar al salir del input o presionar Enter
+  nameInput.addEventListener('blur',    () => doRenameProfile(nameInput.value));
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameInput.blur(); });
+
+  // ── Nuevo perfil: mostrar formulario inline ──
+  const newForm    = document.getElementById('newProfileForm');
+  const newInput   = document.getElementById('newProfileName');
+  const newConfirm = document.getElementById('newProfileConfirm');
+  const newCancel  = document.getElementById('newProfileCancel');
 
   document.getElementById('newProfileBtn').addEventListener('click', () => {
-    const name = prompt('Nombre del nuevo perfil:');
-    if (!name) return;
-    const id = 'profile-' + Date.now();
-    profiles[id] = { name, isDefault: false, config: readConfigFromUI() };
-    currentProfile = id;
-    saveProfiles();
-    renderProfileSelect(select);
-    select.value = id;
+    newInput.value = '';
+    newForm.classList.remove('hidden');
+    newInput.focus();
   });
 
-  document.getElementById('delProfileBtn').addEventListener('click', () => {
-    if (profiles[currentProfile]?.isDefault) return alert('No se puede eliminar el perfil por defecto');
-    if (!confirm('¿Eliminar este perfil?')) return;
+  newCancel.addEventListener('click', () => {
+    newForm.classList.add('hidden');
+  });
+
+  const doCreateProfile = async () => {
+    const name = newInput.value.trim();
+    if (!name) { newInput.focus(); return; }
+    newForm.classList.add('hidden');
+    const id = await window.bic.createProfile(name);
+    profiles[id] = { name, isDefault: false, config: { ...DEFAULT_CONFIG } };
+    currentProfile = id;
+    renderProfileSelects();
+    syncProfileUI();
+    applyConfigToUI(getEffectiveConfig());
+    loadSigPreview(id);
+  };
+
+  newConfirm.addEventListener('click', doCreateProfile);
+  newInput.addEventListener('keydown', e => { if (e.key === 'Enter') doCreateProfile(); });
+
+  // ── Eliminar perfil: mostrar confirmación inline ──
+  const delConfirmPanel = document.getElementById('delProfileConfirm');
+  const delMsg          = document.getElementById('delProfileMsg');
+  const delOk           = document.getElementById('delProfileOk');
+  const delCancel       = document.getElementById('delProfileCancelBtn');
+
+  delBtn.addEventListener('click', () => {
+    if (profiles[currentProfile]?.isDefault) return; // botón deshabilitado, pero por si acaso
+    delMsg.textContent = `¿Eliminar el perfil "${profiles[currentProfile]?.name}"?`;
+    delConfirmPanel.classList.remove('hidden');
+  });
+
+  delCancel.addEventListener('click', () => {
+    delConfirmPanel.classList.add('hidden');
+  });
+
+  delOk.addEventListener('click', async () => {
+    delConfirmPanel.classList.add('hidden');
+    await window.bic.deleteProfile(currentProfile);
     delete profiles[currentProfile];
     currentProfile = 'default';
-    saveProfiles();
-    renderProfileSelect(select);
+    renderProfileSelects();
+    syncProfileUI();
+    applyConfigToUI(getEffectiveConfig());
+    loadSigPreview('default');
   });
 }
 
-function renderProfileSelect(select) {
-  select.innerHTML = '';
-  for (const [id, p] of Object.entries(profiles)) {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = p.name;
-    if (id === currentProfile) opt.selected = true;
-    select.appendChild(opt);
-  }
+// Cambia el perfil activo (persiste en disco)
+async function switchProfile(id) {
+  if (!profiles[id]) return;
+  currentProfile = id;
+  await window.bic.setCurrentProfile(id);
+  syncProfileUI();
+  applyConfigToUI(getEffectiveConfig());
+  loadSigPreview(id);
 }
 
-async function saveProfiles() {
-  await window.bic.saveProfiles(profiles);
+// Sincroniza los selectores y el input de nombre con currentProfile
+function syncProfileUI() {
+  const headerSelect = document.getElementById('profileSelect');
+  const cfgSelect    = document.getElementById('cfgProfileSelect');
+  const nameInput    = document.getElementById('profileName');
+  const delBtn       = document.getElementById('delProfileBtn');
+
+  headerSelect.value = currentProfile;
+  cfgSelect.value    = currentProfile;
+  nameInput.value    = profiles[currentProfile]?.name || '';
+
+  // Deshabilitar renombrar y eliminar en el perfil default
+  const isDefault = profiles[currentProfile]?.isDefault === true;
+  nameInput.disabled = isDefault;
+  delBtn.disabled    = isDefault;
+  delBtn.classList.toggle('opacity-40', isDefault);
+  delBtn.classList.toggle('cursor-not-allowed', isDefault);
 }
 
-// ─── Panel de firma ───────────────────────────────────────────────────────────
-function initSignPanel() {
-  const signBtn    = document.getElementById('signBtn');
-  const selectAll  = document.getElementById('selectAll');
-  const openBtn    = document.getElementById('openFilesBtn');
-  const resetBtn   = document.getElementById('resetBtn');
-  const useCert    = document.getElementById('useCert');
-  const passwordEl = document.getElementById('password');
-  const certPanel  = document.getElementById('certPanel');
-  const selectCertBtn = document.getElementById('selectCertBtn');
-  const certFileName  = document.getElementById('certFileName');
-  const certPassword  = document.getElementById('certPassword');
+// Puebla ambos <select> con la lista de perfiles
+function renderProfileSelects() {
+  const headerSelect = document.getElementById('profileSelect');
+  const cfgSelect    = document.getElementById('cfgProfileSelect');
 
-  let selectedCertPath = null;
-
-  // Toggle panel .p12
-  useCert.addEventListener('change', () => {
-    const checked = useCert.checked;
-    certPanel.classList.toggle('hidden', !checked);
-    passwordEl.disabled = checked;
-    if (checked) passwordEl.value = '';
-    else { selectedCertPath = null; certFileName.textContent = 'Sin certificado seleccionado'; }
-  });
-
-  // Seleccionar archivo .p12
-  selectCertBtn.addEventListener('click', async () => {
-    const p = await window.bic.selectCert();
-    if (!p) return;
-    selectedCertPath = p;
-    certFileName.textContent = p.split('/').pop();
-  });
-
-  openBtn.addEventListener('click', async () => {
-    const paths = await window.bic.selectFiles();
-    if (!paths.length) return;
-    const newFiles = paths.map(p => ({
-      id:     p,
-      nombre: p.split('/').pop().split('\\').pop(),
-      local:  p,
-    }));
-    allFiles = [...allFiles, ...newFiles];
-    renderFileList();
-    updateSignBtn();
-  });
-
-  resetBtn.addEventListener('click', () => {
-    allFiles = [];
-    selectedIds.clear();
-    renderFileList();
-    updateSignBtn();
-    clearMsg();
-    window.bic.reset();
-  });
-
-  selectAll.addEventListener('change', () => {
-    if (selectAll.checked) {
-      allFiles.forEach(f => selectedIds.add(f.id));
-    } else {
-      selectedIds.clear();
-    }
-    renderFileList();
-    updateSignBtn();
-  });
-
-  signBtn.addEventListener('click', async () => {
-    const filesToSign = allFiles.filter(f => selectedIds.has(f.id));
-    if (!filesToSign.length) return;
-
-    let pin, certSource, certFile;
-
-    if (useCert.checked) {
-      // Firma con .p12
-      if (!selectedCertPath) { showMsg('Seleccioná un archivo .p12 primero', 'error'); return; }
-      certSource = 'pkcs12';
-      certFile   = selectedCertPath;
-      pin        = certPassword.value;
-    } else {
-      // Firma con token PKCS11
-      certSource = 'pkcs11';
-      certFile   = null;
-      pin        = passwordEl.value;
-    }
-
-    const config = getEffectiveConfig();
-    setSigningState(true);
-    clearMsg();
-
-    window.bic.sign({ files: filesToSign, pin, certSource, certAlias: null, certFile, config });
-  });
-}
-
-function renderFileList() {
-  const list = document.getElementById('fileList');
-  list.innerHTML = '';
-
-  if (!allFiles.length) {
-    list.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Sin archivos. Abre PDFs o espera una solicitud web.</p>';
-    return;
-  }
-
-  allFiles.forEach(f => {
-    const checked = selectedIds.has(f.id);
-    const row = document.createElement('label');
-    row.className = 'flex items-center gap-2 p-2 rounded-lg cursor-pointer ' +
-      'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700';
-    row.innerHTML = `
-      <input type="checkbox" class="file-check rounded" data-id="${f.id}" ${checked ? 'checked' : ''}>
-      <span class="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">${f.nombre}</span>
-      <span class="text-xs text-gray-400">${f.local ? '📁' : '🌐'}</span>
-    `;
-    row.querySelector('.file-check').addEventListener('change', e => {
-      if (e.target.checked) selectedIds.add(f.id);
-      else selectedIds.delete(f.id);
-      updateSignBtn();
-      updateSelectAll();
+  [headerSelect, cfgSelect].forEach(sel => {
+    sel.innerHTML = '';
+    // Primero el default, luego el resto ordenado por nombre
+    const sorted = Object.entries(profiles).sort(([aId, a], [bId, b]) => {
+      if (a.isDefault) return -1;
+      if (b.isDefault) return 1;
+      return a.name.localeCompare(b.name);
     });
-    list.appendChild(row);
+    for (const [id, p] of sorted) {
+      const opt = document.createElement('option');
+      opt.value       = id;
+      opt.textContent = p.name;
+      opt.selected    = id === currentProfile;
+      sel.appendChild(opt);
+    }
   });
 }
 
-function updateSignBtn() {
-  document.getElementById('signBtn').disabled = selectedIds.size === 0;
-}
-
-function updateSelectAll() {
-  const cb = document.getElementById('selectAll');
-  cb.indeterminate = selectedIds.size > 0 && selectedIds.size < allFiles.length;
-  cb.checked = allFiles.length > 0 && selectedIds.size === allFiles.length;
-}
-
-function setSigningState(signing) {
-  document.getElementById('signBtn').disabled = signing;
-  const spinner = document.getElementById('spinner');
-  if (signing) spinner.classList.replace('hidden', 'flex');
-  else         spinner.classList.replace('flex', 'hidden');
-}
-
-function showMsg(text, type = 'info') {
-  const el = document.getElementById('signMsg');
-  el.className = 'mb-3 p-3 rounded-lg text-sm ' + (
-    type === 'error'   ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-    type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                         'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-  );
-  el.textContent = text;
-  el.classList.remove('hidden');
-}
-
-function clearMsg() {
-  document.getElementById('signMsg').classList.add('hidden');
+// Renombra el perfil activo si el nombre cambió
+async function doRenameProfile(newName) {
+  newName = newName?.trim();
+  if (!newName || profiles[currentProfile]?.isDefault) return;
+  if (profiles[currentProfile]?.name === newName) return;
+  profiles[currentProfile].name = newName;
+  await window.bic.renameProfile(currentProfile, newName);
+  renderProfileSelects();
+  document.getElementById('profileSelect').value    = currentProfile;
+  document.getElementById('cfgProfileSelect').value = currentProfile;
 }
 
 // ─── Panel de configuración ───────────────────────────────────────────────────
@@ -330,14 +282,12 @@ function initConfigPanel() {
 
   document.getElementById('saveConfigBtn').addEventListener('click', async () => {
     const cfg = readConfigFromUI();
-    if (profiles[currentProfile]) {
-      profiles[currentProfile].config = cfg;
-      await saveProfiles();
-    }
-    appConfig = cfg;
-    await window.bic.saveConfig(cfg);
-    showMsg('Configuración guardada', 'success');
-    setTimeout(clearMsg, 2000);
+    profiles[currentProfile].config = cfg;
+    await window.bic.saveProfileConfig(currentProfile, cfg);
+    loadSigPreview(currentProfile);
+    const name = profiles[currentProfile]?.name || currentProfile;
+    showMsg(`Configuración guardada en "${name}"`, 'success');
+    setTimeout(clearMsg, 2500);
   });
 
   // Imagen de firma
@@ -349,75 +299,189 @@ function initConfigPanel() {
     const file = e.target.files[0];
     if (!file) return;
     const buf = await file.arrayBuffer();
-    const ext = file.name.split('.').pop();
-    const savedPath = await window.bic.saveSignatureImage(Array.from(new Uint8Array(buf)), ext, currentProfile);
+    const ext = file.name.split('.').pop().toLowerCase();
+    await window.bic.saveSignatureImage(Array.from(new Uint8Array(buf)), ext, currentProfile);
+    e.target.value = ''; // reset input para permitir re-subir el mismo archivo
     loadSigPreview(currentProfile);
   });
 
   document.getElementById('clearSigBtn').addEventListener('click', () => {
+    // Solo oculta visualmente; el archivo en disco queda (no hay API de borrado)
     document.getElementById('sigPreview').classList.add('hidden');
+    document.getElementById('sigPlaceholder').classList.remove('hidden');
   });
 
   loadSigPreview(currentProfile);
 }
 
 async function loadSigPreview(profileId) {
-  const b64 = await window.bic.getSignatureImage(profileId);
-  const preview = document.getElementById('sigPreview');
+  const b64         = await window.bic.getSignatureImage(profileId);
+  const preview     = document.getElementById('sigPreview');
+  const placeholder = document.getElementById('sigPlaceholder');
   if (b64) {
     preview.src = 'data:image/png;base64,' + b64;
     preview.classList.remove('hidden');
+    placeholder.classList.add('hidden');
   } else {
     preview.classList.add('hidden');
+    placeholder.classList.remove('hidden');
   }
 }
 
-function toggleNumeroPagina(show) {
-  const el = document.getElementById('numeroPagina');
-  el.classList.toggle('hidden', !show);
+// ─── Panel de firma ───────────────────────────────────────────────────────────
+function initSignPanel() {
+  const useCert       = document.getElementById('useCert');
+  const passwordEl    = document.getElementById('password');
+  const certPanel     = document.getElementById('certPanel');
+  const selectCertBtn = document.getElementById('selectCertBtn');
+  const certFileName  = document.getElementById('certFileName');
+  const certPassword  = document.getElementById('certPassword');
+  let selectedCertPath = null;
+
+  useCert.addEventListener('change', () => {
+    const checked = useCert.checked;
+    certPanel.classList.toggle('hidden', !checked);
+    passwordEl.disabled = checked;
+    if (checked) passwordEl.value = '';
+    else { selectedCertPath = null; certFileName.textContent = 'Sin certificado seleccionado'; }
+  });
+
+  selectCertBtn.addEventListener('click', async () => {
+    const p = await window.bic.selectCert();
+    if (!p) return;
+    selectedCertPath = p;
+    certFileName.textContent = p.split('/').pop();
+  });
+
+  document.getElementById('openFilesBtn').addEventListener('click', async () => {
+    const paths = await window.bic.selectFiles();
+    if (!paths.length) return;
+    const newFiles = paths.map(p => ({
+      id: p, nombre: p.split('/').pop().split('\\').pop(), local: p,
+    }));
+    allFiles = [...allFiles, ...newFiles];
+    renderFileList();
+    updateSignBtn();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    allFiles = [];
+    selectedIds.clear();
+    renderFileList();
+    updateSignBtn();
+    clearMsg();
+    window.bic.reset();
+  });
+
+  document.getElementById('selectAll').addEventListener('change', e => {
+    if (e.target.checked) allFiles.forEach(f => selectedIds.add(f.id));
+    else selectedIds.clear();
+    renderFileList();
+    updateSignBtn();
+  });
+
+  document.getElementById('signBtn').addEventListener('click', () => {
+    const filesToSign = allFiles.filter(f => selectedIds.has(f.id));
+    if (!filesToSign.length) return;
+
+    let pin, certSource, certFile;
+    if (useCert.checked) {
+      if (!selectedCertPath) { showMsg('Seleccioná un archivo .p12 primero', 'error'); return; }
+      certSource = 'pkcs12';
+      certFile   = selectedCertPath;
+      pin        = certPassword.value;
+    } else {
+      certSource = 'pkcs11';
+      certFile   = null;
+      pin        = passwordEl.value;
+    }
+
+    setSigningState(true);
+    clearMsg();
+    window.bic.sign({ files: filesToSign, pin, certSource, certAlias: null, certFile, config: getEffectiveConfig() });
+  });
 }
 
-// ─── Eventos desde main process ───────────────────────────────────────────────
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  if (!allFiles.length) {
+    list.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Sin archivos. Abre PDFs o espera una solicitud web.</p>';
+    return;
+  }
+  allFiles.forEach(f => {
+    const row = document.createElement('label');
+    row.className = 'flex items-center gap-2 p-2 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700';
+    row.innerHTML = `
+      <input type="checkbox" class="file-check rounded" data-id="${f.id}" ${selectedIds.has(f.id) ? 'checked' : ''}>
+      <span class="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">${f.nombre}</span>
+      <span class="text-xs text-gray-400">${f.local ? '📁' : '🌐'}</span>
+    `;
+    row.querySelector('.file-check').addEventListener('change', e => {
+      if (e.target.checked) selectedIds.add(f.id); else selectedIds.delete(f.id);
+      updateSignBtn();
+      updateSelectAll();
+    });
+    list.appendChild(row);
+  });
+}
+
+function updateSignBtn()  { document.getElementById('signBtn').disabled = selectedIds.size === 0; }
+function updateSelectAll() {
+  const cb = document.getElementById('selectAll');
+  cb.indeterminate = selectedIds.size > 0 && selectedIds.size < allFiles.length;
+  cb.checked = allFiles.length > 0 && selectedIds.size === allFiles.length;
+}
+function setSigningState(signing) {
+  document.getElementById('signBtn').disabled = signing;
+  const spinner = document.getElementById('spinner');
+  if (signing) spinner.classList.replace('hidden', 'flex');
+  else         spinner.classList.replace('flex',   'hidden');
+}
+
+// ─── Mensajes ─────────────────────────────────────────────────────────────────
+function showMsg(text, type = 'info') {
+  const el = document.getElementById('signMsg');
+  el.className = 'mb-3 p-3 rounded-lg text-sm ' + (
+    type === 'error'   ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+    type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                         'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+  );
+  el.textContent = text;
+  el.classList.remove('hidden');
+}
+function clearMsg() { document.getElementById('signMsg').classList.add('hidden'); }
+
+// ─── Eventos desde main ───────────────────────────────────────────────────────
 function bindBicEvents() {
-  // Avisar al main que el renderer está listo para recibir archivos
   window.bic.rendererReady();
 
   window.bic.onModeLocal(() => {
     isLocalMode = true;
     document.getElementById('openFilesBtn').classList.remove('hidden');
-    // Mostrar botón de prueba en modo local (desarrollo)
     const testBtn = document.getElementById('testBtn');
     if (testBtn) {
       testBtn.style.display = 'inline-block';
       testBtn.addEventListener('click', () => {
-        const testFiles = [
-          { id: 'test-1', nombre: 'A4-test-1.pdf',      url: 'http://127.0.0.1:3100/test/A4-test-1.pdf' },
-          { id: 'test-2', nombre: 'oficio-test-2.pdf',  url: 'http://127.0.0.1:3100/test/oficio-test-2.pdf' },
-          { id: 'test-3', nombre: 'carta-test-3.pdf',   url: 'http://127.0.0.1:3100/test/carta-test-3.pdf' },
+        allFiles = [
+          { id: 'test-1', nombre: 'A4-test-1.pdf',     url: 'http://127.0.0.1:3100/test/A4-test-1.pdf' },
+          { id: 'test-2', nombre: 'oficio-test-2.pdf', url: 'http://127.0.0.1:3100/test/oficio-test-2.pdf' },
+          { id: 'test-3', nombre: 'carta-test-3.pdf',  url: 'http://127.0.0.1:3100/test/carta-test-3.pdf' },
         ];
-        // Simular recibir set-files
-        allFiles = testFiles;
-        selectedIds = new Set(testFiles.map(f => f.id));
-        renderFileList();
-        updateSignBtn();
-        updateSelectAll();
-        addLog('🧪 Archivos de prueba cargados (modo dev)');
+        selectedIds = new Set(allFiles.map(f => f.id));
+        renderFileList(); updateSignBtn(); updateSelectAll();
+        addLog('🧪 Archivos de prueba cargados');
       });
     }
   });
 
   window.bic.onSetFiles(files => {
-    console.log('[RENDERER] set-files recibido:', files.length, 'archivos');
-    allFiles = files;
+    allFiles    = files;
     selectedIds = new Set(files.map(f => f.id));
-    renderFileList();
-    updateSignBtn();
-    updateSelectAll();
+    renderFileList(); updateSignBtn(); updateSelectAll();
     document.getElementById('openFilesBtn').classList.add('hidden');
-    // Cambiar a tab de firma
     document.querySelector('[data-tab="sign"]').click();
-    // Log visible
-    addLog(`📥 ${files.length} archivo(s) recibidos via protocolo bic://`);
+    addLog(`📥 ${files.length} archivo(s) recibidos via bic://`);
   });
 
   window.bic.onSignProgress(msg => {
@@ -426,26 +490,21 @@ function bindBicEvents() {
 
   window.bic.onSignResult(result => {
     setSigningState(false);
-    if (result.success) {
-      showMsg('✓ ' + result.message, 'success');
-      addLog('✓ ' + result.message);
-    } else {
-      showMsg('✗ ' + result.message, 'error');
-      addLog('✗ ' + result.message);
-    }
+    if (result.success) { showMsg('✓ ' + result.message, 'success'); addLog('✓ ' + result.message); }
+    else                { showMsg('✗ ' + result.message, 'error');   addLog('✗ ' + result.message); }
   });
 }
 
 // ─── Log ──────────────────────────────────────────────────────────────────────
 function addLog(msg) {
-  const el = document.getElementById('logContent');
+  const el   = document.getElementById('logContent');
   const line = document.createElement('div');
-  const ts = new Date().toLocaleTimeString();
-  line.className = 'text-gray-700 dark:text-gray-300';
-  line.textContent = `[${ts}] ${msg}`;
+  line.className   = 'text-gray-700 dark:text-gray-300';
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
   el.prepend(line);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function getVal(id) { return document.getElementById(id)?.value || ''; }
+function toggleNumeroPagina(show) { document.getElementById('numeroPagina').classList.toggle('hidden', !show); }
+function getVal(id)      { return document.getElementById(id)?.value || ''; }
 function setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val; }

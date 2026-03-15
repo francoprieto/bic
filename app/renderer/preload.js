@@ -3,31 +3,37 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('bic', {
-  // Renderer listo para recibir archivos
+  // Ciclo de vida del renderer
   rendererReady: () => ipcRenderer.send('renderer-ready'),
 
-  // Archivos desde protocolo bic://
-  onSetFiles:    cb => ipcRenderer.on('set-files',    (_, d) => cb(d)),
-  onModeLocal:   cb => ipcRenderer.on('mode-local',   ()     => cb()),
+  // Eventos desde main
+  onSetFiles:     cb => ipcRenderer.on('set-files',      (_, d) => cb(d)),
+  onModeLocal:    cb => ipcRenderer.on('mode-local',     ()     => cb()),
+  onSignProgress: cb => ipcRenderer.on('sign-progress',  (_, d) => cb(d)),
+  onSignResult:   cb => ipcRenderer.on('sign-result',    (_, d) => cb(d)),
 
   // Firma
-  sign:          payload => ipcRenderer.send('sign', payload),
-  onSignProgress: cb => ipcRenderer.on('sign-progress', (_, d) => cb(d)),
-  onSignResult:   cb => ipcRenderer.on('sign-result',   (_, d) => cb(d)),
-  reset:         ()      => ipcRenderer.send('reset'),
+  sign:  payload => ipcRenderer.send('sign', payload),
+  reset: ()      => ipcRenderer.send('reset'),
 
   // Certificados
-  listCerts:     params  => ipcRenderer.invoke('list-certs', params),
+  listCerts:  params => ipcRenderer.invoke('list-certs', params),
+  selectCert: ()     => ipcRenderer.invoke('select-cert'),
 
-  // Configuración y perfiles
-  getConfig:     ()      => ipcRenderer.invoke('get-config'),
-  saveConfig:    config  => ipcRenderer.invoke('save-config', config),
-  getProfiles:   ()      => ipcRenderer.invoke('get-profiles'),
-  saveProfiles:  profiles => ipcRenderer.invoke('save-profiles', profiles),
+  // Archivos locales
+  selectFiles: () => ipcRenderer.invoke('select-files'),
 
-  // Archivos
-  selectFiles:   ()      => ipcRenderer.invoke('select-files'),
-  selectCert:    ()      => ipcRenderer.invoke('select-cert'),
+  // Estado completo (perfiles + perfil activo)
+  getState:          ()                   => ipcRenderer.invoke('get-state'),
+
+  // Operaciones de perfil
+  saveProfileConfig: (profileId, config)  => ipcRenderer.invoke('save-profile-config', profileId, config),
+  createProfile:     name                 => ipcRenderer.invoke('create-profile', name),
+  renameProfile:     (profileId, name)    => ipcRenderer.invoke('rename-profile', profileId, name),
+  deleteProfile:     profileId            => ipcRenderer.invoke('delete-profile', profileId),
+  setCurrentProfile: profileId            => ipcRenderer.invoke('set-current-profile', profileId),
+
+  // Imagen de firma (por perfil)
   saveSignatureImage: (buf, ext, profileId) => ipcRenderer.invoke('save-signature-image', buf, ext, profileId),
-  getSignatureImage:  profileId => ipcRenderer.invoke('get-signature-image', profileId),
+  getSignatureImage:  profileId             => ipcRenderer.invoke('get-signature-image', profileId),
 });

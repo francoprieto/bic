@@ -11,7 +11,7 @@
   <!-- Header -->
   <div class="w-full max-w-2xl flex justify-between items-center px-2 mb-3">
     <select id="profileSelect"
-      class="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      class="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 max-w-[180px]">
     </select>
 
     <h1 class="text-2xl font-serif italic font-semibold text-blue-700 dark:text-blue-400
@@ -40,16 +40,13 @@
 
       <!-- Controles de firma -->
       <div class="flex flex-wrap items-center gap-2 p-3 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-
-        <!-- Fila 1: token PIN -->
         <label class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">PIN token:</label>
         <input id="password" type="password" placeholder="PIN del token"
           class="w-36 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
                  dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
         <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer ml-2">
-          <input id="useCert" type="checkbox" class="rounded">
-          Usar .p12
+          <input id="useCert" type="checkbox" class="rounded"> Usar .p12
         </label>
 
         <button id="signBtn" disabled
@@ -66,29 +63,25 @@
           <span id="progressText"></span>
         </div>
 
-        <!-- Fila 2: selector de .p12 (visible solo cuando useCert está marcado) -->
+        <!-- Panel .p12 -->
         <div id="certPanel" class="hidden w-full flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
           <button id="selectCertBtn"
             class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
-                   text-gray-800 dark:text-gray-100 px-2 py-1 rounded">
-            📂 Elegir .p12
-          </button>
+                   text-gray-800 dark:text-gray-100 px-2 py-1 rounded">📂 Elegir .p12</button>
           <span id="certFileName" class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">Sin certificado seleccionado</span>
           <input id="certPassword" type="password" placeholder="Contraseña del .p12"
             class="w-40 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
                    dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
-
       </div>
 
-      <!-- Mensaje de resultado -->
+      <!-- Mensaje -->
       <div id="signMsg" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
 
       <!-- Barra de archivos -->
       <div class="flex items-center justify-between bg-gray-400 dark:bg-blue-800 rounded-lg px-3 py-2 mb-2">
         <label class="flex items-center gap-2 text-gray-900 dark:text-gray-100 text-sm cursor-pointer">
-          <input id="selectAll" type="checkbox" class="rounded">
-          Archivos
+          <input id="selectAll" type="checkbox" class="rounded"> Archivos
         </label>
         <div class="flex gap-3">
           <button id="openFilesBtn" title="Abrir archivos locales">
@@ -101,17 +94,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M17.651 7.65a7.131 7.131 0 00-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0012.68-3.15M6 20v-4h4"/>
             </svg>
           </button>
-          <!-- Botón de prueba (solo en desarrollo) -->
-          <button id="testBtn" title="Simular archivos de prueba (dev)" style="display:none"
-            class="text-xs bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-2 py-0.5 rounded font-mono">
-            TEST
-          </button>
+          <button id="testBtn" title="Simular archivos de prueba" style="display:none"
+            class="text-xs bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-2 py-0.5 rounded font-mono">TEST</button>
         </div>
       </div>
 
-      <!-- Lista de PDFs -->
       <div id="fileList" class="space-y-1 max-h-72 overflow-y-auto"></div>
-
     </div>
 
     <!-- Panel: Log -->
@@ -121,28 +109,67 @@
     </div>
 
     <!-- Panel: Configuración -->
-    <div id="panel-config" class="tab-panel hidden p-4 max-h-[480px] overflow-y-auto">
+    <div id="panel-config" class="tab-panel hidden p-4 max-h-[520px] overflow-y-auto">
 
-      <!-- Perfiles -->
-      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-semibold text-blue-700 dark:text-blue-400">Perfiles</span>
-          <div class="flex gap-2">
-            <button id="newProfileBtn"
-              class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded">+ Nuevo</button>
-            <button id="delProfileBtn"
-              class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded disabled:opacity-40">Eliminar</button>
-          </div>
-        </div>
-        <input id="profileName" type="text" placeholder="Nombre del perfil"
+      <!-- Gestión de perfiles -->
+      <div class="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 rounded-lg p-3 mb-4">
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Perfil activo</p>
+
+        <!-- Selector de perfil (dentro del panel config) -->
+        <select id="cfgProfileSelect"
           class="w-full text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
-                 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2">
+        </select>
+
+        <!-- Nombre editable del perfil -->
+        <div class="flex gap-2 mb-2">
+          <input id="profileName" type="text" placeholder="Nombre del perfil"
+            class="flex-1 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
+                   dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400
+                   disabled:opacity-50 disabled:cursor-not-allowed">
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex gap-2 mb-2">
+          <button id="newProfileBtn"
+            class="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1.5 rounded font-medium">
+            + Nuevo perfil
+          </button>
+          <button id="delProfileBtn"
+            class="flex-1 text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1.5 rounded font-medium">
+            Eliminar perfil
+          </button>
+        </div>
+
+        <!-- Formulario inline: nuevo perfil -->
+        <div id="newProfileForm" class="hidden flex gap-2 mt-1">
+          <input id="newProfileName" type="text" placeholder="Nombre del nuevo perfil"
+            class="flex-1 text-sm px-2 py-1 rounded border border-blue-400 dark:border-blue-500
+                   dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <button id="newProfileConfirm"
+            class="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded">OK</button>
+          <button id="newProfileCancel"
+            class="text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 px-2 py-1 rounded">✕</button>
+        </div>
+
+        <!-- Confirmación inline: eliminar perfil -->
+        <div id="delProfileConfirm" class="hidden flex items-center gap-2 mt-1 p-2 bg-red-50 dark:bg-red-950 rounded border border-red-300 dark:border-red-700">
+          <span id="delProfileMsg" class="text-xs text-red-700 dark:text-red-300 flex-1"></span>
+          <button id="delProfileOk"
+            class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded">Eliminar</button>
+          <button id="delProfileCancelBtn"
+            class="text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 text-gray-800 dark:text-gray-100 px-2 py-1 rounded">Cancelar</button>
+        </div>
+
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+          La configuración de abajo se guarda en el perfil activo al presionar "Guardar".
+        </p>
       </div>
 
       <!-- Posición de firma -->
       <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
         <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Posición de la firma</p>
-        <div class="grid grid-cols-3 gap-1 mb-3" id="posGrid">
+        <div class="grid grid-cols-3 gap-1 mb-3">
           <button data-pos="esquina-superior-izquierda" class="pos-btn py-1 text-xs rounded border">↖ Sup. Izq.</button>
           <button data-pos="centro-superior"            class="pos-btn py-1 text-xs rounded border">↑ Centro Sup.</button>
           <button data-pos="esquina-superior-derecha"   class="pos-btn py-1 text-xs rounded border">↗ Sup. Der.</button>
@@ -150,7 +177,6 @@
           <button data-pos="centro-inferior"            class="pos-btn py-1 text-xs rounded border active-pos">↓ Centro Inf.</button>
           <button data-pos="esquina-inferior-derecha"   class="pos-btn py-1 text-xs rounded border">↘ Inf. Der.</button>
         </div>
-
         <div class="flex gap-2 mb-2">
           <label class="text-xs text-gray-600 dark:text-gray-400 w-16">Página:</label>
           <select id="pagina" class="text-xs flex-1 px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
@@ -161,17 +187,14 @@
           <input id="numeroPagina" type="number" min="1" placeholder="Nº"
             class="hidden w-16 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
         </div>
-
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Alto:</label>
-            <input id="alto" type="number" value="40"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="alto" type="number" value="40" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Ancho:</label>
-            <input id="ancho" type="number" value="160"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="ancho" type="number" value="160" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
         </div>
       </div>
@@ -182,33 +205,34 @@
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Superior:</label>
-            <input id="mt" type="number" value="50"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="mt" type="number" value="50" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Inferior:</label>
-            <input id="mb" type="number" value="50"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="mb" type="number" value="50" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Izquierda:</label>
-            <input id="ml" type="number" value="50"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="ml" type="number" value="50" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
           <div class="flex items-center gap-1">
             <label class="text-xs text-gray-600 dark:text-gray-400 w-12">Derecha:</label>
-            <input id="mr" type="number" value="50"
-              class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <input id="mr" type="number" value="50" class="flex-1 text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           </div>
         </div>
       </div>
 
       <!-- Imagen de firma -->
       <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
-        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Imagen de firma</p>
+        <p class="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Imagen de firma (apariencia)</p>
         <div class="flex items-center gap-3">
           <img id="sigPreview" class="h-12 border rounded hidden" alt="Vista previa">
-          <div class="flex gap-2">
+          <div id="sigPlaceholder"
+            class="h-12 w-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded
+                   flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
+            Sin imagen
+          </div>
+          <div class="flex flex-col gap-1">
             <button id="uploadSigBtn"
               class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
                      text-gray-800 dark:text-gray-100 px-2 py-1 rounded">Subir imagen</button>
@@ -216,7 +240,7 @@
               class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded">Quitar</button>
           </div>
         </div>
-        <input id="sigInput" type="file" accept="image/png" class="hidden">
+        <input id="sigInput" type="file" accept="image/png,image/jpeg" class="hidden">
       </div>
 
       <!-- Directorio destino -->
@@ -229,7 +253,7 @@
 
       <button id="saveConfigBtn"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded transition-colors">
-        Guardar configuración
+        Guardar configuración del perfil
       </button>
 
     </div>

@@ -99,13 +99,13 @@ ipcMain.on('renderer-ready', () => {
   }
 });
 
-// Configuración
-ipcMain.handle('get-config',  () => store.getConfig());
-ipcMain.handle('save-config', (_, config) => store.saveConfig(config));
-
-// Perfiles
-ipcMain.handle('get-profiles',    ()           => store.getProfiles());
-ipcMain.handle('save-profiles',   (_, profiles) => store.saveProfiles(profiles));
+// Configuración y perfiles
+ipcMain.handle('get-state',           ()                    => store.getState());
+ipcMain.handle('save-profile-config', (_, profileId, cfg)  => store.saveProfileConfig(profileId, cfg));
+ipcMain.handle('create-profile',      (_, name)            => store.createProfile(name));
+ipcMain.handle('rename-profile',      (_, profileId, name) => store.renameProfile(profileId, name));
+ipcMain.handle('delete-profile',      (_, profileId)       => store.deleteProfile(profileId));
+ipcMain.handle('set-current-profile', (_, profileId)       => store.setCurrentProfile(profileId));
 
 // Imagen de firma
 ipcMain.handle('save-signature-image', (_, buffer, ext, profileId) => {

@@ -198,13 +198,13 @@
         const hostname = window.location.hostname; // localhost, 127.0.0.1, etc.
         const port = window.location.port; // 8080, 3000, etc.
         let current = null;
-        // Construir la URL base del servidor
-        const serverBase = `${protocol}//${hostname}${port ? ':' + port : ''}/test/`;
+        // Construir la URL base del servidor (sin barra final)
+        const serverBase = `${protocol}//${hostname}${port ? ':' + port : ''}/test`;
         
         // Mostrar información del servidor
-        document.getElementById('server-info').textContent = serverBase;
+        document.getElementById('server-info').textContent = serverBase + '/';
         
-        // Lista de archivos PDF a firmar (rutas relativas desde el servidor)
+        // Lista de archivos PDF a firmar
         const pdfFiles = [
             'A4-test-1.pdf',
             'oficio-test-2.pdf',
@@ -214,14 +214,18 @@
         // Construir URLs completas para cada archivo
         const fullUrls = pdfFiles.map(file => `${serverBase}/${file}`);
         
-        const bicBase = "bic://firmar?";
-
         // Construir el enlace bic:// con las URLs completas
-        const bicUrl = `${bicBase}files=${fullUrls.join(',')}`;
-        const req = btoa(`{"uri":"${protocol}//${hostname}${port ? ':' + port : ''}/test/archivos.json", "headers":{"Content-Type":"application/json"}}`);
-        // Asignar el enlace al botón
+        const bicUrl = `bic://firmar?files=${fullUrls.join(',')}`;
+
+        // Para paramsurl: usar Base64 URL-safe (sin +, /, =) para evitar problemas en href
+        const jsonStr = JSON.stringify({
+            "uri": `${serverBase}/archivos.json`,
+            "headers": {"Content-Type": "application/json"}
+        });
+        const req = btoa(jsonStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+        // Asignar los enlaces
         document.getElementById('sign-link').href = bicUrl;
-        
         document.getElementById('local-link').innerHTML = "Enlace para firmar: <br />" + bicUrl;
         document.getElementById('base64-val').value = req;
         document.getElementById('sign-json').href = `bic://?paramsurl=${req}`;

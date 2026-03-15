@@ -14,6 +14,7 @@ function init() {
   const write = (level, args) => {
     const line = `[${new Date().toISOString()}] [${level}] ${args.map(String).join(' ')}\n`;
     fs.appendFileSync(logFile, line, 'utf8');
+    process.stderr.write(line); // también a stderr para verlo en terminal
   };
 
   const orig = { log: console.log, error: console.error, warn: console.warn, info: console.info };

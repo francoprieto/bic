@@ -19,8 +19,10 @@ const JAR_NAME = 'bic-core-jar-with-dependencies.jar';
 // ─── Ruta al JAR ─────────────────────────────────────────────────────────────
 function getJarPath() {
   // En producción (empaquetado), el JAR está en extraResources/target/
-  const packed = path.join(process.resourcesPath, 'target', JAR_NAME);
-  if (fs.existsSync(packed)) return packed;
+  if (process.resourcesPath) {
+    const packed = path.join(process.resourcesPath, 'target', JAR_NAME);
+    if (fs.existsSync(packed)) return packed;
+  }
 
   // En desarrollo, buscar en el directorio raíz del proyecto
   const dev = path.join(__dirname, '..', '..', 'core', 'target', JAR_NAME);
@@ -32,11 +34,24 @@ function getJarPath() {
 // ─── Ruta a Java ─────────────────────────────────────────────────────────────
 function getJavaCmd() {
   // JRE empaquetado (fat build)
-  const bundled = path.join(process.resourcesPath, 'jdk', 'bin', 'java');
-  if (fs.existsSync(bundled))       return bundled;
-  if (fs.existsSync(bundled + '.exe')) return bundled + '.exe';
+  if (process.resourcesPath) {
+    const bundled = path.join(process.resourcesPath, 'jdk', 'bin', 'java');
+    if (fs.existsSync(bundled))          return bundled;
+    if (fs.existsSync(bundled + '.exe')) return bundled + '.exe';
+  }
 
-  // Java del sistema
+  // En macOS, detectar Java 17 via java_home
+  if (process.platform === 'darwin') {
+    try {
+      const { execSync } = require('child_process');
+      const j17 = execSync('/usr/libexec/java_home -v 17 2>/dev/null').toString().trim();
+      if (j17) return path.join(j17, 'bin', 'java');
+    } catch (_) {}
+  }
+
+  // JAVA_HOME del entorno
+  if (process.env.JAVA_HOME) return path.join(process.env.JAVA_HOME, 'bin', 'java');
+
   return 'java';
 }
 
