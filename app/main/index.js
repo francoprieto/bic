@@ -5,6 +5,20 @@ const path = require('path');
 const os   = require('os');
 const fs   = require('fs');
 
+// Capturar errores no manejados antes de cualquier otra cosa
+process.on('uncaughtException', (err) => {
+  process.stderr.write(`[FATAL] uncaughtException: ${err.stack || err.message}\n`);
+  try {
+    const logDir = path.join(os.homedir(), '.bic', 'logs');
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.appendFileSync(path.join(logDir, 'crash.log'), `[${new Date().toISOString()}] ${err.stack || err.message}\n`);
+  } catch (_) {}
+});
+
+process.on('unhandledRejection', (reason) => {
+  process.stderr.write(`[FATAL] unhandledRejection: ${reason}\n`);
+});
+
 const protocol = require('./protocol');
 const signer   = require('./signer');
 const store    = require('./store');
@@ -20,20 +34,30 @@ app.setAsDefaultProtocolClient('bic');
 
 // ─── Crear ventana ────────────────────────────────────────────────────────────
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 820,
-    height: 660,
-    webPreferences: {
-      preload: path.join(__dirname, '..', 'renderer', 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  try {
+    mainWindow = new BrowserWindow({
+      width: 820,
+      height: 660,
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'renderer', 'preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+    const htmlPath = path.join(__dirname, '..', 'renderer', 'index.html');
+    process.stderr.write(`[STARTUP] Cargando: ${htmlPath} (existe: ${fs.existsSync(htmlPath)})\n`);
+    mainWindow.loadFile(htmlPath);
+    mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
+      process.stderr.write(`[ERROR] did-fail-load: ${code} ${desc}\n`);
+    });
+  } catch (err) {
+    process.stderr.write(`[FATAL] createWindow: ${err.stack || err.message}\n`);
+  }
 }
 
 // ─── App ready ────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  process.stderr.write(`[STARTUP] app.whenReady() resuelto\n`);
   logger.init();
   createWindow();
 
