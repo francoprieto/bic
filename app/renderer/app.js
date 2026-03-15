@@ -178,10 +178,28 @@ function initSignPanel() {
   const resetBtn   = document.getElementById('resetBtn');
   const useCert    = document.getElementById('useCert');
   const passwordEl = document.getElementById('password');
+  const certPanel  = document.getElementById('certPanel');
+  const selectCertBtn = document.getElementById('selectCertBtn');
+  const certFileName  = document.getElementById('certFileName');
+  const certPassword  = document.getElementById('certPassword');
 
+  let selectedCertPath = null;
+
+  // Toggle panel .p12
   useCert.addEventListener('change', () => {
-    passwordEl.disabled = useCert.checked;
-    if (useCert.checked) passwordEl.value = '';
+    const checked = useCert.checked;
+    certPanel.classList.toggle('hidden', !checked);
+    passwordEl.disabled = checked;
+    if (checked) passwordEl.value = '';
+    else { selectedCertPath = null; certFileName.textContent = 'Sin certificado seleccionado'; }
+  });
+
+  // Seleccionar archivo .p12
+  selectCertBtn.addEventListener('click', async () => {
+    const p = await window.bic.selectCert();
+    if (!p) return;
+    selectedCertPath = p;
+    certFileName.textContent = p.split('/').pop();
   });
 
   openBtn.addEventListener('click', async () => {
@@ -220,29 +238,27 @@ function initSignPanel() {
     const filesToSign = allFiles.filter(f => selectedIds.has(f.id));
     if (!filesToSign.length) return;
 
-    const pin        = useCert.checked ? null : passwordEl.value;
-    const certSource = useCert.checked ? detectCertSource() : 'pkcs11';
-    const config     = getEffectiveConfig();
+    let pin, certSource, certFile;
 
+    if (useCert.checked) {
+      // Firma con .p12
+      if (!selectedCertPath) { showMsg('Seleccioná un archivo .p12 primero', 'error'); return; }
+      certSource = 'pkcs12';
+      certFile   = selectedCertPath;
+      pin        = certPassword.value;
+    } else {
+      // Firma con token PKCS11
+      certSource = 'pkcs11';
+      certFile   = null;
+      pin        = passwordEl.value;
+    }
+
+    const config = getEffectiveConfig();
     setSigningState(true);
     clearMsg();
 
-    window.bic.sign({
-      files:      filesToSign,
-      pin,
-      certSource,
-      certAlias:  null,
-      certFile:   null,
-      config,
-    });
+    window.bic.sign({ files: filesToSign, pin, certSource, certAlias: null, certFile, config });
   });
-}
-
-function detectCertSource() {
-  const platform = navigator.platform.toLowerCase();
-  if (platform.includes('win'))   return 'windows-store';
-  if (platform.includes('mac'))   return 'nss';
-  return 'nss';
 }
 
 function renderFileList() {

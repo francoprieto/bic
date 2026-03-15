@@ -47,7 +47,6 @@ function createWindow() {
     const htmlPath = path.join(__dirname, '..', 'renderer', 'index.html');
     process.stderr.write(`[STARTUP] Cargando: ${htmlPath} (existe: ${fs.existsSync(htmlPath)})\n`);
     mainWindow.loadFile(htmlPath);
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
     mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
       process.stderr.write(`[ERROR] did-fail-load: ${code} ${desc}\n`);
     });
@@ -133,6 +132,15 @@ ipcMain.handle('select-files', async () => {
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   return result.canceled ? [] : result.filePaths;
+});
+
+// Seleccionar certificado .p12
+ipcMain.handle('select-cert', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Certificado', extensions: ['p12', 'pfx'] }],
+  });
+  return result.canceled ? null : result.filePaths[0];
 });
 
 // Listar certificados (llama al JAR)

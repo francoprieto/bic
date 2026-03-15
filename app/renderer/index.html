@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>BiC - Firmador Digital</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind.min.js"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
 </head>
 <body class="bg-gray-200 dark:bg-gray-800 min-h-screen flex flex-col items-center pt-4 transition-colors">
@@ -40,14 +40,16 @@
 
       <!-- Controles de firma -->
       <div class="flex flex-wrap items-center gap-2 p-3 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-        <label class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">Password:</label>
-        <input id="password" type="password"
+
+        <!-- Fila 1: token PIN -->
+        <label class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">PIN token:</label>
+        <input id="password" type="password" placeholder="PIN del token"
           class="w-36 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
                  dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
-        <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer ml-2">
           <input id="useCert" type="checkbox" class="rounded">
-          Usar certificado
+          Usar .p12
         </label>
 
         <button id="signBtn" disabled
@@ -63,6 +65,20 @@
           </svg>
           <span id="progressText"></span>
         </div>
+
+        <!-- Fila 2: selector de .p12 (visible solo cuando useCert está marcado) -->
+        <div id="certPanel" class="hidden w-full flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+          <button id="selectCertBtn"
+            class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
+                   text-gray-800 dark:text-gray-100 px-2 py-1 rounded">
+            📂 Elegir .p12
+          </button>
+          <span id="certFileName" class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">Sin certificado seleccionado</span>
+          <input id="certPassword" type="password" placeholder="Contraseña del .p12"
+            class="w-40 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
+                   dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
       </div>
 
       <!-- Mensaje de resultado -->

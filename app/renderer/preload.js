@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('bic', {
 
   // Archivos
   selectFiles:   ()      => ipcRenderer.invoke('select-files'),
+  selectCert:    ()      => ipcRenderer.invoke('select-cert'),
   saveSignatureImage: (buf, ext, profileId) => ipcRenderer.invoke('save-signature-image', buf, ext, profileId),
   getSignatureImage:  profileId => ipcRenderer.invoke('get-signature-image', profileId),
 });
