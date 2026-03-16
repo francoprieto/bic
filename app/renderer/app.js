@@ -133,161 +133,130 @@ function readConfigFromUI() {
 }
 
 // ─── Perfiles ─────────────────────────────────────────────────────────────────
-function initProfileUI() {
-  const headerSelect = document.getElementById('profileSelect');
-  const cfgSelect    = document.getElementById('cfgProfileSelect');
-  const nameInput    = document.getElementById('profileName');
-  const delBtn       = document.getElementById('delProfileBtn');
 
-  renderProfileSelects();
-  syncProfileUI();
-
-  // Cambiar perfil desde el header o desde el panel config
-  headerSelect.addEventListener('change', () => switchProfile(headerSelect.value));
-  cfgSelect.addEventListener('change',    () => switchProfile(cfgSelect.value));
-
-  // Renombrar al salir del input o presionar Enter
-  nameInput.addEventListener('blur',    () => doRenameProfile(nameInput.value));
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameInput.blur(); });
-
-  // ── Nuevo perfil: mostrar formulario inline ──
-  const newForm    = document.getElementById('newProfileForm');
-  const newInput   = document.getElementById('newProfileName');
-  const newConfirm = document.getElementById('newProfileConfirm');
-  const newCancel  = document.getElementById('newProfileCancel');
-
-  document.getElementById('newProfileBtn').addEventListener('click', () => {
-    newInput.value = '';
-    newForm.classList.remove('hidden');
-    newInput.focus();
-  });
-
-  newCancel.addEventListener('click', () => {
-    newForm.classList.add('hidden');
-  });
-
-  const doCreateProfile = async () => {
-    const name = newInput.value.trim();
-    if (!name) { newInput.focus(); return; }
-    newForm.classList.add('hidden');
-    const id = await window.bic.createProfile(name);
-    profiles[id] = { name, isDefault: false, config: { ...DEFAULT_CONFIG } };
-    currentProfile = id;
-    renderProfileSelects();
-    syncProfileUI();
-    applyConfigToUI(getEffectiveConfig());
-    loadSigPreview(id);
-  };
-
-  newConfirm.addEventListener('click', doCreateProfile);
-  newInput.addEventListener('keydown', e => { if (e.key === 'Enter') doCreateProfile(); });
-
-  // ── Eliminar perfil: mostrar confirmación inline ──
-  const delConfirmPanel = document.getElementById('delProfileConfirm');
-  const delMsg          = document.getElementById('delProfileMsg');
-  const delOk           = document.getElementById('delProfileOk');
-  const delCancel       = document.getElementById('delProfileCancelBtn');
-
-  delBtn.addEventListener('click', () => {
-    if (profiles[currentProfile]?.isDefault) return; // botón deshabilitado, pero por si acaso
-    delMsg.textContent = `¿Eliminar el perfil "${profiles[currentProfile]?.name}"?`;
-    delConfirmPanel.classList.remove('hidden');
-  });
-
-  delCancel.addEventListener('click', () => {
-    delConfirmPanel.classList.add('hidden');
-  });
-
-  delOk.addEventListener('click', async () => {
-    delConfirmPanel.classList.add('hidden');
-    await window.bic.deleteProfile(currentProfile);
-    delete profiles[currentProfile];
-    currentProfile = 'default';
-    renderProfileSelects();
-    syncProfileUI();
-    applyConfigToUI(getEffectiveConfig());
-    loadSigPreview('default');
+function mostrarMensaje(titulo, texto) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('modal-mensaje');
+    document.getElementById('modal-mensaje-titulo').textContent = titulo;
+    document.getElementById('modal-mensaje-texto').textContent  = texto;
+    modal.classList.remove('hidden');
+    const btn = document.getElementById('btn-cerrar-mensaje');
+    const cerrar = () => { modal.classList.add('hidden'); btn.removeEventListener('click', cerrar); resolve(); };
+    btn.addEventListener('click', cerrar);
   });
 }
 
-// Cambia el perfil activo (persiste en disco)
+function solicitarNombre() {
+  return new Promise(resolve => {
+    const modal     = document.getElementById('modal-nuevo-perfil');
+    const input     = document.getElementById('input-nombre-perfil');
+    const btnOk     = document.getElementById('btn-confirmar-perfil');
+    const btnCancel = document.getElementById('btn-cancelar-perfil');
+    input.value = '';
+    modal.classList.remove('hidden');
+    input.focus();
+    const confirmar = () => { const n = input.value.trim(); modal.classList.add('hidden'); cleanup(); resolve(n || null); };
+    const cancelar  = () => { modal.classList.add('hidden'); cleanup(); resolve(null); };
+    const onEnter   = e => { if (e.key === 'Enter') confirmar(); };
+    const cleanup   = () => { btnOk.removeEventListener('click', confirmar); btnCancel.removeEventListener('click', cancelar); input.removeEventListener('keypress', onEnter); };
+    btnOk.addEventListener('click', confirmar);
+    btnCancel.addEventListener('click', cancelar);
+    input.addEventListener('keypress', onEnter);
+  });
+}
+
+function confirmarAccion(texto) {
+  return new Promise(resolve => {
+    const modal     = document.getElementById('modal-confirmar');
+    document.getElementById('modal-confirmar-texto').textContent = texto;
+    modal.classList.remove('hidden');
+    const btnOk     = document.getElementById('btn-aceptar-confirmar');
+    const btnCancel = document.getElementById('btn-cancelar-confirmar');
+    const aceptar  = () => { modal.classList.add('hidden'); cleanup(); resolve(true); };
+    const cancelar = () => { modal.classList.add('hidden'); cleanup(); resolve(false); };
+    const cleanup  = () => { btnOk.removeEventListener('click', aceptar); btnCancel.removeEventListener('click', cancelar); };
+    btnOk.addEventListener('click', aceptar);
+    btnCancel.addEventListener('click', cancelar);
+  });
+}
+
+function initProfileUI() {
+  const headerSelect = document.getElementById('profileSelect');
+  renderProfileSelect(headerSelect);
+
+  // Cambiar perfil desde el header
+  headerSelect.addEventListener('change', () => switchProfile(headerSelect.value));
+
+  // + Nuevo
+  document.getElementById('newProfileBtn').addEventListener('click', async () => {
+    const nombre = await solicitarNombre();
+    if (!nombre) return;
+    const id = await window.bic.createProfile(nombre);
+    profiles[id] = { name: nombre, isDefault: false, config: { ...DEFAULT_CONFIG } };
+    currentProfile = id;
+    renderProfileSelect(headerSelect);
+    applyConfigToUI(getEffectiveConfig());
+    loadSigPreview(id);
+    await mostrarMensaje('Perfil creado', `El perfil "${nombre}" fue creado exitosamente.`);
+  });
+
+  // 💾 Guardar
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const cfg = readConfigFromUI();
+    profiles[currentProfile].config = cfg;
+    await window.bic.saveProfileConfig(currentProfile, cfg);
+    loadSigPreview(currentProfile);
+    await mostrarMensaje('Guardado', `Configuración guardada en "${profiles[currentProfile]?.name}".`);
+  });
+
+  // 🗑️ Eliminar
+  document.getElementById('delProfileBtn').addEventListener('click', async () => {
+    if (profiles[currentProfile]?.isDefault) {
+      await mostrarMensaje('No permitido', 'El perfil "Por defecto" no se puede eliminar.');
+      return;
+    }
+    const nombre = profiles[currentProfile]?.name || currentProfile;
+    const ok = await confirmarAccion(`¿Está seguro de eliminar el perfil "${nombre}"?`);
+    if (!ok) return;
+    await window.bic.deleteProfile(currentProfile);
+    delete profiles[currentProfile];
+    currentProfile = 'default';
+    renderProfileSelect(headerSelect);
+    applyConfigToUI(getEffectiveConfig());
+    loadSigPreview('default');
+    await mostrarMensaje('Eliminado', `El perfil "${nombre}" fue eliminado.`);
+  });
+}
+
+function renderProfileSelect(select) {
+  const prev = select.value;
+  select.innerHTML = '';
+  const sorted = Object.entries(profiles).sort(([, a], [, b]) => {
+    if (a.isDefault) return -1;
+    if (b.isDefault) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  for (const [id, p] of sorted) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = p.name;
+    select.appendChild(opt);
+  }
+  select.value = profiles[prev] ? prev : currentProfile;
+}
+
 async function switchProfile(id) {
   if (!profiles[id]) return;
   currentProfile = id;
   await window.bic.setCurrentProfile(id);
-  syncProfileUI();
   applyConfigToUI(getEffectiveConfig());
   loadSigPreview(id);
-}
-
-// Sincroniza los selectores y el input de nombre con currentProfile
-function syncProfileUI() {
-  const headerSelect = document.getElementById('profileSelect');
-  const cfgSelect    = document.getElementById('cfgProfileSelect');
-  const nameInput    = document.getElementById('profileName');
-  const delBtn       = document.getElementById('delProfileBtn');
-
-  headerSelect.value = currentProfile;
-  cfgSelect.value    = currentProfile;
-  nameInput.value    = profiles[currentProfile]?.name || '';
-
-  // Deshabilitar renombrar y eliminar en el perfil default
-  const isDefault = profiles[currentProfile]?.isDefault === true;
-  nameInput.disabled = isDefault;
-  delBtn.disabled    = isDefault;
-  delBtn.classList.toggle('opacity-40', isDefault);
-  delBtn.classList.toggle('cursor-not-allowed', isDefault);
-}
-
-// Puebla ambos <select> con la lista de perfiles
-function renderProfileSelects() {
-  const headerSelect = document.getElementById('profileSelect');
-  const cfgSelect    = document.getElementById('cfgProfileSelect');
-
-  [headerSelect, cfgSelect].forEach(sel => {
-    sel.innerHTML = '';
-    // Primero el default, luego el resto ordenado por nombre
-    const sorted = Object.entries(profiles).sort(([aId, a], [bId, b]) => {
-      if (a.isDefault) return -1;
-      if (b.isDefault) return 1;
-      return a.name.localeCompare(b.name);
-    });
-    for (const [id, p] of sorted) {
-      const opt = document.createElement('option');
-      opt.value       = id;
-      opt.textContent = p.name;
-      opt.selected    = id === currentProfile;
-      sel.appendChild(opt);
-    }
-  });
-}
-
-// Renombra el perfil activo si el nombre cambió
-async function doRenameProfile(newName) {
-  newName = newName?.trim();
-  if (!newName || profiles[currentProfile]?.isDefault) return;
-  if (profiles[currentProfile]?.name === newName) return;
-  profiles[currentProfile].name = newName;
-  await window.bic.renameProfile(currentProfile, newName);
-  renderProfileSelects();
-  document.getElementById('profileSelect').value    = currentProfile;
-  document.getElementById('cfgProfileSelect').value = currentProfile;
 }
 
 // ─── Panel de configuración ───────────────────────────────────────────────────
 function initConfigPanel() {
   document.getElementById('pagina').addEventListener('change', e => {
     toggleNumeroPagina(e.target.value === 'np');
-  });
-
-  document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-    const cfg = readConfigFromUI();
-    profiles[currentProfile].config = cfg;
-    await window.bic.saveProfileConfig(currentProfile, cfg);
-    loadSigPreview(currentProfile);
-    const name = profiles[currentProfile]?.name || currentProfile;
-    showMsg(`Configuración guardada en "${name}"`, 'success');
-    setTimeout(clearMsg, 2500);
   });
 
   // Imagen de firma
