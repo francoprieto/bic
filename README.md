@@ -1,47 +1,86 @@
-# bic
-Programa para firmar documentos digitalmente
+# BIC
 
-## Características
+## Estructura
 
-- Firma digital de documentos PDF usando tokens PKCS#11 (eToken, ePass, bit4id, SafeSign, ACS, etc.)
-- **Soporte para certificados del almacén de Windows** - Usa certificados instalados en el sistema Windows sin necesidad de token físico
-- Interfaz gráfica con Electron
-- Firma por lotes con paginación
-- Personalización de posición y apariencia de la firma
-- Descarga y subida de archivos remotos
-- Modo oscuro
-
-## Uso del Almacén de Certificados de Windows
-
-En sistemas Windows, puedes usar certificados instalados en el almacén del sistema en lugar de tokens físicos:
-
-1. Marca la casilla "Usar almacén de Windows" en la interfaz
-2. El campo de contraseña se deshabilitará automáticamente
-3. Al firmar, se mostrará un diálogo para seleccionar el certificado deseado
-4. Los certificados se muestran con información del emisor y fecha de caducidad
-
-### Parámetros de línea de comandos
-
-Para usar el almacén de Windows desde la línea de comandos:
-
-```bash
-java -jar bic-jar-with-dependencies.jar --use-windows-store=true --archivos=documento.pdf --destino=./firmados
+```
+bic/
+├── core/          # Componente Java (firma digital)
+│   ├── pom.xml
+│   └── src/
+└── app/           # Componente Electron (UI + orquestación)
+    ├── package.json
+    ├── main/
+    │   ├── index.js      # Entry point, IPC handlers
+    │   ├── protocol.js   # Manejo de bic://
+    │   ├── signer.js     # Invocación del JAR + upload
+    │   ├── store.js      # Configuración persistente (~/.bic/app-config.json)
+    │   └── logger.js     # Logging a archivo
+    ├── renderer/
+    │   ├── index.html
+    │   ├── preload.js
+    │   └── app.js
+    └── scripts/
+        └── build.js      # Build script (Maven + electron-builder)
 ```
 
-## Compilación
+## Cambios principales respecto a v1
+
+| Aspecto | v1 | v2 |
+|---------|----|----|
+| Java UI | JOptionPane, JFileChooser en el JAR | Sin Swing. Electron maneja toda la UI |
+| Selección de certificado | Diálogo Swing | Electron lista certs (`--cmd=listar-certs`) y el usuario elige |
+| main.js | 1100 líneas monolíticas | Dividido en `protocol.js`, `signer.js`, `store.js`, `logger.js` |
+| Configuración | localStorage (renderer) | `~/.bic/app-config.json` (accesible desde main y renderer) |
+| Perfiles | localStorage | Mismo archivo JSON, gestionado desde main process |
+| Build | JAVA_HOME hardcodeado | Detección automática via `/usr/libexec/java_home` |
+| Protocolo JAR | `--cmd` implícito | `--cmd=init \| listar-certs \| firmar` explícito |
+| Resultado JAR | stdout mezclado | Línea `RESULT:{json}` siempre presente |
+
+## Comandos del JAR
 
 ```bash
-mvn clean package
+# Inicializar (detectar librerías PKCS11)
+java -jar bic-core.jar --cmd=init
+
+# Listar certificados disponibles
+java -jar bic-core.jar --cmd=listar-certs --cert-source=pkcs11 --pin=1234
+java -jar bic-core.jar --cmd=listar-certs --cert-source=windows-store
+java -jar bic-core.jar --cmd=listar-certs --cert-source=pkcs12 --cert-file=/ruta/cert.p12 --pin=pass
+
+# Firmar
+java -jar bic-core.jar --cmd=firmar \
+  --archivos=/tmp/doc.pdf \
+  --pin=1234 \
+  --cert-source=pkcs11 \
+  --posicion='{"pagina":"primera","lugar":"centro-inferior"}' \
+  --destino=/tmp/firmados
 ```
 
-El JAR se generará en `target/bic-jar-with-dependencies.jar`
-
-## Construcción del instalador Electron
+## Desarrollo
 
 ```bash
-cd bic-electron
-node tooling.js fat win64
-npm run build
+# Compilar JAR
+cd core && mvn clean package -DskipTests
+
+# Instalar dependencias Electron
+cd app && npm install
+
+# Ejecutar en modo desarrollo
+cd app && npm start
+
+# Build para macOS ARM64
+cd app && npm run build:mac-arm
 ```
 
-El script `tooling.js` compilará automáticamente el JAR de Java antes de crear el instalador.
+## Protocolo bic://
+
+```
+bic://firmar?files=http://servidor/doc.pdf,http://servidor/doc2.pdf
+bic://?paramsurl=BASE64_JSON
+bic://?gzipurl=BASE64_GZIP_JSON
+```
+
+El JSON decodificado tiene la forma:
+```json
+{ "uri": "http://servidor/archivos.json", "headers": { "Authorization": "Bearer TOKEN" } }
+```
