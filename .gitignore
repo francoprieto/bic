@@ -24,6 +24,7 @@ test/uploads/
 *.iml
 *.ipr
 *.gz
+**/*.DS_Store
 
 ### NetBeans ###
 /nbproject/private/
