@@ -51,14 +51,17 @@ function load() {
   } catch (e) {
     process.stderr.write(`[STORE] Error al leer config: ${e.message}\n`);
   }
-  // Primera instalación: devolver estado inicial
-  return JSON.parse(JSON.stringify(INITIAL_STATE));
+  // Primera instalación: crear y persistir el estado inicial
+  const initial = JSON.parse(JSON.stringify(INITIAL_STATE));
+  save(initial);
+  return initial;
 }
 
 function save(data) {
   try {
     fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf8');
+    process.stderr.write(`[STORE] Guardado: ${CONFIG_FILE}\n`);
   } catch (e) {
     process.stderr.write(`[STORE] Error al guardar config: ${e.message}\n`);
   }

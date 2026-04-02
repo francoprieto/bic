@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('bic', {
 
   // Archivos locales
   selectFiles: () => ipcRenderer.invoke('select-files'),
+  openFile:    filePath => ipcRenderer.invoke('open-file', filePath),
 
   // Estado completo (perfiles + perfil activo)
   getState:          ()                   => ipcRenderer.invoke('get-state'),
@@ -34,6 +35,7 @@ contextBridge.exposeInMainWorld('bic', {
   setCurrentProfile: profileId            => ipcRenderer.invoke('set-current-profile', profileId),
 
   // Imagen de firma (por perfil)
-  saveSignatureImage: (buf, ext, profileId) => ipcRenderer.invoke('save-signature-image', buf, ext, profileId),
-  getSignatureImage:  profileId             => ipcRenderer.invoke('get-signature-image', profileId),
+  saveSignatureImage:   (buf, ext, profileId) => ipcRenderer.invoke('save-signature-image', buf, ext, profileId),
+  getSignatureImage:    profileId             => ipcRenderer.invoke('get-signature-image', profileId),
+  deleteSignatureImage: profileId             => ipcRenderer.invoke('delete-signature-image', profileId),
 });

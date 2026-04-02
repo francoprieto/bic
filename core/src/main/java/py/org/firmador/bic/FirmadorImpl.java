@@ -386,11 +386,16 @@ public class FirmadorImpl implements Firmador {
             if (imgBytes == null) {
                 X509Certificate x509 = (X509Certificate) cert;
                 String dn = x509.getSubjectX500Principal().getName();
+                Log.info("DN del certificado: " + dn);
+
+                // Generar ID único de firma para el QR
+                String signatureId = UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+
                 int qrSize = pos.get("hqr").intValue();
-                ByteArrayOutputStream qr = QRCode.from(dn).withSize(qrSize, qrSize).stream();
+                ByteArrayOutputStream qr = QRCode.from(signatureId).withSize(qrSize, qrSize).stream();
                 sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
                 sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
-                sap.setLayer2Text(buildSignatureText(dn));
+                sap.setLayer2Text(buildSignatureText(dn, signatureId));
             } else {
                 sap.setSignatureGraphic(Image.getInstance(imgBytes));
                 sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC);
@@ -421,22 +426,49 @@ public class FirmadorImpl implements Firmador {
         }
     }
 
-    private String buildSignatureText(String dn) {
-        Map<String, String> datos = new HashMap<>(Map.of("APELLIDOS", "", "NOMBRES", "", "SERIAL", "", "FECHA", ""));
-        for (String part : dn.split(",")) {
-            if (part.contains("SURNAME="))     datos.put("APELLIDOS", part.replace("SURNAME=", "").trim());
-            if (part.contains("GIVENNAME="))   datos.put("NOMBRES",   part.replace("GIVENNAME=", "").trim());
-            if (part.contains("SERIALNUMBER="))datos.put("SERIAL",    part.replace("SERIALNUMBER=", "").trim());
-        }
-        String serial = datos.get("SERIAL");
-        if (serial.contains("CI")) serial = serial.replace("CI", "CI ").trim();
-        datos.put("SERIAL", serial);
-        datos.put("FECHA", ConfiguracionUtil.ahora());
+    private String buildSignatureText(String dn, String signatureId) {
+        String apellidos = "";
+        String nombres   = "";
+        String serial    = "";
 
-        return "Firmado digitalmente por:\n" + datos.get("APELLIDOS") +
-               (datos.get("NOMBRES").isEmpty()  ? "" : ", " + datos.get("NOMBRES")) +
-               (datos.get("SERIAL").isEmpty()   ? "" : "\n" + datos.get("SERIAL")) +
-               (datos.get("FECHA").isEmpty()    ? "" : "\n" + datos.get("FECHA"));
+        try {
+            // LdapName parsea correctamente RFC 2253 (valores con comas, OIDs numéricos, etc.)
+            javax.naming.ldap.LdapName ldap = new javax.naming.ldap.LdapName(dn);
+            for (javax.naming.ldap.Rdn rdn : ldap.getRdns()) {
+                String type  = rdn.getType().toUpperCase();
+                String value = rdn.getValue() != null ? rdn.getValue().toString().trim() : "";
+
+                switch (type) {
+                    case "SURNAME",    "SN",           "OID.2.5.4.4"  -> apellidos = value;
+                    case "GIVENNAME",  "GN",           "OID.2.5.4.42" -> nombres   = value;
+                    case "SERIALNUMBER",               "OID.2.5.4.5"  -> serial    = value;
+                    case "CN" -> { if (apellidos.isEmpty()) apellidos = value; }
+                }
+            }
+        } catch (Exception e) {
+            // Fallback: split simple si LdapName falla
+            for (String part : dn.split(",")) {
+                String p = part.trim();
+                if      (p.startsWith("SURNAME="))      apellidos = p.substring(8).trim();
+                else if (p.startsWith("GIVENNAME="))    nombres   = p.substring(10).trim();
+                else if (p.startsWith("SERIALNUMBER=")) serial    = p.substring(13).trim();
+                else if (p.startsWith("CN=") && apellidos.isEmpty()) apellidos = p.substring(3).trim();
+            }
+        }
+
+        // Normalizar número de documento
+        if (!serial.isEmpty() && !serial.startsWith("CI ") && serial.contains("CI")) {
+            serial = serial.replace("CI", "CI ").trim();
+        }
+
+        // Construir texto
+        StringBuilder sb = new StringBuilder("Firmado digitalmente por:\n");
+        sb.append(apellidos.isEmpty() ? dn : apellidos);
+        if (!nombres.isEmpty())   sb.append(", ").append(nombres);
+        if (!serial.isEmpty())    sb.append("\n").append(serial);
+        sb.append("\n").append(ConfiguracionUtil.ahora());
+        if (signatureId != null && !signatureId.isEmpty()) sb.append("\nID: ").append(signatureId);
+        return sb.toString();
     }
 
     // =========================================================================

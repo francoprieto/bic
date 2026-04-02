@@ -125,6 +125,16 @@ ipcMain.handle('get-signature-image', (_, profileId) => {
   return null;
 });
 
+/** Devuelve la ruta absoluta de la imagen del perfil, o null si no existe. */
+function getSignatureImagePath(profileId) {
+  const dir = path.join(os.homedir(), '.bic');
+  for (const ext of ['png', 'jpg', 'jpeg']) {
+    const file = path.join(dir, `firma-${profileId}.${ext}`);
+    if (fs.existsSync(file)) return file;
+  }
+  return null;
+}
+
 // Seleccionar archivos locales
 ipcMain.handle('select-files', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -150,10 +160,35 @@ ipcMain.handle('list-certs', async (_, params) => {
 
 // Firmar (llama al JAR)
 ipcMain.on('sign', (event, payload) => {
+  // Resolver ruta absoluta de imagen del perfil activo antes de firmar
+  const profileId = payload.profileId || 'default';
+  const imagenPath = getSignatureImagePath(profileId);
+  if (imagenPath) {
+    payload.config = { ...payload.config, imagenPath };
+  }
   signer.sign(payload, mainWindow);
 });
 
 // Reset
 ipcMain.on('reset', () => {
   protocol.reset();
+});
+
+// Abrir archivo con la app por defecto del sistema
+ipcMain.handle('open-file', (_, filePath) => {
+  const { shell } = require('electron');
+  shell.openPath(filePath);
+});
+
+// Borrar imagen de firma de un perfil
+ipcMain.handle('delete-signature-image', (_, profileId) => {
+  const dir = path.join(os.homedir(), '.bic');
+  for (const ext of ['png', 'jpg', 'jpeg']) {
+    const file = path.join(dir, `firma-${profileId}.${ext}`);
+    if (fs.existsSync(file)) {
+      fs.unlinkSync(file);
+      return true;
+    }
+  }
+  return false;
 });

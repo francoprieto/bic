@@ -274,10 +274,9 @@ function initConfigPanel() {
     loadSigPreview(currentProfile);
   });
 
-  document.getElementById('clearSigBtn').addEventListener('click', () => {
-    // Solo oculta visualmente; el archivo en disco queda (no hay API de borrado)
-    document.getElementById('sigPreview').classList.add('hidden');
-    document.getElementById('sigPlaceholder').classList.remove('hidden');
+  document.getElementById('clearSigBtn').addEventListener('click', async () => {
+    await window.bic.deleteSignatureImage(currentProfile);
+    loadSigPreview(currentProfile);
   });
 
   loadSigPreview(currentProfile);
@@ -301,18 +300,24 @@ async function loadSigPreview(profileId) {
 function initSignPanel() {
   const useCert       = document.getElementById('useCert');
   const passwordEl    = document.getElementById('password');
+  const passwordLabel = document.getElementById('passwordLabel');
   const certPanel     = document.getElementById('certPanel');
   const selectCertBtn = document.getElementById('selectCertBtn');
   const certFileName  = document.getElementById('certFileName');
-  const certPassword  = document.getElementById('certPassword');
   let selectedCertPath = null;
 
   useCert.addEventListener('change', () => {
     const checked = useCert.checked;
     certPanel.classList.toggle('hidden', !checked);
-    passwordEl.disabled = checked;
-    if (checked) passwordEl.value = '';
-    else { selectedCertPath = null; certFileName.textContent = 'Sin certificado seleccionado'; }
+    if (checked) {
+      passwordLabel.textContent    = 'Contraseña:';
+      passwordEl.placeholder       = 'Contraseña del certificado';
+    } else {
+      passwordLabel.textContent    = 'PIN token:';
+      passwordEl.placeholder       = 'PIN del token';
+      selectedCertPath = null;
+      certFileName.textContent = 'Sin certificado seleccionado';
+    }
   });
 
   selectCertBtn.addEventListener('click', async () => {
@@ -339,6 +344,8 @@ function initSignPanel() {
     renderFileList();
     updateSignBtn();
     clearMsg();
+    const links = document.getElementById('signedLinks');
+    if (links) { links.innerHTML = ''; links.classList.add('hidden'); }
     window.bic.reset();
   });
 
@@ -356,10 +363,22 @@ function initSignPanel() {
     let pin, certSource, certFile;
     if (useCert.checked) {
       if (!selectedCertPath) { showMsg('Seleccioná un archivo .p12 primero', 'error'); return; }
+      if (!passwordEl.value.trim()) {
+        passwordEl.focus();
+        passwordEl.classList.add('ring-2', 'ring-red-500', 'border-red-500');
+        showMsg('Ingresá la contraseña del certificado', 'error');
+        return;
+      }
       certSource = 'pkcs12';
       certFile   = selectedCertPath;
-      pin        = certPassword.value;
+      pin        = passwordEl.value;
     } else {
+      if (!passwordEl.value.trim()) {
+        passwordEl.focus();
+        passwordEl.classList.add('ring-2', 'ring-red-500', 'border-red-500');
+        showMsg('Ingresá el PIN del token', 'error');
+        return;
+      }
       certSource = 'pkcs11';
       certFile   = null;
       pin        = passwordEl.value;
@@ -367,7 +386,12 @@ function initSignPanel() {
 
     setSigningState(true);
     clearMsg();
-    window.bic.sign({ files: filesToSign, pin, certSource, certAlias: null, certFile, config: getEffectiveConfig() });
+    window.bic.sign({ files: filesToSign, pin, certSource, certAlias: null, certFile, config: getEffectiveConfig(), profileId: currentProfile });
+  });
+
+  // Quitar el borde rojo al empezar a escribir
+  passwordEl.addEventListener('input', () => {
+    passwordEl.classList.remove('ring-2', 'ring-red-500', 'border-red-500');
   });
 }
 
@@ -381,6 +405,7 @@ function renderFileList() {
   allFiles.forEach(f => {
     const row = document.createElement('label');
     row.className = 'flex items-center gap-2 p-2 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700';
+    row.dataset.id = f.id;
     row.innerHTML = `
       <input type="checkbox" class="file-check rounded" data-id="${f.id}" ${selectedIds.has(f.id) ? 'checked' : ''}>
       <span class="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">${f.nombre}</span>
@@ -459,9 +484,60 @@ function bindBicEvents() {
 
   window.bic.onSignResult(result => {
     setSigningState(false);
-    if (result.success) { showMsg('✓ ' + result.message, 'success'); addLog('✓ ' + result.message); }
-    else                { showMsg('✗ ' + result.message, 'error');   addLog('✗ ' + result.message); }
+    if (result.success) {
+      showMsg('✓ ' + result.message, 'success');
+      addLog('✓ ' + result.message);
+      // Mostrar links a los archivos firmados
+      if (result.firmados?.length && result.firmadosDir) {
+        showSignedLinks(result.firmados, result.firmadosDir);
+      }
+    } else {
+      showMsg('✗ ' + result.message, 'error');
+      addLog('✗ ' + result.message);
+    }
   });
+}
+
+// ─── Links a archivos firmados ────────────────────────────────────────────────
+function showSignedLinks(firmados, dir) {
+  // Mapear nombre de archivo → id del archivo original
+  const byName = {};
+  allFiles.forEach(f => { byName[f.nombre] = f.id; });
+
+  firmados.forEach(nombre => {
+    const id  = byName[nombre];
+    const row = id
+      ? document.querySelector(`#fileList label[data-id="${id}"]`)
+      : null;
+    if (!row) return;
+
+    const fullPath = dir + '/' + nombre;
+
+    // Evitar duplicar si ya existe
+    if (row.querySelector('.download-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'download-btn shrink-0 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors';
+    btn.title = 'Abrir archivo firmado';
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-4-4 4m0 0-4-4m4 4V4"/>
+    </svg>`;
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      window.bic.openFile(fullPath);
+    });
+
+    // Insertar antes del último span (el 📁/🌐)
+    const lastSpan = row.querySelector('span:last-of-type');
+    row.insertBefore(btn, lastSpan);
+
+    // Marcar la fila como firmada
+    row.classList.add('border-green-400', 'dark:border-green-600');
+  });
+
+  // Ocultar el panel separado si existe
+  const container = document.getElementById('signedLinks');
+  if (container) container.classList.add('hidden');
 }
 
 // ─── Log ──────────────────────────────────────────────────────────────────────

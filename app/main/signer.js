@@ -164,6 +164,7 @@ async function sign(payload, mainWindow) {
       success:  true,
       message:  result.mensaje,
       firmados: firmados.map(f => path.basename(f)),
+      firmadosDir: destDir,
       subidos,
     });
 

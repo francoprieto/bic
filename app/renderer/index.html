@@ -40,13 +40,13 @@
 
       <!-- Controles de firma -->
       <div class="flex flex-wrap items-center gap-2 p-3 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-        <label class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">PIN token:</label>
-        <input id="password" type="password" placeholder="PIN del token"
+        <label id="passwordLabel" class="text-sm font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">PIN token:</label>
+        <input id="password" type="password" placeholder="PIN del token" required
           class="w-36 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
                  dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
         <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer ml-2">
-          <input id="useCert" type="checkbox" class="rounded"> Usar .p12
+          <input id="useCert" type="checkbox" class="rounded"> Usar certificado
         </label>
 
         <button id="signBtn" disabled
@@ -63,20 +63,20 @@
           <span id="progressText"></span>
         </div>
 
-        <!-- Panel .p12 -->
-        <div id="certPanel" class="hidden w-full flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <!-- Panel .p12: solo selector de archivo, la contraseña usa el campo de arriba -->
+        <div id="certPanel" class="hidden w-full flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
           <button id="selectCertBtn"
             class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
-                   text-gray-800 dark:text-gray-100 px-2 py-1 rounded">📂 Elegir .p12</button>
+                   text-gray-800 dark:text-gray-100 px-2 py-1 rounded">📂 Elegir certificado *.p12</button>
           <span id="certFileName" class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">Sin certificado seleccionado</span>
-          <input id="certPassword" type="password" placeholder="Contraseña del .p12"
-            class="w-40 text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
-                   dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
       </div>
 
       <!-- Mensaje -->
       <div id="signMsg" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
+
+      <!-- Links a archivos firmados -->
+      <div id="signedLinks" class="hidden mb-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col gap-1"></div>
 
       <!-- Barra de archivos -->
       <div class="flex items-center justify-between bg-gray-400 dark:bg-blue-800 rounded-lg px-3 py-2 mb-2">
@@ -94,8 +94,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M17.651 7.65a7.131 7.131 0 00-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0012.68-3.15M6 20v-4h4"/>
             </svg>
           </button>
-          <button id="testBtn" title="Simular archivos de prueba" style="display:none"
-            class="text-xs bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-2 py-0.5 rounded font-mono">TEST</button>
         </div>
       </div>
 
@@ -218,11 +216,6 @@
           class="w-full text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600
                  dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
       </div>
-
-      <button id="saveConfigBtn"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded transition-colors">
-        Guardar configuración del perfil
-      </button>
 
     </div>
   </div>
