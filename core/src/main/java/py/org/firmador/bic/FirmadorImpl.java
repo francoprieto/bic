@@ -8,7 +8,11 @@ import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.itextpdf.text.pdf.security.*;
-import net.glxn.qrgen.javase.QRCode;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import py.org.firmador.Log;
@@ -392,7 +396,14 @@ public class FirmadorImpl implements Firmador {
                 String signatureId = UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
 
                 int qrSize = pos.get("hqr").intValue();
-                ByteArrayOutputStream qr = QRCode.from(signatureId).withSize(qrSize, qrSize).stream();
+                QRCodeWriter writer = new QRCodeWriter();
+                BitMatrix matrix = writer.encode(signatureId, BarcodeFormat.QR_CODE, qrSize, qrSize);
+                BufferedImage qrImage = new BufferedImage(qrSize, qrSize, BufferedImage.TYPE_INT_RGB);
+                for (int x = 0; x < qrSize; x++)
+                    for (int y = 0; y < qrSize; y++)
+                        qrImage.setRGB(x, y, matrix.get(x, y) ? 0x000000 : 0xFFFFFF);
+                ByteArrayOutputStream qr = new ByteArrayOutputStream();
+                ImageIO.write(qrImage, "PNG", qr);
                 sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
                 sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
                 sap.setLayer2Text(buildSignatureText(dn, signatureId));
