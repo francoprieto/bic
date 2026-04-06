@@ -36,8 +36,9 @@ app.setAsDefaultProtocolClient('bic');
 function createWindow() {
   try {
     mainWindow = new BrowserWindow({
-      width: 820,
-      height: 660,
+      width: 800,
+      height: 700,
+      autoHideMenuBar: true,
       webPreferences: {
         preload: path.join(__dirname, '..', 'renderer', 'preload.js'),
         nodeIntegration: false,
@@ -142,6 +143,14 @@ ipcMain.handle('select-files', async () => {
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   return result.canceled ? [] : result.filePaths;
+});
+
+// Seleccionar directorio de salida
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return result.canceled ? null : result.filePaths[0];
 });
 
 // Seleccionar certificado .p12

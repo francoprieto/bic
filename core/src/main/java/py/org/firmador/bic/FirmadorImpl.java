@@ -393,11 +393,11 @@ public class FirmadorImpl implements Firmador {
                 Log.info("DN del certificado: " + dn);
 
                 // Generar ID único de firma para el QR
-                String signatureId = UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+                //String signatureId = UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
 
                 int qrSize = pos.get("hqr").intValue();
                 QRCodeWriter writer = new QRCodeWriter();
-                BitMatrix matrix = writer.encode(signatureId, BarcodeFormat.QR_CODE, qrSize, qrSize);
+                BitMatrix matrix = writer.encode(dn, BarcodeFormat.QR_CODE, qrSize, qrSize);
                 BufferedImage qrImage = new BufferedImage(qrSize, qrSize, BufferedImage.TYPE_INT_RGB);
                 for (int x = 0; x < qrSize; x++)
                     for (int y = 0; y < qrSize; y++)
@@ -406,7 +406,7 @@ public class FirmadorImpl implements Firmador {
                 ImageIO.write(qrImage, "PNG", qr);
                 sap.setSignatureGraphic(Image.getInstance(qr.toByteArray()));
                 sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
-                sap.setLayer2Text(buildSignatureText(dn, signatureId));
+                sap.setLayer2Text(buildSignatureText(dn));
             } else {
                 sap.setSignatureGraphic(Image.getInstance(imgBytes));
                 sap.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC);
@@ -437,11 +437,11 @@ public class FirmadorImpl implements Firmador {
         }
     }
 
-    private String buildSignatureText(String dn, String signatureId) {
+    private String buildSignatureText(String dn) {
         String apellidos = "";
         String nombres   = "";
         String serial    = "";
-
+        
         try {
             // LdapName parsea correctamente RFC 2253 (valores con comas, OIDs numéricos, etc.)
             javax.naming.ldap.LdapName ldap = new javax.naming.ldap.LdapName(dn);
@@ -466,7 +466,7 @@ public class FirmadorImpl implements Firmador {
                 else if (p.startsWith("CN=") && apellidos.isEmpty()) apellidos = p.substring(3).trim();
             }
         }
-
+        String signatureId = serial;
         // Normalizar número de documento
         if (!serial.isEmpty() && !serial.startsWith("CI ") && serial.contains("CI")) {
             serial = serial.replace("CI", "CI ").trim();

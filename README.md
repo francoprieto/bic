@@ -23,19 +23,6 @@ bic/
         └── build.js      # Build script (Maven + electron-builder)
 ```
 
-## Cambios principales respecto a v1
-
-| Aspecto | v1 | v2 |
-|---------|----|----|
-| Java UI | JOptionPane, JFileChooser en el JAR | Sin Swing. Electron maneja toda la UI |
-| Selección de certificado | Diálogo Swing | Electron lista certs (`--cmd=listar-certs`) y el usuario elige |
-| main.js | 1100 líneas monolíticas | Dividido en `protocol.js`, `signer.js`, `store.js`, `logger.js` |
-| Configuración | localStorage (renderer) | `~/.bic/app-config.json` (accesible desde main y renderer) |
-| Perfiles | localStorage | Mismo archivo JSON, gestionado desde main process |
-| Build | JAVA_HOME hardcodeado | Detección automática via `/usr/libexec/java_home` |
-| Protocolo JAR | `--cmd` implícito | `--cmd=init \| listar-certs \| firmar` explícito |
-| Resultado JAR | stdout mezclado | Línea `RESULT:{json}` siempre presente |
-
 ## Comandos del JAR
 
 ```bash

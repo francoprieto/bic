@@ -279,6 +279,11 @@ function initConfigPanel() {
     loadSigPreview(currentProfile);
   });
 
+  document.getElementById('selectDirBtn').addEventListener('click', async () => {
+    const dir = await window.bic.selectDirectory();
+    if (dir) document.getElementById('directorio').value = dir;
+  });
+
   loadSigPreview(currentProfile);
 }
 
@@ -489,7 +494,7 @@ function bindBicEvents() {
       addLog('✓ ' + result.message);
       // Mostrar links a los archivos firmados
       if (result.firmados?.length && result.firmadosDir) {
-        showSignedLinks(result.firmados, result.firmadosDir);
+        showSignedLinks(result.firmados, result.firmadosDir, result.firmadosPaths);
       }
     } else {
       showMsg('✗ ' + result.message, 'error');
@@ -499,21 +504,34 @@ function bindBicEvents() {
 }
 
 // ─── Links a archivos firmados ────────────────────────────────────────────────
-function showSignedLinks(firmados, dir) {
-  // Mapear nombre de archivo → id del archivo original
+function showSignedLinks(firmados, dir, firmadosPaths) {
+  // Mapear nombre de archivo → archivo original
   const byName = {};
-  allFiles.forEach(f => { byName[f.nombre] = f.id; });
+  allFiles.forEach(f => { byName[f.nombre] = f; });
+
+  // Mapear nombre → ruta completa (si viene del main)
+  const pathByName = {};
+  if (firmadosPaths) {
+    firmadosPaths.forEach(p => {
+      const nombre = p.split(/[\\/]/).pop();
+      pathByName[nombre] = p;
+    });
+  }
 
   firmados.forEach(nombre => {
-    const id  = byName[nombre];
-    const row = id
-      ? document.querySelector(`#fileList label[data-id="${id}"]`)
-      : null;
+    const fileInfo = byName[nombre];
+    if (!fileInfo) return;
+
+    // Buscar la fila por iteración en lugar de querySelector con data-id
+    // (evita problemas con rutas que contienen caracteres especiales en CSS)
+    const rows = document.querySelectorAll('#fileList label[data-id]');
+    let row = null;
+    for (const r of rows) {
+      if (r.dataset.id === fileInfo.id) { row = r; break; }
+    }
     if (!row) return;
 
-    const fullPath = dir + '/' + nombre;
-
-    // Evitar duplicar si ya existe
+    const fullPath = pathByName[nombre] || (dir + '/' + nombre);
     if (row.querySelector('.download-btn')) return;
 
     const btn = document.createElement('button');

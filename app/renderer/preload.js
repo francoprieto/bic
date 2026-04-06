@@ -21,7 +21,8 @@ contextBridge.exposeInMainWorld('bic', {
   selectCert: ()     => ipcRenderer.invoke('select-cert'),
 
   // Archivos locales
-  selectFiles: () => ipcRenderer.invoke('select-files'),
+  selectFiles:     () => ipcRenderer.invoke('select-files'),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
   openFile:    filePath => ipcRenderer.invoke('open-file', filePath),
 
   // Estado completo (perfiles + perfil activo)
