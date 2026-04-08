@@ -6,6 +6,7 @@ let selectedIds    = new Set();
 let profiles       = {};          // { [id]: { name, isDefault, config } }
 let currentProfile = 'default';
 let isLocalMode    = false;
+let selectedCertPath = null;
 
 const DEFAULT_CONFIG = {
   posicion: 'centro-inferior', pagina: 'primera', numeroPagina: '',
@@ -108,6 +109,16 @@ function applyConfigToUI(cfg) {
   setVal('ml',          cfg.ml          || '50');
   setVal('mr',          cfg.mr          || '50');
   setVal('directorio',  cfg.directorio  || '');
+
+  // Restaurar último certificado seleccionado
+  selectedCertPath = cfg.lastCertPath || null;
+  const certFileName = document.getElementById('certFileName');
+  if (certFileName) {
+    certFileName.textContent = selectedCertPath
+      ? selectedCertPath.split('/').pop().split('\\').pop()
+      : 'Sin certificado seleccionado';
+  }
+
   setVal('pagina',      cfg.pagina      || 'primera');
   toggleNumeroPagina(cfg.pagina === 'np');
 
@@ -129,6 +140,7 @@ function readConfigFromUI() {
     ml:           getVal('ml'),
     mr:           getVal('mr'),
     directorio:   getVal('directorio'),
+    lastCertPath: selectedCertPath || '',
   };
 }
 
@@ -309,7 +321,6 @@ function initSignPanel() {
   const certPanel     = document.getElementById('certPanel');
   const selectCertBtn = document.getElementById('selectCertBtn');
   const certFileName  = document.getElementById('certFileName');
-  let selectedCertPath = null;
 
   useCert.addEventListener('change', () => {
     const checked = useCert.checked;
@@ -320,8 +331,6 @@ function initSignPanel() {
     } else {
       passwordLabel.textContent    = 'PIN token:';
       passwordEl.placeholder       = 'PIN del token';
-      selectedCertPath = null;
-      certFileName.textContent = 'Sin certificado seleccionado';
     }
   });
 
@@ -329,7 +338,11 @@ function initSignPanel() {
     const p = await window.bic.selectCert();
     if (!p) return;
     selectedCertPath = p;
-    certFileName.textContent = p.split('/').pop();
+    certFileName.textContent = p.split('/').pop().split('\\').pop();
+    // Persistir la ruta del certificado en la config del perfil
+    const cfg = readConfigFromUI();
+    profiles[currentProfile].config = cfg;
+    await window.bic.saveProfileConfig(currentProfile, cfg);
   });
 
   document.getElementById('openFilesBtn').addEventListener('click', async () => {
