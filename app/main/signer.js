@@ -109,12 +109,19 @@ async function sign(payload, mainWindow) {
   const send = (channel, data) => mainWindow?.webContents.send(channel, data);
 
   try {
+    // 0. Limpiar caché antes de firmar
+    const cacheDir = path.join(os.homedir(), '.bic', 'cache');
+    if (fs.existsSync(cacheDir)) {
+      for (const file of fs.readdirSync(cacheDir)) {
+        try { fs.unlinkSync(path.join(cacheDir, file)); } catch (_) {}
+      }
+    }
+
     // 1. Descargar archivos remotos a caché
     send('sign-progress', 'Descargando archivos...');
     const localFiles = await downloadFiles(files);
 
     // 2. Construir argumentos para el JAR
-    const cacheDir  = path.join(os.homedir(), '.bic', 'cache');
     const destDir   = config.directorio || path.join(os.homedir(), '.bic', 'firmados');
     fs.mkdirSync(destDir, { recursive: true });
 

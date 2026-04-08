@@ -208,11 +208,12 @@
         const pdfFiles = [
             'A4-test-1.pdf',
             'oficio-test-2.pdf',
-            'carta-test-3.pdf'
+            'carta-test-3.pdf',
+			'https://www.mef.gov.py/sites/default/files/2026-01/LEY_7609_PGN_2026_OCR.pdf'
         ];
         
         // Construir URLs completas para cada archivo
-        const fullUrls = pdfFiles.map(file => `${serverBase}/${file}`);
+        const fullUrls = pdfFiles.map(file =>{ return file.includes('https') ? `${file}` : `${serverBase}/${file}`});
         
         // Construir el enlace bic:// con las URLs completas
         const bicUrl = `bic://firmar?files=${fullUrls.join(',')}`;
