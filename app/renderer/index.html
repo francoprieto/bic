@@ -224,6 +224,14 @@
         </div>
       </div>
 
+      <!-- Previsualizar firma -->
+      <div class="flex justify-center">
+        <button id="previewSignBtn" type="button"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 px-4 rounded transition-colors">
+          👁 Previsualizar firma
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -273,6 +281,46 @@
         <button id="btn-aceptar-confirmar" type="button"
           class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded">
           Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Previsualización de firma -->
+  <div id="modal-preview" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-[420px] max-w-[95vw]">
+      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Previsualización de firma</h3>
+      <div class="flex justify-center items-center gap-2 mb-3">
+        <label class="text-xs text-gray-600 dark:text-gray-400">Papel:</label>
+        <select id="previewPaperSize"
+          class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="a4" selected>A4 (210 × 297 mm)</option>
+          <option value="oficio">Oficio (216 × 356 mm)</option>
+          <option value="carta">Carta (216 × 279 mm)</option>
+        </select>
+      </div>
+      <div class="flex justify-center mb-3">
+        <div id="previewPage" class="relative bg-white border-2 border-gray-300 dark:border-gray-500 shadow-md"
+             style="width:297px; height:420px;">
+          <!-- Líneas de margen (guías) -->
+          <div id="previewMarginTop" class="absolute left-0 right-0 border-b border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
+          <div id="previewMarginBottom" class="absolute left-0 right-0 border-t border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
+          <div id="previewMarginLeft" class="absolute top-0 bottom-0 border-r border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
+          <div id="previewMarginRight" class="absolute top-0 bottom-0 border-l border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
+          <!-- Rectángulo de firma -->
+          <div id="previewSigBox" class="absolute border-2 border-green-500 bg-green-100 bg-opacity-40 dark:bg-green-900 dark:bg-opacity-40 rounded flex items-center justify-center overflow-hidden">
+            <img id="previewSigImg" class="hidden max-w-full max-h-full object-contain" alt="Firma">
+            <span id="previewSigText" class="text-green-700 dark:text-green-300 text-[9px] font-semibold text-center px-1">FIRMA</span>
+          </div>
+          <!-- Etiqueta de página -->
+          <div id="previewPageLabel" class="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] text-gray-400 dark:text-gray-500">A4</div>
+        </div>
+      </div>
+      <div id="previewInfo" class="text-xs text-gray-500 dark:text-gray-400 text-center mb-3"></div>
+      <div class="flex justify-end">
+        <button id="btn-cerrar-preview" type="button"
+          class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded">
+          Cerrar
         </button>
       </div>
     </div>

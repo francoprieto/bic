@@ -23,6 +23,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   initProfileUI();
   initConfigPanel();
   initSignPanel();
+  initPreview();
   bindBicEvents();
 });
 
@@ -578,6 +579,121 @@ function addLog(msg) {
   line.className   = 'text-gray-700 dark:text-gray-300';
   line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
   el.prepend(line);
+}
+
+// ─── Previsualización de firma ─────────────────────────────────────────────────
+
+// Tamaños de papel en puntos PDF (72 puntos = 1 pulgada)
+const PAPER_SIZES = {
+  a4:     { w: 595, h: 842, label: 'A4' },
+  oficio: { w: 612, h: 1008, label: 'Oficio' },
+  carta:  { w: 612, h: 792, label: 'Carta' },
+};
+
+function initPreview() {
+  const modal = document.getElementById('modal-preview');
+  const paperSelect = document.getElementById('previewPaperSize');
+
+  document.getElementById('previewSignBtn').addEventListener('click', () => {
+    renderPreview();
+    modal.classList.remove('hidden');
+  });
+  document.getElementById('btn-cerrar-preview').addEventListener('click', () => {
+    modal.classList.add('hidden');
+  });
+  paperSelect.addEventListener('change', () => renderPreview());
+}
+
+function renderPreview() {
+  const cfg = readConfigFromUI();
+  const paperKey = document.getElementById('previewPaperSize').value || 'a4';
+  const paper = PAPER_SIZES[paperKey];
+
+  const pdfW = paper.w;
+  const pdfH = paper.h;
+
+  // Escalar para que el contenedor tenga un ancho fijo de 297px
+  const containerW = 297;
+  const scale = containerW / pdfW;
+  const containerH = Math.round(pdfH * scale);
+
+  // Ajustar el contenedor de página
+  const pageEl = document.getElementById('previewPage');
+  pageEl.style.width  = `${containerW}px`;
+  pageEl.style.height = `${containerH}px`;
+
+  // Etiqueta de papel
+  document.getElementById('previewPageLabel').textContent = paper.label;
+
+  // Convertir valores de config a puntos PDF (misma fórmula que AparienciaUtil.java)
+  const sigW = parseInt(cfg.ancho || '160') * 2 * 0.75;
+  const sigH = parseInt(cfg.alto  || '40')  * 2 * 0.75;
+  const mt   = parseInt(cfg.mt    || '50')  * 0.75;
+  const mb   = parseInt(cfg.mb    || '50')  * 0.75;
+  const ml   = parseInt(cfg.ml    || '50')  * 0.75;
+  const mr   = parseInt(cfg.mr    || '50')  * 0.75;
+
+  // Calcular posición en puntos PDF (origen abajo-izquierda en PDF, arriba-izquierda en pantalla)
+  let llx, lly;
+  const lugar = cfg.posicion || 'centro-inferior';
+  switch (lugar) {
+    case 'centro-superior':
+      llx = (pdfW - sigW) / 2; lly = pdfH - mt - sigH; break;
+    case 'esquina-superior-izquierda':
+      llx = ml; lly = pdfH - mt - sigH; break;
+    case 'esquina-superior-derecha':
+      llx = pdfW - mr - sigW; lly = pdfH - mt - sigH; break;
+    case 'esquina-inferior-izquierda':
+      llx = ml; lly = mb; break;
+    case 'esquina-inferior-derecha':
+      llx = pdfW - mr - sigW; lly = mb; break;
+    default: // centro-inferior
+      llx = (pdfW - sigW) / 2; lly = mb; break;
+  }
+
+  // Convertir de coordenadas PDF (origen abajo-izq) a pantalla (origen arriba-izq)
+  const screenX = llx * scale;
+  const screenY = (pdfH - lly - sigH) * scale;
+  const screenW = sigW * scale;
+  const screenH = sigH * scale;
+
+  // Posicionar el rectángulo de firma
+  const box = document.getElementById('previewSigBox');
+  box.style.left   = `${Math.max(0, screenX)}px`;
+  box.style.top    = `${Math.max(0, screenY)}px`;
+  box.style.width  = `${Math.min(screenW, containerW)}px`;
+  box.style.height = `${Math.min(screenH, containerH)}px`;
+
+  // Guías de márgenes
+  document.getElementById('previewMarginTop').style.top       = `${mt * scale}px`;
+  document.getElementById('previewMarginBottom').style.bottom  = `${mb * scale}px`;
+  document.getElementById('previewMarginLeft').style.left      = `${ml * scale}px`;
+  document.getElementById('previewMarginRight').style.right    = `${mr * scale}px`;
+
+  // Imagen de firma (si hay)
+  const sigPreview = document.getElementById('sigPreview');
+  const previewImg = document.getElementById('previewSigImg');
+  const previewTxt = document.getElementById('previewSigText');
+  if (sigPreview && !sigPreview.classList.contains('hidden') && sigPreview.src) {
+    previewImg.src = sigPreview.src;
+    previewImg.classList.remove('hidden');
+    previewTxt.classList.add('hidden');
+  } else {
+    previewImg.classList.add('hidden');
+    previewTxt.classList.remove('hidden');
+  }
+
+  // Info
+  const posLabels = {
+    'centro-inferior': 'Centro Inf.',
+    'centro-superior': 'Centro Sup.',
+    'esquina-superior-izquierda': 'Sup. Izq.',
+    'esquina-superior-derecha': 'Sup. Der.',
+    'esquina-inferior-izquierda': 'Inf. Izq.',
+    'esquina-inferior-derecha': 'Inf. Der.',
+  };
+  document.getElementById('previewInfo').textContent =
+    `${paper.label} · Posición: ${posLabels[lugar] || lugar} · ${cfg.ancho}×${cfg.alto} px · Márgenes: ↑${cfg.mt} ↓${cfg.mb} ←${cfg.ml} →${cfg.mr}`;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
