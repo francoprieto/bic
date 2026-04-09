@@ -683,7 +683,7 @@ async function renderPreview() {
   }
 
   // Escalar para que el contenedor tenga un ancho fijo de 297px
-  const containerW = 297;
+  const containerW = 400;
   const scale = containerW / pdfW;
   const containerH = Math.round(pdfH * scale);
 
