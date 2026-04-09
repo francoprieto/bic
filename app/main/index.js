@@ -153,6 +153,41 @@ ipcMain.handle('select-directory', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
+// Obtener info de página de un PDF (dimensiones, total de páginas y contenido base64)
+ipcMain.handle('get-pdf-page-info', (_, filePath) => {
+  try {
+    const buf = fs.readFileSync(filePath);
+    const raw = buf.toString('binary');
+
+    // Contar páginas: buscar /Type /Page (no /Pages)
+    const pageMatches = raw.match(/\/Type\s*\/Page(?!s)\b/g);
+    const totalPages = pageMatches ? pageMatches.length : 1;
+
+    // Extraer todos los MediaBox
+    const mediaBoxes = [];
+    const mbRegex = /\/MediaBox\s*\[\s*([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s*\]/g;
+    let m;
+    while ((m = mbRegex.exec(raw)) !== null) {
+      mediaBoxes.push({
+        x: parseFloat(m[1]), y: parseFloat(m[2]),
+        w: parseFloat(m[3]), h: parseFloat(m[4]),
+      });
+    }
+
+    // Usar el primer MediaBox encontrado (aplica a la mayoría de PDFs)
+    const box = mediaBoxes.length > 0 ? mediaBoxes[0] : { x: 0, y: 0, w: 595, h: 842 };
+
+    return {
+      width: box.w - box.x,
+      height: box.h - box.y,
+      totalPages,
+      base64: buf.toString('base64'),
+    };
+  } catch (e) {
+    return { width: 595, height: 842, totalPages: 1, error: e.message };
+  }
+});
+
 // Seleccionar certificado .p12
 ipcMain.handle('select-cert', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {

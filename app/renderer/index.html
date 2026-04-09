@@ -5,6 +5,11 @@
   <title>BiC - Firmador Digital</title>
   <script src="tailwind.min.js"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
+  <script type="module">
+    import * as pdfjsLib from './pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
+  </script>
 </head>
 <body class="bg-gray-200 dark:bg-gray-800 min-h-screen flex flex-col items-center pt-4 transition-colors">
 
@@ -228,7 +233,7 @@
       <div class="flex justify-center">
         <button id="previewSignBtn" type="button"
           class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 px-4 rounded transition-colors">
-          👁 Previsualizar firma
+          👁 Previsualizar firma en archivo
         </button>
       </div>
 
@@ -288,20 +293,32 @@
 
   <!-- Modal: Previsualización de firma -->
   <div id="modal-preview" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-[420px] max-w-[95vw]">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-[440px] max-w-[95vw]">
       <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Previsualización de firma</h3>
-      <div class="flex justify-center items-center gap-2 mb-3">
-        <label class="text-xs text-gray-600 dark:text-gray-400">Papel:</label>
+
+      <!-- Selector de PDF y papel manual -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <button id="previewSelectPdf" type="button"
+          class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
+                 text-gray-800 dark:text-gray-100 px-2 py-1 rounded">
+          📂 Elegir PDF
+        </button>
+        <span id="previewPdfName" class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">Sin archivo (usando tamaño manual)</span>
         <select id="previewPaperSize"
           class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <option value="a4" selected>A4 (210 × 297 mm)</option>
-          <option value="oficio">Oficio (216 × 356 mm)</option>
-          <option value="carta">Carta (216 × 279 mm)</option>
+          <option value="a4" selected>A4</option>
+          <option value="oficio">Oficio</option>
+          <option value="carta">Carta</option>
         </select>
       </div>
+
       <div class="flex justify-center mb-3">
-        <div id="previewPage" class="relative bg-white border-2 border-gray-300 dark:border-gray-500 shadow-md"
+        <div id="previewPage" class="relative border-2 border-gray-300 dark:border-gray-500 shadow-md overflow-hidden"
              style="width:297px; height:420px;">
+          <!-- Canvas para renderizar la página del PDF -->
+          <canvas id="previewPdfCanvas" class="absolute inset-0 w-full h-full"></canvas>
+          <!-- Fondo blanco cuando no hay PDF -->
+          <div id="previewPageBg" class="absolute inset-0 bg-white"></div>
           <!-- Líneas de margen (guías) -->
           <div id="previewMarginTop" class="absolute left-0 right-0 border-b border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
           <div id="previewMarginBottom" class="absolute left-0 right-0 border-t border-dashed border-blue-300 dark:border-blue-600 opacity-50"></div>
@@ -313,7 +330,7 @@
             <span id="previewSigText" class="text-green-700 dark:text-green-300 text-[9px] font-semibold text-center px-1">FIRMA</span>
           </div>
           <!-- Etiqueta de página -->
-          <div id="previewPageLabel" class="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] text-gray-400 dark:text-gray-500">A4</div>
+          <div id="previewPageLabel" class="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] text-gray-400 dark:text-gray-500 bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 px-1 rounded">A4</div>
         </div>
       </div>
       <div id="previewInfo" class="text-xs text-gray-500 dark:text-gray-400 text-center mb-3"></div>

@@ -23,7 +23,8 @@ contextBridge.exposeInMainWorld('bic', {
   // Archivos locales
   selectFiles:     () => ipcRenderer.invoke('select-files'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
-  openFile:    filePath => ipcRenderer.invoke('open-file', filePath),
+  openFile:        filePath => ipcRenderer.invoke('open-file', filePath),
+  getPdfPageInfo:  filePath => ipcRenderer.invoke('get-pdf-page-info', filePath),
 
   // Estado completo (perfiles + perfil activo)
   getState:          ()                   => ipcRenderer.invoke('get-state'),

@@ -590,27 +590,97 @@ const PAPER_SIZES = {
   carta:  { w: 612, h: 792, label: 'Carta' },
 };
 
+// Estado de la previsualización
+let previewPdfInfo = null; // { width, height, totalPages, name, base64 }
+let previewPdfDoc  = null; // instancia de pdfjsLib.PDFDocumentProxy
+
 function initPreview() {
   const modal = document.getElementById('modal-preview');
   const paperSelect = document.getElementById('previewPaperSize');
 
-  document.getElementById('previewSignBtn').addEventListener('click', () => {
-    renderPreview();
+  document.getElementById('previewSignBtn').addEventListener('click', async () => {
+    const paths = await window.bic.selectFiles();
+    if (!paths.length) return;
+    await loadPreviewPdf(paths[0]);
     modal.classList.remove('hidden');
   });
+
+  document.getElementById('previewSelectPdf').addEventListener('click', async () => {
+    const paths = await window.bic.selectFiles();
+    if (!paths.length) return;
+    await loadPreviewPdf(paths[0]);
+  });
+
   document.getElementById('btn-cerrar-preview').addEventListener('click', () => {
     modal.classList.add('hidden');
   });
+
   paperSelect.addEventListener('change', () => renderPreview());
 }
 
-function renderPreview() {
-  const cfg = readConfigFromUI();
-  const paperKey = document.getElementById('previewPaperSize').value || 'a4';
-  const paper = PAPER_SIZES[paperKey];
+async function loadPreviewPdf(filePath) {
+  const fileName = filePath.split('/').pop().split('\\').pop();
+  const info = await window.bic.getPdfPageInfo(filePath);
 
-  const pdfW = paper.w;
-  const pdfH = paper.h;
+  previewPdfInfo = { ...info, name: fileName };
+  document.getElementById('previewPdfName').textContent = `${fileName} (${info.totalPages} pág.)`;
+
+  // Detectar tamaño de papel y seleccionar en el combo
+  const detected = detectPaperSize(info.width, info.height);
+  document.getElementById('previewPaperSize').value = detected;
+
+  // Cargar el PDF con pdf.js
+  if (info.base64 && window.pdfjsLib) {
+    try {
+      const data = Uint8Array.from(atob(info.base64), c => c.charCodeAt(0));
+      previewPdfDoc = await window.pdfjsLib.getDocument({ data }).promise;
+    } catch (e) {
+      console.error('Error cargando PDF con pdf.js:', e);
+      previewPdfDoc = null;
+    }
+  } else {
+    previewPdfDoc = null;
+  }
+
+  await renderPreview();
+}
+
+function detectPaperSize(w, h) {
+  // Tolerancia de 10 puntos para detectar el tamaño
+  const tol = 10;
+  for (const [key, paper] of Object.entries(PAPER_SIZES)) {
+    if (Math.abs(w - paper.w) < tol && Math.abs(h - paper.h) < tol) return key;
+  }
+  return 'custom';
+}
+
+async function renderPreview() {
+  const cfg = readConfigFromUI();
+  const paperSelect = document.getElementById('previewPaperSize');
+  const paperKey = paperSelect.value;
+
+  let pdfW, pdfH, paperLabel;
+
+  if (previewPdfInfo && previewPdfInfo.width) {
+    pdfW = previewPdfInfo.width;
+    pdfH = previewPdfInfo.height;
+    const detected = detectPaperSize(pdfW, pdfH);
+    if (detected !== 'custom' && PAPER_SIZES[detected]) {
+      paperLabel = PAPER_SIZES[detected].label;
+    } else if (paperKey !== 'custom' && PAPER_SIZES[paperKey]) {
+      pdfW = PAPER_SIZES[paperKey].w;
+      pdfH = PAPER_SIZES[paperKey].h;
+      paperLabel = PAPER_SIZES[paperKey].label;
+    } else {
+      paperLabel = `${Math.round(pdfW)}×${Math.round(pdfH)} pt`;
+    }
+  } else if (PAPER_SIZES[paperKey]) {
+    pdfW = PAPER_SIZES[paperKey].w;
+    pdfH = PAPER_SIZES[paperKey].h;
+    paperLabel = PAPER_SIZES[paperKey].label;
+  } else {
+    pdfW = 595; pdfH = 842; paperLabel = 'A4';
+  }
 
   // Escalar para que el contenedor tenga un ancho fijo de 297px
   const containerW = 297;
@@ -623,7 +693,45 @@ function renderPreview() {
   pageEl.style.height = `${containerH}px`;
 
   // Etiqueta de papel
-  document.getElementById('previewPageLabel').textContent = paper.label;
+  document.getElementById('previewPageLabel').textContent = paperLabel;
+
+  // Resolver número de página
+  const pagCfg = cfg.pagina || 'primera';
+  const totalPages = previewPdfInfo ? previewPdfInfo.totalPages : 1;
+  let targetPage;
+  if (pagCfg === 'up') {
+    targetPage = totalPages;
+  } else if (pagCfg === 'np') {
+    targetPage = Math.min(parseInt(cfg.numeroPagina) || 1, totalPages);
+  } else {
+    targetPage = 1;
+  }
+
+  // Renderizar la página del PDF en el canvas
+  const canvas = document.getElementById('previewPdfCanvas');
+  const pageBg = document.getElementById('previewPageBg');
+  if (previewPdfDoc) {
+    try {
+      const page = await previewPdfDoc.getPage(targetPage);
+      const viewport = page.getViewport({ scale: containerW / page.getViewport({ scale: 1 }).width });
+      canvas.width  = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      canvas.style.width  = `${containerW}px`;
+      canvas.style.height = `${containerH}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      canvas.classList.remove('hidden');
+      pageBg.classList.add('hidden');
+    } catch (e) {
+      console.error('Error renderizando página PDF:', e);
+      canvas.classList.add('hidden');
+      pageBg.classList.remove('hidden');
+    }
+  } else {
+    canvas.classList.add('hidden');
+    pageBg.classList.remove('hidden');
+  }
 
   // Convertir valores de config a puntos PDF (misma fórmula que AparienciaUtil.java)
   const sigW = parseInt(cfg.ancho || '160') * 2 * 0.75;
@@ -633,7 +741,7 @@ function renderPreview() {
   const ml   = parseInt(cfg.ml    || '50')  * 0.75;
   const mr   = parseInt(cfg.mr    || '50')  * 0.75;
 
-  // Calcular posición en puntos PDF (origen abajo-izquierda en PDF, arriba-izquierda en pantalla)
+  // Calcular posición en puntos PDF
   let llx, lly;
   const lugar = cfg.posicion || 'centro-inferior';
   switch (lugar) {
@@ -647,7 +755,7 @@ function renderPreview() {
       llx = ml; lly = mb; break;
     case 'esquina-inferior-derecha':
       llx = pdfW - mr - sigW; lly = mb; break;
-    default: // centro-inferior
+    default:
       llx = (pdfW - sigW) / 2; lly = mb; break;
   }
 
@@ -692,8 +800,9 @@ function renderPreview() {
     'esquina-inferior-izquierda': 'Inf. Izq.',
     'esquina-inferior-derecha': 'Inf. Der.',
   };
+  const pageInfo = previewPdfInfo ? ` · Pág. ${targetPage}/${totalPages}` : '';
   document.getElementById('previewInfo').textContent =
-    `${paper.label} · Posición: ${posLabels[lugar] || lugar} · ${cfg.ancho}×${cfg.alto} px · Márgenes: ↑${cfg.mt} ↓${cfg.mb} ←${cfg.ml} →${cfg.mr}`;
+    `${paperLabel}${pageInfo} · ${posLabels[lugar] || lugar} · ${cfg.ancho}×${cfg.alto} px · Márgenes: ↑${cfg.mt} ↓${cfg.mb} ←${cfg.ml} →${cfg.mr}`;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

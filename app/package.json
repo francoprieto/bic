@@ -7,10 +7,10 @@
   "scripts": {
     "start": "electron .",
     "copy-jar": "node -e \"const fs=require('fs'),path=require('path');const src=path.join(__dirname,'..','core','target','bic-core-jar-with-dependencies.jar');const dst=path.join(__dirname,'extraResources','target','bic-core-jar-with-dependencies.jar');if(fs.existsSync(src)){fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);console.log('JAR copiado a extraResources');}else{console.warn('JAR no encontrado, usando el existente');}\"",
-    "build:win":      "node ./scripts/build.js win64   && electron-builder --win --x64",
-    "build:mac-arm":  "node ./scripts/build.js mac-arm && electron-builder --mac --arm64",
-    "build:mac-x64":  "node ./scripts/build.js mac-x64 && electron-builder --mac --x64",
-    "build:linux":    "node ./scripts/build.js linux   && electron-builder --linux --x64"
+    "build:win": "node ./scripts/build.js win64   && electron-builder --win --x64",
+    "build:mac-arm": "node ./scripts/build.js mac-arm && electron-builder --mac --arm64",
+    "build:mac-x64": "node ./scripts/build.js mac-x64 && electron-builder --mac --x64",
+    "build:linux": "node ./scripts/build.js linux   && electron-builder --linux --x64"
   },
   "keywords": [],
   "author": "",
@@ -22,21 +22,45 @@
   },
   "devDependencies": {
     "electron": "^37.2.4",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "pdfjs-dist": "^4.9.155"
   },
   "build": {
     "appId": "py.org.firmador.bic",
     "productName": "Bic",
     "icon": "./assets/icon.png",
     "asar": true,
-    "directories": { "output": "dist" },
-    "files": ["**/*", "!extraResources/**"],
-    "extraResources": [{ "from": "./extraResources", "to": ".", "filter": ["**/*"] }],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!extraResources/**"
+    ],
+    "extraResources": [
+      {
+        "from": "./extraResources",
+        "to": ".",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "win": {
-      "target": { "target": "nsis", "arch": ["x64"] }
+      "target": {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
     },
     "mac": {
-      "target": { "target": "dmg", "arch": ["arm64"] }
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "arm64"
+        ]
+      }
     },
     "linux": {
       "target": [
