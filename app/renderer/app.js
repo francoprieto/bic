@@ -103,6 +103,13 @@ function initPosButtons() {
 // ─── Aplicar / leer config de la UI ──────────────────────────────────────────
 function applyConfigToUI(cfg) {
   if (!cfg) cfg = { ...DEFAULT_CONFIG };
+
+  // Actualizar nombre del perfil en la sección de configuración
+  const profileNameEl = document.getElementById('configProfileName');
+  if (profileNameEl && profiles[currentProfile]) {
+    profileNameEl.textContent = profiles[currentProfile].name;
+  }
+
   setVal('alto',        cfg.alto        || '40');
   setVal('ancho',       cfg.ancho       || '160');
   setVal('mt',          cfg.mt          || '50');
@@ -683,7 +690,7 @@ async function renderPreview() {
   }
 
   // Escalar para que el contenedor tenga un ancho fijo de 297px
-  const containerW = 297;
+  const containerW = 400;
   const scale = containerW / pdfW;
   const containerH = Math.round(pdfH * scale);
 

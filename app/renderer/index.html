@@ -117,8 +117,8 @@
       <!-- Gestión de perfiles -->
       <div class="flex flex-col border border-gray-200 dark:border-gray-700 p-3 mb-4 rounded-lg shadow-md">
         <div class="flex flex-row justify-between items-center">
-          <div class="text-blue-700 dark:text-blue-400 font-semibold text-sm whitespace-nowrap">
-            Gestión de Perfiles
+          <div id="configProfileName" class="text-blue-700 dark:text-blue-400 font-semibold text-sm whitespace-nowrap truncate max-w-[180px]">
+            Por defecto
           </div>
           <div class="flex gap-2">
             <button id="newProfileBtn" type="button"
@@ -293,7 +293,7 @@
 
   <!-- Modal: Previsualización de firma -->
   <div id="modal-preview" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-[440px] max-w-[95vw]">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-[560px] max-w-[95vw]">
       <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Previsualización de firma</h3>
 
       <!-- Selector de PDF y papel manual -->
